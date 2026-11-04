@@ -1,4 +1,14 @@
+# Dependências Python do projeto. A Vercel instala este arquivo.
+# (O agente em agente/ continua sem dependências externas.)
+
+# Broker e versão online
 fastapi>=0.110.0
 uvicorn[standard]>=0.28.0
 pydantic>=2.0.0
+
+# Broker (upload de arquivos)
 python-multipart>=0.0.9
+
+# Versão online (nuvem/)
+anthropic>=2.4.0
+psycopg[binary]>=3.2

@@ -17,10 +17,7 @@ import math
 import os
 import re
 import secrets
-import sqlite3
-import threading
 import time
-from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Iterator
@@ -29,7 +26,8 @@ from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
-from .ia import Resposta, criar_ia, custo_usd
+from .banco import Banco, ErroDuplicado, url_postgres
+from .ia import Resposta, criar_ia, custo_usd, modelo_do_plano
 from .tarefas import TAREFAS
 
 BASE = Path(__file__).resolve().parent
@@ -55,72 +53,18 @@ def ia() -> Any:
 
 # ----------------------------------------------------------------- banco ---
 
-SCHEMA = """
-CREATE TABLE IF NOT EXISTS usuarios (
-    id INTEGER PRIMARY KEY,
-    email TEXT NOT NULL UNIQUE,
-    nome TEXT NOT NULL,
-    senha_hash TEXT NOT NULL,
-    creditos INTEGER NOT NULL DEFAULT 0,
-    plano TEXT NOT NULL DEFAULT 'gratis',
-    criado_em TEXT NOT NULL
-);
-CREATE TABLE IF NOT EXISTS sessoes (
-    token_hash TEXT PRIMARY KEY,
-    usuario_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
-    expira_em TEXT NOT NULL
-);
-CREATE TABLE IF NOT EXISTS conversas (
-    id INTEGER PRIMARY KEY,
-    usuario_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
-    titulo TEXT NOT NULL,
-    criado_em TEXT NOT NULL,
-    atualizado_em TEXT NOT NULL
-);
-CREATE TABLE IF NOT EXISTS mensagens (
-    id INTEGER PRIMARY KEY,
-    conversa_id INTEGER NOT NULL REFERENCES conversas(id) ON DELETE CASCADE,
-    papel TEXT NOT NULL CHECK (papel IN ('user', 'assistant')),
-    texto TEXT NOT NULL,
-    conteudo_api TEXT,
-    criado_em TEXT NOT NULL
-);
-CREATE TABLE IF NOT EXISTS extrato (
-    id INTEGER PRIMARY KEY,
-    usuario_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
-    delta INTEGER NOT NULL,
-    motivo TEXT NOT NULL,
-    criado_em TEXT NOT NULL
-);
-CREATE INDEX IF NOT EXISTS idx_conversas_usuario ON conversas(usuario_id, atualizado_em);
-CREATE INDEX IF NOT EXISTS idx_mensagens_conversa ON mensagens(conversa_id, id);
-"""
-
-_local = threading.local()
+_bancos: dict[tuple[str, str | None], Banco] = {}
 
 
-def db() -> sqlite3.Connection:
-    con = getattr(_local, "con", None)
-    if con is None or getattr(_local, "caminho", None) != DB_PATH:
-        con = sqlite3.connect(DB_PATH, check_same_thread=False, isolation_level=None)
-        con.row_factory = sqlite3.Row
-        con.execute("PRAGMA foreign_keys = ON")
-        con.execute("PRAGMA journal_mode = WAL")
-        con.executescript(SCHEMA)
-        _local.con, _local.caminho = con, DB_PATH
-    return con
+def db() -> Banco:
+    chave = (str(DB_PATH), url_postgres())
+    if chave not in _bancos:
+        _bancos[chave] = Banco(DB_PATH, chave[1])
+    return _bancos[chave]
 
 
-@contextmanager
-def transacao() -> Iterator[sqlite3.Connection]:
-    con = db()
-    con.execute("BEGIN IMMEDIATE")
-    try:
-        yield con
-        con.execute("COMMIT")
-    except BaseException:
-        con.execute("ROLLBACK")
-        raise
+def transacao() -> Any:
+    return db().transacao()
 
 
 def agora() -> str:
@@ -161,7 +105,7 @@ def abrir_sessao(resp: Response, usuario_id: int) -> None:
                     secure=COOKIE_SEGURO, samesite="lax")
 
 
-def usuario_atual(request: Request) -> sqlite3.Row:
+def usuario_atual(request: Request) -> Any:
     token = request.cookies.get(COOKIE)
     if not token:
         raise HTTPException(401, "Faça login para continuar.")
@@ -202,7 +146,7 @@ class Entrada(BaseModel):
 _RE_EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
-def _publico(u: sqlite3.Row) -> dict[str, Any]:
+def _publico(u: Any) -> dict[str, Any]:
     return {"id": u["id"], "nome": u["nome"], "email": u["email"],
             "creditos": u["creditos"], "plano": u["plano"]}
 
@@ -215,13 +159,12 @@ def cadastrar(c: Cadastro, request: Request, resp: Response) -> dict[str, Any]:
         raise HTTPException(400, "E-mail inválido.")
     try:
         with transacao() as con:
-            cur = con.execute(
+            uid = con.inserir(
                 "INSERT INTO usuarios (email, nome, senha_hash, creditos, criado_em) VALUES (?, ?, ?, ?, ?)",
                 (email, c.nome.strip(), gerar_hash(c.senha), CREDITOS_INICIAIS, agora()))
-            uid = cur.lastrowid
             con.execute("INSERT INTO extrato (usuario_id, delta, motivo, criado_em) VALUES (?, ?, ?, ?)",
                         (uid, CREDITOS_INICIAIS, "boas-vindas", agora()))
-    except sqlite3.IntegrityError:
+    except ErroDuplicado:
         raise HTTPException(409, "Já existe uma conta com este e-mail.")
     abrir_sessao(resp, uid)
     return _publico(db().execute("SELECT * FROM usuarios WHERE id = ?", (uid,)).fetchone())
@@ -248,12 +191,12 @@ def sair(request: Request, resp: Response) -> dict[str, bool]:
 
 
 @app.get("/api/eu")
-def eu(u: sqlite3.Row = Depends(usuario_atual)) -> dict[str, Any]:
+def eu(u: Any = Depends(usuario_atual)) -> dict[str, Any]:
     return _publico(u)
 
 
 @app.delete("/api/eu")
-def apagar_conta(resp: Response, u: sqlite3.Row = Depends(usuario_atual)) -> dict[str, bool]:
+def apagar_conta(resp: Response, u: Any = Depends(usuario_atual)) -> dict[str, bool]:
     """Direito de exclusão (LGPD): apaga a conta e tudo ligado a ela."""
     with transacao() as con:
         con.execute("DELETE FROM usuarios WHERE id = ?", (u["id"],))
@@ -269,13 +212,13 @@ def tarefas() -> list[dict[str, str]]:
 
 
 @app.get("/api/conversas")
-def listar_conversas(u: sqlite3.Row = Depends(usuario_atual)) -> list[dict[str, Any]]:
+def listar_conversas(u: Any = Depends(usuario_atual)) -> list[dict[str, Any]]:
     rows = db().execute("SELECT id, titulo, atualizado_em FROM conversas WHERE usuario_id = ? "
                         "ORDER BY atualizado_em DESC LIMIT 100", (u["id"],)).fetchall()
     return [dict(r) for r in rows]
 
 
-def _conversa_do_usuario(cid: int, uid: int) -> sqlite3.Row:
+def _conversa_do_usuario(cid: int, uid: int) -> Any:
     c = db().execute("SELECT * FROM conversas WHERE id = ? AND usuario_id = ?", (cid, uid)).fetchone()
     if c is None:
         raise HTTPException(404, "Conversa não encontrada.")
@@ -283,7 +226,7 @@ def _conversa_do_usuario(cid: int, uid: int) -> sqlite3.Row:
 
 
 @app.get("/api/conversas/{cid}")
-def ver_conversa(cid: int, u: sqlite3.Row = Depends(usuario_atual)) -> dict[str, Any]:
+def ver_conversa(cid: int, u: Any = Depends(usuario_atual)) -> dict[str, Any]:
     c = _conversa_do_usuario(cid, u["id"])
     msgs = db().execute("SELECT papel, texto, criado_em FROM mensagens WHERE conversa_id = ? ORDER BY id",
                         (cid,)).fetchall()
@@ -291,7 +234,7 @@ def ver_conversa(cid: int, u: sqlite3.Row = Depends(usuario_atual)) -> dict[str,
 
 
 @app.delete("/api/conversas/{cid}")
-def apagar_conversa(cid: int, u: sqlite3.Row = Depends(usuario_atual)) -> dict[str, bool]:
+def apagar_conversa(cid: int, u: Any = Depends(usuario_atual)) -> dict[str, bool]:
     _conversa_do_usuario(cid, u["id"])
     with transacao() as con:
         con.execute("DELETE FROM conversas WHERE id = ?", (cid,))
@@ -319,15 +262,15 @@ def _sse(evento: str, dados: Any) -> str:
 
 
 @app.post("/api/mensagens")
-def enviar_mensagem(m: NovaMensagem, u: sqlite3.Row = Depends(usuario_atual)) -> StreamingResponse:
+def enviar_mensagem(m: NovaMensagem, u: Any = Depends(usuario_atual)) -> StreamingResponse:
     if u["creditos"] <= 0:
         raise HTTPException(402, "Seus créditos acabaram. Recarregue para continuar conversando.")
     texto = m.texto.strip()
     with transacao() as con:
         if m.conversa_id is None:
             titulo = texto.splitlines()[0][:60] or "Nova conversa"
-            cid = con.execute("INSERT INTO conversas (usuario_id, titulo, criado_em, atualizado_em) "
-                              "VALUES (?, ?, ?, ?)", (u["id"], titulo, agora(), agora())).lastrowid
+            cid = con.inserir("INSERT INTO conversas (usuario_id, titulo, criado_em, atualizado_em) "
+                              "VALUES (?, ?, ?, ?)", (u["id"], titulo, agora(), agora()))
         else:
             cid = _conversa_do_usuario(m.conversa_id, u["id"])["id"]
         con.execute("INSERT INTO mensagens (conversa_id, papel, texto, criado_em) VALUES (?, 'user', ?, ?)",
@@ -339,7 +282,7 @@ def enviar_mensagem(m: NovaMensagem, u: sqlite3.Row = Depends(usuario_atual)) ->
         yield _sse("conversa", {"id": cid})
         final = Resposta()
         try:
-            for pedaco in motor.responder(historico, final):
+            for pedaco in motor.responder(historico, final, modelo_do_plano(u["plano"])):
                 yield _sse("texto", pedaco)
         except Exception as exc:  # noqa: BLE001 - a pessoa precisa ver algo amigável
             app.state.ultimo_erro = repr(exc)
@@ -347,17 +290,18 @@ def enviar_mensagem(m: NovaMensagem, u: sqlite3.Row = Depends(usuario_atual)) ->
             return
         if final.recusada and not final.texto:
             final.texto = "Não posso ajudar com esse pedido. Que tal tentar de outro jeito?"
-        custo = max(1, math.ceil(custo_usd(motor.modelo, final.tokens_entrada, final.tokens_saida)
+        custo = max(1, math.ceil(custo_usd(final.modelo, final.tokens_entrada, final.tokens_saida)
                                  * CREDITOS_POR_DOLAR))
         with transacao() as con:
             con.execute("INSERT INTO mensagens (conversa_id, papel, texto, conteudo_api, criado_em) "
                         "VALUES (?, 'assistant', ?, ?, ?)",
                         (cid, final.texto, json.dumps(final.conteudo, ensure_ascii=False), agora()))
             con.execute("UPDATE conversas SET atualizado_em = ? WHERE id = ?", (agora(), cid))
-            con.execute("UPDATE usuarios SET creditos = MAX(0, creditos - ?) WHERE id = ?", (custo, u["id"]))
+            con.execute("UPDATE usuarios SET creditos = CASE WHEN creditos > ? THEN creditos - ? ELSE 0 END "
+                        "WHERE id = ?", (custo, custo, u["id"]))
             con.execute("INSERT INTO extrato (usuario_id, delta, motivo, criado_em) VALUES (?, ?, ?, ?)",
                         (u["id"], -custo, f"conversa {cid}", agora()))
-            saldo = con.execute("SELECT creditos FROM usuarios WHERE id = ?", (u["id"],)).fetchone()[0]
+            saldo = con.execute("SELECT creditos FROM usuarios WHERE id = ?", (u["id"],)).fetchone()["creditos"]
         yield _sse("fim", {"custo": custo, "creditos": saldo})
 
     return StreamingResponse(gerar(), media_type="text/event-stream",
@@ -384,7 +328,7 @@ def planos() -> list[dict[str, Any]]:
 
 
 @app.get("/api/extrato")
-def extrato(u: sqlite3.Row = Depends(usuario_atual)) -> list[dict[str, Any]]:
+def extrato(u: Any = Depends(usuario_atual)) -> list[dict[str, Any]]:
     rows = db().execute("SELECT delta, motivo, criado_em FROM extrato WHERE usuario_id = ? "
                         "ORDER BY id DESC LIMIT 50", (u["id"],)).fetchall()
     return [dict(r) for r in rows]

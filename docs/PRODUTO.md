@@ -36,45 +36,68 @@ no site e pronto.
 
 ---
 
-## 2. Onde hospedar
+## 2. Onde hospedar: Vercel + Postgres (Neon)
 
-### Fase 1: começar (0 a ~1.000 usuários) — custo ~R$ 30 a 60/mês
+A Vercel roda o app como função serverless. Como o disco dela é apagado a cada
+execução, **o banco precisa ser externo**: o código usa Postgres sempre que
+existe a variável `DATABASE_URL` (ou `POSTGRES_URL`). O jeito mais simples é o
+**Neon**, que a própria Vercel cria e liga ao projeto em dois cliques, com
+plano gratuito. Supabase também serve.
 
-**Recomendação: [Railway](https://railway.app) ou [Fly.io](https://fly.io)**,
-usando o `Dockerfile` da raiz do repositório.
+Arquivos que fazem isso funcionar: `vercel.json` (manda toda requisição para o
+app), `api/index.py` (ponto de entrada), `requirements.txt` e `.vercelignore`
+(só a versão online sobe; broker e agente ficam de fora).
 
-- Deploy: conecta o repositório do GitHub, cada `git push` publica sozinho.
-- Banco: SQLite num volume persistente (`/dados`). Aguenta bem milhares de
-  usuários com a carga de um chat.
-- HTTPS e domínio próprio (`jarvis.com.br`, por exemplo) inclusos.
-- Variáveis a configurar no painel: `ANTHROPIC_API_KEY`, `IA_MODELO`,
-  `CREDITOS_INICIAIS`.
+### Passo a passo (pelo painel, sem terminal)
 
-Passo a passo (Railway):
-1. Criar conta em railway.app e "New Project → Deploy from GitHub repo".
-2. Adicionar um **Volume** montado em `/dados`.
-3. Em **Variables**, colocar `ANTHROPIC_API_KEY` (gerada em
-   console.anthropic.com).
-4. Em **Settings → Domains**, gerar um domínio ou apontar o seu.
-5. Abrir o link: a tela de cadastro já aparece.
+1. Em vercel.com, **Add New → Project** e importe o repositório
+   `Cainho-pt-br/MiniJarvis` do GitHub. Framework: **Other**. Não precisa
+   mudar comando de build.
+2. Antes de publicar, em **Environment Variables**, adicione:
+   - `ANTHROPIC_API_KEY`: gerada em console.anthropic.com (coloque um limite
+     de gasto mensal lá também).
+3. Clique **Deploy**. O primeiro deploy sobe, mas ainda sem banco.
+4. No projeto, aba **Storage → Create Database → Neon (Postgres)** e conecte
+   ao projeto. Isso cria `DATABASE_URL` sozinho.
+5. Aba **Deployments → ⋯ → Redeploy**, para o app enxergar o banco.
+6. Abra o link `.vercel.app`: a tela de cadastro aparece e as tabelas são
+   criadas no primeiro acesso.
+7. Domínio próprio: **Settings → Domains**.
+
+A partir daí, cada `git push` na `main` publica sozinho, e cada PR ganha um
+link de pré-visualização.
+
+### Pelo terminal (alternativa)
+
+```bash
+npm i -g vercel
+vercel login
+vercel link
+vercel env add ANTHROPIC_API_KEY
+vercel --prod
+```
+
+### Limites a conhecer
+
+- **Duração da função:** `vercel.json` pede até 60 s por resposta, aceito
+  em todos os planos. Respostas de chat cabem nisso com folga.
+- **Streaming:** o app envia a resposta aos pedaços (SSE). Confira no
+  primeiro deploy se o texto aparece aos poucos; se vier tudo de uma vez,
+  funciona do mesmo jeito, só sem o efeito de digitação.
+- **Limite de tentativas de login** fica na memória de cada instância. Em
+  serverless isso é só uma proteção básica; o próximo passo é guardar no banco
+  ou usar o Firewall da Vercel.
+- **Plano Hobby (grátis) da Vercel é só para uso não comercial.** Quando
+  começar a cobrar dos usuários, o projeto precisa estar no plano Pro.
 
 Para testar no seu computador antes:
 ```bash
 pip install -r nuvem/requirements.txt
-COOKIE_SEGURO=0 IA_FAKE=1 uvicorn nuvem.app:app --reload
+COOKIE_SEGURO=0 IA_FAKE=1 uvicorn api.index:app --reload
 ```
 
-### Fase 2: crescer (milhares de usuários pagantes)
-
-- Trocar SQLite por **Postgres** (Supabase ou Neon, plano gratuito no começo).
-  O código já concentra o acesso ao banco em `db()`/`transacao()` para
-  facilitar a troca.
-- Login com Google (Supabase Auth ou OAuth direto), que reduz muito o
-  abandono no cadastro.
-- Mais de uma instância atrás do balanceador do próprio Railway/Fly.
-
-O Raspberry Pi continua útil como **seu** agente e ambiente de testes, mas não
-deve hospedar o produto: queda de energia ou internet derruba todo mundo.
+O `Dockerfile` continua no repositório, caso um dia queira sair da Vercel
+(Railway, Fly.io ou um servidor próprio).
 
 ---
 
@@ -92,22 +115,26 @@ deve hospedar o produto: queda de energia ou internet derruba todo mundo.
 cada resposta (`nuvem/ia.py` → `custo_usd`), então o preço nunca fica abaixo
 do custo.
 
-### A conta que precisa fechar
+### Modelos e a conta que precisa fechar
 
-Com o modelo padrão (`claude-opus-5-5`, US$ 4 / US$ 20 por milhão de tokens),
-uma mensagem típica (≈2 mil tokens de entrada, ≈800 de saída) custa cerca de
-**US$ 0,02 = 20 créditos**. Então:
+| Plano | Modelo | Custo por mensagem típica* | Mensagens que os créditos pagam |
+|---|---|---|---|
+| Grátis | `claude-haiku-5-5` | ~US$ 0,0006 (cobra o mínimo de 1 crédito) | ~300 |
+| Básico | `claude-sonnet-5-5` | ~US$ 0,012 (12 créditos) | ~165 por mês |
+| Pro | `claude-sonnet-5-5` | ~US$ 0,012 (12 créditos) | ~375 por mês |
 
-- Grátis: ~15 mensagens. Suficiente para a pessoa sentir o valor.
-- Básico: ~100 mensagens/mês. O custo de IA fica em ~US$ 2 (≈R$ 11), ou
-  ~37% do preço; o resto paga taxa de pagamento (~5%), imposto e servidor.
+\* ≈2 mil tokens de entrada e ≈800 de saída. A cobrança real usa os tokens de
+cada resposta, com o desconto do cache de prompt.
 
-**Alavanca de custo (decisão sua):** o modelo é configurável por
-`IA_MODELO`. `claude-sonnet-5-5` custa metade, e `claude-haiku-5-5` é ~40 vezes
-mais barato e serve bem para tarefas simples. Trocar o modelo permite dar
-muito mais mensagens pelo mesmo preço, mas vale comparar a qualidade das
-respostas antes. Um caminho comum é usar o mais barato no plano grátis e o
-melhor nos pagos.
+- O **Haiku 5.5** deixa o plano grátis quase sem custo (300 créditos custam no
+  máximo US$ 0,30 por pessoa), então dá para ser generoso e deixar a pessoa
+  usar bastante antes de pagar.
+- O **Sonnet 5.5** dá respostas melhores nos planos pagos, que é o motivo de
+  assinar.
+- No Básico, o custo de IA fica em ~US$ 2 (≈R$ 11), cerca de 37% do preço; o
+  resto paga taxa de pagamento (~5%), imposto, Vercel e banco.
+- Os modelos são trocáveis por variável de ambiente (`IA_MODELO_GRATIS`,
+  `IA_MODELO_PAGO`), sem mexer no código.
 
 ### Pagamento
 
@@ -146,7 +173,7 @@ próxima etapa do código.
 | Etapa | Entrega | Situação |
 |---|---|---|
 | 1 | Nuvem: contas, chat em streaming, histórico, créditos, tarefas prontas, Docker | **Feito** (`nuvem/`) |
-| 2 | Deploy no Railway + domínio + termos/privacidade | Próximo |
+| 2 | Deploy na Vercel + Neon + domínio + termos/privacidade | Próximo |
 | 3 | Pagamento (Mercado Pago) e tela de planos | |
 | 4 | Login com Google, link compartilhável, indicação | |
 | 5 | Instalador (.exe/.dmg) do agente com código de pareamento | |

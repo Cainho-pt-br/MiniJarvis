@@ -1,0 +1,10 @@
+# Só a versão online (nuvem/ + api/) vai para a Vercel.
+broker/
+agente/
+deploy/
+docs/
+nuvem/tests/
+*.db
+*.db-*
+.env
+.venv/

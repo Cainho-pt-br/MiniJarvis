@@ -12,7 +12,18 @@ from nuvem import app as modulo  # noqa: E402
 
 @pytest.fixture()
 def cliente(tmp_path, monkeypatch):
+    """SQLite por padrão; com TEST_DATABASE_URL roda os mesmos testes em Postgres."""
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    monkeypatch.delenv("POSTGRES_URL", raising=False)
     monkeypatch.setattr(modulo, "DB_PATH", tmp_path / "teste.db")
+    url = os.environ.get("TEST_DATABASE_URL")
+    if url:
+        import psycopg
+
+        with psycopg.connect(url, autocommit=True) as con:
+            con.execute("DROP TABLE IF EXISTS extrato, mensagens, conversas, sessoes, usuarios CASCADE")
+        monkeypatch.setenv("DATABASE_URL", url)
+    modulo._bancos.clear()
     monkeypatch.setattr(modulo, "COOKIE_SEGURO", False)
     modulo._tentativas.clear()
     return TestClient(modulo.app)
@@ -88,7 +99,7 @@ def test_apagar_conta(cliente):
     cadastrar(cliente)
     cliente.post("/api/mensagens", json={"texto": "Oi"})
     assert cliente.delete("/api/eu").status_code == 200
-    assert modulo.db().execute("SELECT COUNT(*) FROM conversas").fetchone()[0] == 0
+    assert modulo.db().execute("SELECT COUNT(*) AS n FROM conversas").fetchone()["n"] == 0
 
 
 def test_limite_de_tentativas(cliente):
