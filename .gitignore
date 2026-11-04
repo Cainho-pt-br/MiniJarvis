@@ -24,3 +24,5 @@ sugestoes-gemini.json
 *.tmp
 .DS_Store
 Thumbs.db
+*.db-wal
+*.db-shm
