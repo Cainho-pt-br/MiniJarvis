@@ -168,6 +168,7 @@ def cadastrar(c: Cadastro, request: Request, resp: Response) -> dict[str, Any]:
                         (uid, CREDITOS_INICIAIS, "boas-vindas", agora()))
     except ErroDuplicado:
         raise HTTPException(409, "Já existe uma conta com este e-mail.")
+    parque._semear_cerebro(uid)  # o cérebro já nasce com as notas de boas-vindas
     abrir_sessao(resp, uid)
     return _publico(db().execute("SELECT * FROM usuarios WHERE id = ?", (uid,)).fetchone())
 
@@ -230,8 +231,8 @@ def _conversa_do_usuario(cid: int, uid: int) -> Any:
 @app.get("/api/conversas/{cid}")
 def ver_conversa(cid: int, u: Any = Depends(usuario_atual)) -> dict[str, Any]:
     c = _conversa_do_usuario(cid, u["id"])
-    msgs = db().execute("SELECT papel, texto, criado_em FROM mensagens WHERE conversa_id = ? ORDER BY id",
-                        (cid,)).fetchall()
+    msgs = db().execute("SELECT papel, texto, criado_em FROM mensagens WHERE conversa_id = ? AND oculta = 0 "
+                        "AND texto <> '' ORDER BY id", (cid,)).fetchall()
     return {"id": c["id"], "titulo": c["titulo"], "mensagens": [dict(m) for m in msgs]}
 
 
@@ -250,10 +251,11 @@ class NovaMensagem(BaseModel):
 
 def _historico_api(cid: int) -> list[dict[str, Any]]:
     rows = db().execute(
-        "SELECT papel, texto, conteudo_api FROM mensagens WHERE conversa_id = ? ORDER BY id DESC LIMIT ?",
+        "SELECT papel, texto, conteudo_api, oculta FROM mensagens WHERE conversa_id = ? ORDER BY id DESC LIMIT ?",
         (cid, HISTORICO_MAX_MSGS)).fetchall()[::-1]
-    # A janela tem que começar por uma mensagem do usuário.
-    while rows and rows[0]["papel"] != "user":
+    # A janela tem que começar por uma mensagem que a pessoa escreveu (não por
+    # um resultado de ferramenta, que precisa vir colado no pedido dele).
+    while rows and (rows[0]["papel"] != "user" or rows[0]["oculta"]):
         rows = rows[1:]
     return [{"role": r["papel"],
              "content": json.loads(r["conteudo_api"]) if r["conteudo_api"] else r["texto"]} for r in rows]
@@ -263,8 +265,27 @@ def _sse(evento: str, dados: Any) -> str:
     return f"event: {evento}\ndata: {json.dumps(dados, ensure_ascii=False)}\n\n"
 
 
+def _cobrar(uid: int, custo: int, motivo: str) -> int:
+    with transacao() as con:
+        con.execute("UPDATE usuarios SET creditos = CASE WHEN creditos > ? THEN creditos - ? ELSE 0 END "
+                    "WHERE id = ?", (custo, custo, uid))
+        con.execute("INSERT INTO extrato (usuario_id, delta, motivo, criado_em) VALUES (?, ?, ?, ?)",
+                    (uid, -custo, motivo, agora()))
+        return con.execute("SELECT creditos FROM usuarios WHERE id = ?", (uid,)).fetchone()["creditos"]
+
+
+def _custo(final: Resposta) -> int:
+    return max(1, math.ceil(custo_usd(final.modelo, final.tokens_entrada, final.tokens_saida) * CREDITOS_POR_DOLAR))
+
+
+MAX_RODADAS = 6  # quantas idas e vindas com ferramentas uma mensagem pode ter
+
+
 @app.post("/api/mensagens")
 def enviar_mensagem(m: NovaMensagem, u: Any = Depends(usuario_atual)) -> StreamingResponse:
+    from .ia import FERRAMENTAS
+    from .jarvis import EntradaInvalida, executar_ferramenta
+
     if u["creditos"] <= 0:
         raise HTTPException(402, "Seus créditos acabaram. Recarregue para continuar conversando.")
     texto = m.texto.strip()
@@ -279,49 +300,105 @@ def enviar_mensagem(m: NovaMensagem, u: Any = Depends(usuario_atual)) -> Streami
                     (cid, texto, agora()))
     historico = _historico_api(cid)
     motor = ia()
+    modelo = modelo_do_plano(u["plano"])
+
+    def guardar(papel: str, visivel: str, conteudo: Any, oculta: int) -> None:
+        with transacao() as con:
+            con.execute("INSERT INTO mensagens (conversa_id, papel, texto, conteudo_api, oculta, criado_em) "
+                        "VALUES (?, ?, ?, ?, ?, ?)",
+                        (cid, papel, visivel, json.dumps(conteudo, ensure_ascii=False), oculta, agora()))
 
     def gerar() -> Iterator[str]:
         yield _sse("conversa", {"id": cid})
-        final = Resposta()
-        try:
-            for pedaco in motor.responder(historico, final, modelo_do_plano(u["plano"])):
-                yield _sse("texto", pedaco)
-        except Exception as exc:  # noqa: BLE001 - a pessoa precisa ver algo amigável
-            # Vai para os logs (Vercel → Logs); a pessoa vê só a mensagem amigável.
-            log.exception("Falha ao chamar a IA (conversa %s, modelo %s): %s",
-                          cid, final.modelo, type(exc).__name__)
-            yield _sse("erro", "A IA não respondeu agora. Tente de novo em instantes.")
-            return
-        if final.recusada and not final.texto:
-            final.texto = "Não posso ajudar com esse pedido. Que tal tentar de outro jeito?"
-        custo = max(1, math.ceil(custo_usd(final.modelo, final.tokens_entrada, final.tokens_saida)
-                                 * CREDITOS_POR_DOLAR))
+        custo_total = 0
+        for rodada in range(MAX_RODADAS):
+            final = Resposta()
+            try:
+                if rodada:
+                    yield _sse("texto", "\n\n")
+                for pedaco in motor.responder(historico, final, modelo, FERRAMENTAS):
+                    yield _sse("texto", pedaco)
+            except Exception as exc:  # noqa: BLE001 - a pessoa precisa ver algo amigável
+                # Vai para os logs (Vercel → Logs); a pessoa vê só a mensagem amigável.
+                log.exception("Falha ao chamar a IA (conversa %s, modelo %s): %s",
+                              cid, final.modelo, type(exc).__name__)
+                yield _sse("erro", "A IA não respondeu agora. Tente de novo em instantes.")
+                break
+            custo_total += _custo(final)
+            if final.recusada and not final.texto:
+                final.texto = "Não posso ajudar com esse pedido. Que tal tentar de outro jeito?"
+                yield _sse("texto", final.texto)
+            guardar("assistant", final.texto, final.conteudo, 0 if final.texto else 1)
+            historico.append({"role": "assistant", "content": final.conteudo})
+            # Só executa ferramentas de uma resposta que terminou pedindo por elas:
+            # cortada (max_tokens) ou recusada, a entrada pode estar incompleta.
+            if final.stop_reason != "tool_use" or not final.chamadas:
+                break
+            resultados = []
+            for ch in final.chamadas:
+                try:
+                    texto_res, evento = executar_ferramenta(u["id"], ch["name"], ch["input"])
+                    resultados.append({"type": "tool_result", "tool_use_id": ch["id"], "content": texto_res})
+                    if evento and "nota" in evento:
+                        yield _sse("nota", evento)
+                    elif evento:
+                        yield _sse("tarefa", evento)
+                except EntradaInvalida as exc:
+                    resultados.append({"type": "tool_result", "tool_use_id": ch["id"], "is_error": True,
+                                       "content": json.dumps({"INVALID_INPUT": str(exc)}, ensure_ascii=False)})
+            guardar("user", "", resultados, 1)
+            historico.append({"role": "user", "content": resultados})
+        saldo = _cobrar(u["id"], custo_total, f"conversa {cid}") if custo_total else u["creditos"]
         with transacao() as con:
-            con.execute("INSERT INTO mensagens (conversa_id, papel, texto, conteudo_api, criado_em) "
-                        "VALUES (?, 'assistant', ?, ?, ?)",
-                        (cid, final.texto, json.dumps(final.conteudo, ensure_ascii=False), agora()))
             con.execute("UPDATE conversas SET atualizado_em = ? WHERE id = ?", (agora(), cid))
-            con.execute("UPDATE usuarios SET creditos = CASE WHEN creditos > ? THEN creditos - ? ELSE 0 END "
-                        "WHERE id = ?", (custo, custo, u["id"]))
-            con.execute("INSERT INTO extrato (usuario_id, delta, motivo, criado_em) VALUES (?, ?, ?, ?)",
-                        (u["id"], -custo, f"conversa {cid}", agora()))
-            saldo = con.execute("SELECT creditos FROM usuarios WHERE id = ?", (u["id"],)).fetchone()["creditos"]
-        yield _sse("fim", {"custo": custo, "creditos": saldo})
+        yield _sse("fim", {"custo": custo_total, "creditos": saldo})
 
     return StreamingResponse(gerar(), media_type="text/event-stream",
                              headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
 
+# --------------------------------------------------------------- sugestões ---
+
+@app.get("/api/sugestoes")
+def ver_sugestoes(u: Any = Depends(usuario_atual)) -> dict[str, Any]:
+    r = db().execute("SELECT conteudo, gerado_em FROM sugestoes WHERE usuario_id = ?", (u["id"],)).fetchone()
+    return {"sugestoes": json.loads(r["conteudo"]) if r else [], "gerado_em": r["gerado_em"] if r else None}
+
+
+@app.post("/api/sugestoes/gerar")
+def gerar_sugestoes(u: Any = Depends(usuario_atual)) -> dict[str, Any]:
+    from .jarvis import SCHEMA_SUGESTOES, guardar_sugestoes, prompt_sugestoes, validar_sugestoes
+
+    if u["creditos"] <= 0:
+        raise HTTPException(402, "Seus créditos acabaram.")
+    atual = db().execute("SELECT gerado_em FROM sugestoes WHERE usuario_id = ?", (u["id"],)).fetchone()
+    if atual and (datetime.now(timezone.utc) - datetime.fromisoformat(atual["gerado_em"])).total_seconds() < 600:
+        raise HTTPException(429, "As sugestões foram atualizadas há pouco. Tente de novo em alguns minutos.")
+    try:
+        dados, final = ia().gerar_json(prompt_sugestoes(u["id"]), SCHEMA_SUGESTOES, modelo_do_plano(u["plano"]))
+    except Exception as exc:  # noqa: BLE001
+        log.exception("Falha ao gerar sugestões: %s", type(exc).__name__)
+        raise HTTPException(503, "Não consegui pensar em sugestões agora. Tente de novo em instantes.")
+    sugestoes = validar_sugestoes(dados)
+    guardar_sugestoes(u["id"], sugestoes)
+    saldo = _cobrar(u["id"], _custo(final), "sugestões do parque")
+    return {"sugestoes": sugestoes, "gerado_em": agora(), "creditos": saldo}
+
+
 # ------------------------------------------------------------------ planos ---
 
 PLANOS = [
-    {"id": "gratis", "nome": "Grátis", "preco_brl": 0, "creditos": CREDITOS_INICIAIS,
-     "descricao": "Para experimentar, sem cartão."},
+    {"id": "gratis", "nome": "Grátis", "preco_brl": 0, "creditos": CREDITOS_INICIAIS, "maquinas": 1,
+     "descricao": "Para conhecer o Jarvis.",
+     "itens": ["Chat com o Jarvis", "1 máquina conectada", "Cérebro com memória", "300 créditos para começar"]},
     # Créditos calibrados para a IA custar no máximo ~35% do preço (ver docs/PRODUTO.md).
-    {"id": "basico", "nome": "Básico", "preco_brl": 29.90, "creditos": 2000,
-     "descricao": "Uso no dia a dia."},
-    {"id": "pro", "nome": "Pro", "preco_brl": 59.90, "creditos": 4500,
-     "descricao": "Uso intenso e computador conectado."},
+    {"id": "basico", "nome": "Básico", "preco_brl": 29.90, "creditos": 2000, "maquinas": 3,
+     "descricao": "Seu assistente no dia a dia.",
+     "itens": ["IA mais inteligente (Sonnet)", "Até 3 máquinas", "2.000 créditos por mês", "Rotinas manuais"]},
+    {"id": "pro", "nome": "Pro", "preco_brl": 59.90, "creditos": 4500, "maquinas": None, "destaque": True,
+     "descricao": "O parque inteiro trabalhando por você.",
+     "itens": ["IA mais inteligente (Sonnet)", "Máquinas ilimitadas", "4.500 créditos por mês",
+               "Rotinas diárias automáticas", "Sugestões do parque todo dia"]},
 ]
 
 
@@ -329,6 +406,16 @@ PLANOS = [
 def planos() -> list[dict[str, Any]]:
     # A cobrança (Mercado Pago / Stripe) entra na próxima etapa; ver docs/PRODUTO.md.
     return PLANOS
+
+
+@app.post("/api/planos/{plano}/interesse")
+def registrar_interesse(plano: str, u: Any = Depends(usuario_atual)) -> dict[str, bool]:
+    """Enquanto o pagamento não está ligado, guarda quem quis assinar (lista de espera)."""
+    if plano not in {p["id"] for p in PLANOS} - {"gratis"}:
+        raise HTTPException(404, "Plano não encontrado.")
+    with transacao() as con:
+        con.execute("INSERT INTO interesses (usuario_id, plano, criado_em) VALUES (?, ?, ?)", (u["id"], plano, agora()))
+    return {"ok": True}
 
 
 @app.get("/api/extrato")
@@ -348,3 +435,28 @@ def saude() -> dict[str, str]:
 @app.get("/")
 def pagina() -> FileResponse:
     return FileResponse(BASE / "web" / "index.html")
+
+
+@app.get("/favicon.ico")
+def favicon() -> FileResponse:
+    return FileResponse(BASE / "web" / "icones" / "favicon.ico")
+
+
+@app.get("/icones/{nome}")
+def icone(nome: str) -> FileResponse:
+    caminho = (BASE / "web" / "icones" / nome).resolve()
+    if caminho.parent != (BASE / "web" / "icones").resolve() or not caminho.is_file():
+        raise HTTPException(404, "não encontrado")
+    return FileResponse(caminho, headers={"Cache-Control": "public, max-age=86400"})
+
+
+@app.get("/agente.py")
+def baixar_agente() -> FileResponse:
+    """O agente que a pessoa baixa para conectar um computador ao parque."""
+    return FileResponse(BASE.parent / "agente" / "agente.py", media_type="text/x-python",
+                        filename="agente.py")
+
+
+from . import parque  # noqa: E402  (precisa das funções acima já definidas)
+
+app.include_router(parque.router)

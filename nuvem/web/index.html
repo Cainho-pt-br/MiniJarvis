@@ -3,236 +3,1159 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Jarvis</title>
-<meta name="description" content="Seu assistente de IA, em português, sem complicação.">
+<title>Jarvis · seu parque de computadores com IA</title>
+<meta name="description" content="Converse com o Jarvis em português. Ele lembra de tudo, cuida dos seus computadores e trabalha por você, até enquanto você dorme.">
+<meta name="theme-color" content="#05080f">
+<meta property="og:title" content="Jarvis · seus computadores trabalhando por você">
+<meta property="og:description" content="Um assistente de IA que conversa, lembra e executa tarefas nos seus computadores.">
+<link rel="icon" href="/favicon.ico">
+<link rel="apple-touch-icon" href="/icones/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root {
-  --fundo: #f6f7fb; --cartao: #ffffff; --texto: #1c1f2a; --suave: #667085;
-  --borda: #e4e7ec; --marca: #4f46e5; --marca-texto: #ffffff; --eu: #eef0ff; --erro: #b42318;
-}
-@media (prefers-color-scheme: dark) {
-  :root { --fundo: #0f1117; --cartao: #181b24; --texto: #eceef4; --suave: #98a2b3;
-          --borda: #2a2f3c; --marca: #818cf8; --marca-texto: #0f1117; --eu: #23264a; --erro: #f97066; }
+  --fundo: #05080f; --fundo2: #0a0f1a; --cartao: #0e1522; --cartao2: #131c2c; --borda: #1d2940; --borda2: #2a3a57;
+  --texto: #e8eef8; --suave: #9aa8bf; --tenue: #66748c;
+  --ciano: #3fd0c9; --ciano2: #7ae5df; --violeta: #8b7bff; --brilho: rgba(63, 208, 201, .35);
+  --ok: #3fd383; --exec: #5aa9ff; --pend: #e3b341; --erro: #ff7b72; --morto: #66717f;
+  --r: 16px; --r2: 10px;
+  --titulo: "Space Grotesk", "Inter", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
 }
 * { box-sizing: border-box; }
-html, body { margin: 0; height: 100%; }
-body { background: var(--fundo); color: var(--texto); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
-button { font: inherit; cursor: pointer; }
-input, textarea { font: inherit; color: inherit; }
+html, body { margin: 0; min-height: 100%; }
+body { background: var(--fundo); color: var(--texto); font: 15px/1.55 Inter, system-ui, -apple-system, "Segoe UI", sans-serif; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+a { color: var(--ciano2); text-decoration: none; }
+button { font: inherit; cursor: pointer; color: inherit; }
+input, textarea, select { font: inherit; color: inherit; }
 .oculto { display: none !important; }
+h1, h2, h3 { font-family: var(--titulo); letter-spacing: -.02em; margin: 0; }
+.mono { font-family: var(--mono); }
 
-/* entrada */
-#entrada { min-height: 100%; display: grid; place-items: center; padding: 24px 16px; }
-.caixa { width: 100%; max-width: 380px; background: var(--cartao); border: 1px solid var(--borda); border-radius: 16px; padding: 28px 22px; }
-.caixa h1 { margin: 0 0 4px; font-size: 28px; }
-.caixa p { margin: 0 0 20px; color: var(--suave); }
-.caixa label { display: block; font-size: 14px; margin: 12px 0 4px; }
-.caixa input { width: 100%; padding: 12px; border: 1px solid var(--borda); border-radius: 10px; background: var(--fundo); }
-.primario { width: 100%; margin-top: 18px; padding: 13px; border: 0; border-radius: 10px; background: var(--marca); color: var(--marca-texto); font-weight: 600; }
-.link { background: none; border: 0; color: var(--marca); padding: 0; margin-top: 14px; }
-.erro { color: var(--erro); font-size: 14px; min-height: 20px; margin-top: 10px; }
+/* botões */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid var(--borda2); background: var(--cartao2); border-radius: 12px; padding: 10px 16px; font-weight: 600; transition: transform .15s, border-color .15s, background .15s; white-space: nowrap; }
+.btn:hover { border-color: var(--ciano); }
+.btn:active { transform: scale(.98); }
+.btn.prim { background: linear-gradient(135deg, var(--ciano), #36a9e8 60%, var(--violeta)); color: #04121a; border: 0; box-shadow: 0 8px 30px -8px var(--brilho); }
+.btn.prim:hover { box-shadow: 0 10px 40px -6px rgba(63, 208, 201, .6); }
+.btn.grande { padding: 15px 26px; font-size: 17px; border-radius: 14px; }
+.btn.fantasma { background: transparent; }
+.btn.perigo:hover { border-color: var(--erro); color: var(--erro); }
+.btn.peq { padding: 6px 11px; font-size: 13px; border-radius: 9px; }
+.btn:disabled { opacity: .5; cursor: default; }
 
-/* app */
-#app { height: 100%; display: flex; flex-direction: column; }
-header { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--borda); background: var(--cartao); }
-header strong { font-size: 18px; }
-.saldo { margin-left: auto; font-size: 14px; color: var(--suave); }
-.icone { background: none; border: 1px solid var(--borda); border-radius: 8px; padding: 6px 10px; color: var(--texto); }
-#corpo { flex: 1; display: flex; min-height: 0; }
-aside { width: 260px; border-right: 1px solid var(--borda); overflow-y: auto; padding: 12px; background: var(--cartao); }
-aside button.conv { display: block; width: 100%; text-align: left; border: 0; background: none; color: var(--texto); padding: 8px 10px; border-radius: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-aside button.conv:hover, aside button.conv.ativa { background: var(--eu); }
-main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
-#mensagens { flex: 1; overflow-y: auto; padding: 20px 16px; }
-.coluna { max-width: 760px; margin: 0 auto; }
-.boas-vindas h2 { margin: 8px 0 4px; }
-.boas-vindas p { color: var(--suave); margin: 0 0 18px; }
-.grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
-.tarefa { text-align: left; background: var(--cartao); border: 1px solid var(--borda); border-radius: 12px; padding: 14px; color: var(--texto); }
-.tarefa:hover { border-color: var(--marca); }
-.tarefa b { display: block; margin: 4px 0 2px; }
-.tarefa span { color: var(--suave); font-size: 14px; }
-.msg { margin: 0 0 14px; padding: 12px 14px; border-radius: 14px; white-space: pre-wrap; word-wrap: break-word; }
-.msg.user { background: var(--eu); margin-left: 15%; }
-.msg.assistant { background: var(--cartao); border: 1px solid var(--borda); margin-right: 5%; }
-.msg.falha { border-color: var(--erro); color: var(--erro); }
-form#envio { border-top: 1px solid var(--borda); padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); background: var(--cartao); }
-form#envio .coluna { display: flex; gap: 8px; align-items: flex-end; }
-form#envio textarea { flex: 1; resize: none; max-height: 200px; padding: 12px; border: 1px solid var(--borda); border-radius: 12px; background: var(--fundo); }
-form#envio button { padding: 12px 18px; border: 0; border-radius: 12px; background: var(--marca); color: var(--marca-texto); font-weight: 600; }
-form#envio button:disabled { opacity: .5; }
-@media (max-width: 720px) {
-  aside { position: fixed; inset: 53px 0 0 0; width: auto; z-index: 5; }
-  .msg.user { margin-left: 8%; }
+/* ===================================================== LANDING ===== */
+#landing { position: relative; }
+#ceu { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+.topo { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 12px; padding: 14px max(16px, calc(50% - 560px)); background: rgba(5, 8, 15, .7); backdrop-filter: blur(14px); border-bottom: 1px solid rgba(29, 41, 64, .6); }
+.marca { display: flex; align-items: center; gap: 10px; font-family: var(--titulo); font-weight: 700; font-size: 20px; }
+.marca svg { width: 30px; height: 30px; filter: drop-shadow(0 0 10px var(--brilho)); }
+.topo nav { margin-left: auto; display: flex; gap: 6px; align-items: center; }
+.topo nav a { color: var(--suave); padding: 8px 10px; font-size: 14px; }
+.topo nav a:hover { color: var(--texto); }
+.secao { position: relative; z-index: 1; max-width: 1120px; margin: 0 auto; padding: 72px 16px; }
+.hero { display: grid; grid-template-columns: 1.05fr 1fr; gap: 40px; align-items: center; min-height: calc(100vh - 70px); padding-top: 32px; }
+.selo { display: inline-flex; gap: 8px; align-items: center; padding: 6px 12px; border: 1px solid var(--borda2); border-radius: 999px; font-size: 13px; color: var(--ciano2); background: rgba(63, 208, 201, .06); }
+.selo i { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 10px var(--ok); }
+.hero h1 { font-size: clamp(38px, 6vw, 66px); line-height: 1.02; margin: 18px 0 18px; }
+.grad { background: linear-gradient(100deg, var(--ciano2), var(--ciano) 40%, var(--violeta)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.hero p.lead { font-size: 19px; color: var(--suave); max-width: 540px; margin: 0 0 28px; }
+.hero .acoes { display: flex; gap: 12px; flex-wrap: wrap; }
+.hero .prova { margin-top: 26px; color: var(--tenue); font-size: 13px; display: flex; gap: 18px; flex-wrap: wrap; }
+.hero .prova b { color: var(--texto); }
+
+/* cena do hero: mapa vivo + chat */
+.cena { position: relative; max-width: 520px; width: 100%; justify-self: center; display: flex; flex-direction: column; }
+.cena svg.orbita { width: 100%; aspect-ratio: 1 / 1; overflow: visible; margin: -18px 0; }
+.balao { position: relative; z-index: 2; max-width: 300px; padding: 12px 14px; border-radius: 14px; font-size: 14px; background: rgba(14, 21, 34, .92); border: 1px solid var(--borda2); box-shadow: 0 20px 40px -20px #000; backdrop-filter: blur(6px); opacity: 0; transform: translateY(8px); transition: all .5s; }
+.balao.vis { opacity: 1; transform: none; }
+.balao.eu { align-self: flex-end; order: -1; background: rgba(139, 123, 255, .16); border-color: rgba(139, 123, 255, .4); }
+.balao.ele { align-self: flex-start; }
+.balao .acao { margin-top: 10px; display: flex; gap: 8px; }
+.balao .acao span { font-size: 12px; padding: 5px 10px; border-radius: 8px; background: var(--ciano); color: #04121a; font-weight: 700; }
+.balao .acao span.n { background: transparent; border: 1px solid var(--borda2); color: var(--suave); }
+.balao small { display: block; color: var(--tenue); font-size: 11px; margin-bottom: 4px; letter-spacing: .06em; text-transform: uppercase; }
+
+.titulo-secao { text-align: center; max-width: 720px; margin: 0 auto 44px; }
+.titulo-secao .sobre { color: var(--ciano); font-family: var(--mono); font-size: 12px; letter-spacing: .14em; text-transform: uppercase; }
+.titulo-secao h2 { font-size: clamp(28px, 4vw, 44px); margin: 10px 0 12px; }
+.titulo-secao p { color: var(--suave); font-size: 17px; margin: 0; }
+
+.passos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.passo { padding: 26px; border-radius: var(--r); background: linear-gradient(180deg, var(--cartao), rgba(14, 21, 34, .4)); border: 1px solid var(--borda); position: relative; overflow: hidden; }
+.passo .n { font-family: var(--mono); color: var(--ciano); font-size: 13px; }
+.passo h3 { font-size: 21px; margin: 10px 0 8px; }
+.passo p { color: var(--suave); margin: 0; }
+.passo::after { content: ""; position: absolute; right: -40px; top: -40px; width: 120px; height: 120px; border-radius: 50%; background: radial-gradient(circle, var(--brilho), transparent 70%); opacity: .4; }
+
+.recursos { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+.recurso { padding: 26px; border-radius: var(--r); background: var(--cartao); border: 1px solid var(--borda); display: grid; grid-template-columns: 48px 1fr; gap: 16px; transition: border-color .2s, transform .2s; }
+.recurso:hover { border-color: var(--borda2); transform: translateY(-2px); }
+.recurso .ic { width: 48px; height: 48px; border-radius: 12px; display: grid; place-items: center; background: rgba(63, 208, 201, .1); color: var(--ciano); border: 1px solid rgba(63, 208, 201, .25); }
+.recurso h3 { font-size: 19px; margin-bottom: 6px; }
+.recurso p { margin: 0; color: var(--suave); }
+
+.casos { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+.caso { padding: 10px 16px; border-radius: 999px; border: 1px solid var(--borda); background: var(--cartao); color: var(--suave); font-size: 14px; }
+.caso b { color: var(--texto); font-weight: 600; }
+
+.precos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; align-items: stretch; }
+.preco { padding: 28px; border-radius: var(--r); background: var(--cartao); border: 1px solid var(--borda); display: flex; flex-direction: column; gap: 14px; position: relative; }
+.preco.destaque { border-color: transparent; background: linear-gradient(var(--cartao), var(--cartao)) padding-box, linear-gradient(140deg, var(--ciano), var(--violeta)) border-box; border: 1px solid transparent; box-shadow: 0 30px 80px -40px var(--brilho); }
+.preco .rot { position: absolute; top: -12px; left: 24px; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px; background: linear-gradient(135deg, var(--ciano), var(--violeta)); color: #04121a; }
+.preco h3 { font-size: 20px; }
+.preco .valor { font-family: var(--titulo); font-size: 40px; font-weight: 700; }
+.preco .valor small { font-size: 15px; color: var(--suave); font-weight: 500; }
+.preco ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 9px; color: var(--suave); flex: 1; }
+.preco li { display: flex; gap: 9px; align-items: flex-start; }
+.preco li::before { content: "✓"; color: var(--ciano); font-weight: 700; }
+.preco .desc { color: var(--suave); margin: 0; }
+
+.cta-final { text-align: center; padding: 64px 24px; border-radius: 24px; border: 1px solid var(--borda); background: radial-gradient(ellipse at top, rgba(63, 208, 201, .14), transparent 60%), var(--fundo2); }
+.cta-final h2 { font-size: clamp(28px, 4vw, 42px); margin-bottom: 12px; }
+.cta-final p { color: var(--suave); margin: 0 0 26px; font-size: 17px; }
+footer { position: relative; z-index: 1; text-align: center; color: var(--tenue); font-size: 13px; padding: 32px 16px 48px; }
+
+/* modal */
+.modal-fundo { position: fixed; inset: 0; z-index: 100; background: rgba(2, 4, 8, .72); backdrop-filter: blur(6px); display: grid; place-items: center; padding: 16px; animation: aparece .2s; }
+.modal { width: 100%; max-width: 440px; max-height: calc(100vh - 32px); overflow-y: auto; background: var(--fundo2); border: 1px solid var(--borda2); border-radius: 20px; padding: 28px 24px; box-shadow: 0 40px 100px -30px #000; position: relative; }
+.modal.largo { max-width: 620px; }
+.modal h2 { font-size: 24px; margin-bottom: 6px; }
+.modal p.sub { color: var(--suave); margin: 0 0 18px; }
+.modal .fechar { position: absolute; right: 14px; top: 12px; background: none; border: 0; color: var(--suave); font-size: 22px; padding: 4px 8px; }
+.campo { display: block; margin: 12px 0; }
+.campo span { display: block; font-size: 13px; color: var(--suave); margin-bottom: 6px; }
+.campo input, .campo textarea, .campo select { width: 100%; padding: 12px 13px; border: 1px solid var(--borda2); border-radius: 11px; background: var(--fundo); outline: none; }
+.campo input:focus, .campo textarea:focus, .campo select:focus { border-color: var(--ciano); box-shadow: 0 0 0 3px rgba(63, 208, 201, .15); }
+.erro-txt { color: var(--erro); font-size: 14px; min-height: 20px; margin-top: 8px; }
+.link-btn { background: none; border: 0; color: var(--ciano2); padding: 0; }
+@keyframes aparece { from { opacity: 0; } }
+
+/* ======================================================= APP ======= */
+#app { display: grid; grid-template-columns: 236px 1fr; min-height: 100vh; position: relative; z-index: 1; }
+.lateral { position: sticky; top: 0; height: 100vh; border-right: 1px solid var(--borda); background: rgba(10, 15, 26, .85); backdrop-filter: blur(10px); display: flex; flex-direction: column; padding: 18px 12px; gap: 4px; }
+.lateral .marca { padding: 4px 10px 18px; }
+.nav-it { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 11px; border: 0; background: none; color: var(--suave); text-align: left; font-weight: 500; width: 100%; position: relative; }
+.nav-it svg { width: 19px; height: 19px; flex: none; }
+.nav-it:hover { color: var(--texto); background: var(--cartao); }
+.nav-it.ativo { color: var(--texto); background: linear-gradient(90deg, rgba(63, 208, 201, .14), transparent); }
+.nav-it.ativo::before { content: ""; position: absolute; left: 0; top: 9px; bottom: 9px; width: 3px; border-radius: 3px; background: var(--ciano); box-shadow: 0 0 10px var(--ciano); }
+.nav-it .cont { margin-left: auto; font-size: 11px; font-family: var(--mono); padding: 1px 7px; border-radius: 999px; background: var(--pend); color: #1a1200; font-weight: 700; }
+.lateral .rodape { margin-top: auto; display: grid; gap: 10px; }
+.cartao-plano { padding: 14px; border-radius: 14px; border: 1px solid var(--borda2); background: linear-gradient(160deg, rgba(139, 123, 255, .14), rgba(63, 208, 201, .06)); }
+.cartao-plano b { font-family: var(--titulo); }
+.cartao-plano p { margin: 4px 0 10px; color: var(--suave); font-size: 13px; }
+.usuario { display: flex; align-items: center; gap: 10px; padding: 8px; color: var(--suave); font-size: 13px; }
+.avatar { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: linear-gradient(135deg, var(--ciano), var(--violeta)); color: #04121a; font-weight: 700; flex: none; }
+.usuario .nm { color: var(--texto); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+main.conteudo { min-width: 0; padding: 22px clamp(16px, 3vw, 36px) 100px; }
+.barra { display: flex; align-items: center; gap: 12px; margin-bottom: 22px; flex-wrap: wrap; }
+.barra h1 { font-size: 26px; }
+.barra .dir { margin-left: auto; display: flex; gap: 10px; align-items: center; }
+.pilula { display: inline-flex; align-items: center; gap: 7px; padding: 7px 12px; border-radius: 999px; border: 1px solid var(--borda2); background: var(--cartao); font-size: 13px; color: var(--suave); }
+.pilula b { color: var(--texto); font-family: var(--mono); font-weight: 500; }
+.pilula.alerta { border-color: rgba(227, 179, 65, .5); color: var(--pend); }
+
+.grade-inicio > .painel:first-child { align-self: start; }
+.grade-inicio { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 18px; }
+.painel { background: rgba(14, 21, 34, .82); border: 1px solid var(--borda); border-radius: var(--r); padding: 18px; position: relative; min-width: 0; }
+.painel h2 { font-size: 15px; font-family: var(--mono); font-weight: 500; letter-spacing: .1em; text-transform: uppercase; color: var(--suave); margin-bottom: 14px; display: flex; align-items: center; gap: 10px; }
+.painel h2 .acao-dir { margin-left: auto; text-transform: none; letter-spacing: 0; font-family: Inter, sans-serif; }
+
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 18px; }
+.stat { padding: 16px; border-radius: 14px; background: rgba(14, 21, 34, .82); border: 1px solid var(--borda); }
+.stat .rot { font-size: 12px; color: var(--suave); }
+.stat .num { font-family: var(--titulo); font-size: 30px; font-weight: 700; line-height: 1.1; margin-top: 4px; }
+.stat .num small { font-size: 15px; color: var(--tenue); font-weight: 500; }
+.stat .det { font-size: 12px; color: var(--tenue); margin-top: 2px; }
+
+/* mapa do parque */
+.mapa { width: 100%; aspect-ratio: 16 / 10; min-height: 300px; display: block; overflow: visible; }
+.mapa .no-maq { cursor: pointer; }
+.mapa text { font-family: Inter, sans-serif; }
+.legenda { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px; color: var(--suave); margin-top: 8px; }
+.legenda span { display: inline-flex; gap: 6px; align-items: center; }
+
+/* status com ícone + texto */
+.st { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; border: 1px solid; white-space: nowrap; }
+.st::before { font-size: 10px; }
+.st.concluido { color: var(--ok); border-color: rgba(63, 211, 131, .35); } .st.concluido::before { content: "✔"; }
+.st.executando { color: var(--exec); border-color: rgba(90, 169, 255, .35); } .st.executando::before { content: "◉"; animation: pisca 1s infinite; }
+.st.pendente { color: var(--suave); border-color: var(--borda2); } .st.pendente::before { content: "◷"; }
+.st.aguardando { color: var(--pend); border-color: rgba(227, 179, 65, .4); } .st.aguardando::before { content: "✋"; }
+.st.falhou { color: var(--erro); border-color: rgba(255, 123, 114, .35); } .st.falhou::before { content: "✖"; }
+.st.cancelado { color: var(--morto); border-color: var(--borda2); } .st.cancelado::before { content: "⊘"; }
+.st.online { color: var(--ok); border-color: rgba(63, 211, 131, .35); } .st.online::before { content: "●"; }
+.st.offline { color: var(--morto); border-color: var(--borda2); } .st.offline::before { content: "○"; }
+@keyframes pisca { 50% { opacity: .3; } }
+
+.sugestoes { display: grid; gap: 10px; }
+.sug { padding: 14px; border-radius: 13px; border: 1px solid var(--borda); background: var(--cartao2); display: grid; gap: 6px; }
+.sug .tg { font-family: var(--mono); font-size: 11px; color: var(--violeta); text-transform: uppercase; letter-spacing: .1em; }
+.sug b { font-family: var(--titulo); font-size: 16px; }
+.sug p { margin: 0; color: var(--suave); font-size: 14px; }
+.sug .mot { font-size: 12px; color: var(--tenue); }
+.sug .btn { justify-self: start; margin-top: 4px; }
+
+.vazio { text-align: center; padding: 34px 18px; color: var(--suave); }
+.vazio h3 { color: var(--texto); font-size: 20px; margin-bottom: 6px; }
+.vazio p { margin: 0 0 18px; }
+
+.lista-jobs { display: grid; gap: 8px; }
+.job { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--borda); background: var(--cartao2); cursor: pointer; text-align: left; width: 100%; }
+.job:hover { border-color: var(--borda2); }
+.job .tt { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.job .mt { font-size: 12px; color: var(--tenue); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.job .id { font-family: var(--mono); font-size: 12px; color: var(--tenue); }
+@media (max-width: 760px) { .job .id { display: none; } .job { grid-template-columns: auto 1fr; } }
+.barra-prog { height: 3px; border-radius: 3px; background: var(--borda); overflow: hidden; margin-top: 6px; }
+.barra-prog i { display: block; height: 100%; background: linear-gradient(90deg, var(--ciano), var(--violeta)); }
+
+/* máquinas */
+.maquinas { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 14px; }
+.maq { padding: 18px; border-radius: var(--r); border: 1px solid var(--borda); background: var(--cartao); display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.maq.on { box-shadow: inset 0 1px 0 rgba(63, 208, 201, .25); }
+.maq .cab { display: flex; gap: 12px; align-items: center; }
+.maq .ico { width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; background: var(--cartao2); border: 1px solid var(--borda2); color: var(--suave); flex: none; }
+.maq.on .ico { color: var(--ciano); border-color: rgba(63, 208, 201, .35); }
+.maq .nm { font-family: var(--titulo); font-weight: 600; font-size: 17px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.maq .so { font-size: 12px; color: var(--tenue); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.maq .cab .st { margin-left: auto; }
+.fichas { display: flex; gap: 6px; flex-wrap: wrap; }
+.ficha { font-size: 12px; padding: 3px 9px; border-radius: 8px; background: var(--cartao2); border: 1px solid var(--borda); color: var(--suave); }
+.ficha.ia { color: var(--violeta); border-color: rgba(139, 123, 255, .35); }
+.medidor { display: grid; grid-template-columns: 42px 1fr 46px; gap: 10px; align-items: center; font-size: 12px; color: var(--suave); }
+.medidor .trilho { height: 6px; border-radius: 6px; background: var(--cartao2); overflow: hidden; }
+.medidor .trilho i { display: block; height: 100%; border-radius: 6px; background: var(--ciano); }
+.medidor b { font-family: var(--mono); font-weight: 500; color: var(--texto); text-align: right; }
+.maq .acoes { display: flex; gap: 8px; flex-wrap: wrap; margin-top: auto; }
+
+/* chat */
+.chat { display: grid; grid-template-columns: 240px 1fr; gap: 16px; height: calc(100vh - 110px); min-height: 480px; }
+.chat .convs { overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
+.conv { text-align: left; border: 0; background: none; padding: 9px 11px; border-radius: 10px; color: var(--suave); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.conv:hover, .conv.ativa { background: var(--cartao2); color: var(--texto); }
+.chat .area { display: flex; flex-direction: column; min-width: 0; min-height: 0; background: rgba(14, 21, 34, .82); border: 1px solid var(--borda); border-radius: var(--r); }
+.chat .msgs { flex: 1; overflow-y: auto; padding: 20px; }
+.msg { max-width: 760px; margin: 0 auto 14px; display: flex; gap: 12px; }
+.msg .quem { width: 30px; height: 30px; flex: none; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 700; }
+.msg.assistant .quem { background: radial-gradient(circle at 35% 35%, var(--ciano2), var(--ciano) 45%, #1c5a7a); box-shadow: 0 0 16px var(--brilho); color: #04121a; }
+.msg.user .quem { background: var(--cartao2); border: 1px solid var(--borda2); color: var(--suave); }
+.msg .corpo { white-space: pre-wrap; word-wrap: break-word; padding-top: 4px; min-width: 0; flex: 1; }
+.msg.user .corpo { color: var(--texto); }
+.msg.falha .corpo { color: var(--erro); }
+.cartao-tarefa { margin: 10px 0 4px; padding: 14px; border-radius: 13px; border: 1px solid rgba(227, 179, 65, .4); background: rgba(227, 179, 65, .06); white-space: normal; }
+.cartao-tarefa .cab { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+.cartao-tarefa pre { margin: 8px 0 12px; padding: 10px; border-radius: 9px; background: var(--fundo); border: 1px solid var(--borda); font-family: var(--mono); font-size: 13px; white-space: pre-wrap; word-break: break-word; max-height: 160px; overflow: auto; }
+.cartao-tarefa .acoes { display: flex; gap: 8px; flex-wrap: wrap; }
+.chip-nota { display: inline-flex; margin-top: 8px; gap: 6px; font-size: 12px; padding: 4px 10px; border-radius: 999px; background: rgba(139, 123, 255, .14); border: 1px solid rgba(139, 123, 255, .35); color: #c4bbff; white-space: normal; }
+.boas { max-width: 760px; margin: 4vh auto 0; text-align: center; }
+.boas .orb { width: 92px; height: 92px; margin: 0 auto 18px; }
+.boas h2 { font-size: 28px; margin-bottom: 6px; }
+.boas p { color: var(--suave); margin: 0 0 22px; }
+.atalhos { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; text-align: left; }
+.atalho { padding: 13px; border-radius: 13px; border: 1px solid var(--borda); background: var(--cartao2); text-align: left; }
+.atalho:hover { border-color: var(--ciano); }
+.atalho b { display: block; margin: 2px 0; font-size: 14px; }
+.atalho span { font-size: 13px; color: var(--suave); }
+form.envio { padding: 12px; border-top: 1px solid var(--borda); display: flex; gap: 10px; align-items: flex-end; }
+form.envio textarea { flex: 1; resize: none; max-height: 200px; padding: 13px 14px; border: 1px solid var(--borda2); border-radius: 13px; background: var(--fundo); outline: none; }
+form.envio textarea:focus { border-color: var(--ciano); }
+.digitando::after { content: "▍"; color: var(--ciano); animation: pisca .8s infinite; }
+
+/* cérebro */
+.cerebro { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 16px; }
+#grafo-cerebro { width: 100%; height: 560px; display: block; touch-action: none; cursor: grab; }
+#grafo-cerebro text { font-family: Inter, sans-serif; font-size: 12px; fill: var(--suave); pointer-events: none; }
+.editor textarea { width: 100%; min-height: 380px; padding: 14px; border-radius: 12px; border: 1px solid var(--borda2); background: var(--fundo); font-family: var(--mono); font-size: 13px; line-height: 1.6; resize: vertical; outline: none; }
+.editor .cab { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
+.editor .cab b { font-family: var(--titulo); font-size: 18px; margin-right: auto; }
+
+/* gaveta de detalhe */
+.gaveta-fundo { position: fixed; inset: 0; z-index: 90; background: rgba(2, 4, 8, .6); }
+.gaveta { position: fixed; z-index: 91; right: 0; top: 0; bottom: 0; width: min(620px, 100vw); background: var(--fundo2); border-left: 1px solid var(--borda2); padding: 22px; overflow-y: auto; animation: entra .2s; }
+@keyframes entra { from { transform: translateX(30px); opacity: 0; } }
+.gaveta > h2 { font-size: 22px; margin: 8px 0; }
+.gaveta .painel h2 { font-size: 13px; }
+.gaveta .meta { color: var(--suave); font-size: 13px; display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+pre.log { margin: 0; padding: 14px; border-radius: 12px; background: #02050a; border: 1px solid var(--borda); font-family: var(--mono); font-size: 12.5px; line-height: 1.55; color: #c9d6e8; white-space: pre-wrap; word-break: break-word; max-height: 55vh; overflow: auto; }
+
+.form-linha { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.abas { display: flex; gap: 6px; margin: 12px 0; flex-wrap: wrap; }
+.aba { padding: 7px 13px; border-radius: 9px; border: 1px solid var(--borda2); background: none; color: var(--suave); font-size: 13px; }
+.aba.ativa { background: var(--cartao2); color: var(--texto); border-color: var(--ciano); }
+.cmd { position: relative; padding: 14px 14px 14px 14px; border-radius: 12px; background: #02050a; border: 1px solid var(--borda2); font-family: var(--mono); font-size: 13px; word-break: break-all; padding-right: 112px; }
+.cmd .btn { position: absolute; right: 8px; top: 8px; }
+.codigo-grande { font-family: var(--mono); font-size: 40px; letter-spacing: .3em; text-align: center; padding: 10px 0 4px; color: var(--ciano2); text-shadow: 0 0 24px var(--brilho); }
+.esperando { display: flex; gap: 10px; align-items: center; justify-content: center; color: var(--suave); font-size: 14px; margin-top: 16px; }
+.esperando i { width: 9px; height: 9px; border-radius: 50%; background: var(--ciano); animation: pisca 1s infinite; }
+
+.toast { position: fixed; left: 50%; bottom: 90px; transform: translateX(-50%); z-index: 200; padding: 12px 18px; border-radius: 12px; background: var(--cartao2); border: 1px solid var(--borda2); box-shadow: 0 20px 40px -10px #000; animation: aparece .2s; max-width: calc(100vw - 32px); }
+.tabela { width: 100%; border-collapse: collapse; font-size: 14px; }
+.tabela td { padding: 9px 4px; border-bottom: 1px solid var(--borda); }
+.tabela td:last-child { text-align: right; font-family: var(--mono); }
+.baixa { display: none; }
+
+@media (max-width: 1000px) {
+  .hero { grid-template-columns: 1fr; text-align: left; min-height: auto; }
+  .cena { max-width: 420px; }
+  .grade-inicio, .cerebro { grid-template-columns: 1fr; }
+  .stats { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 760px) {
+  .topo nav a.oc { display: none; }
+  .secao { padding: 52px 16px; }
+  .passos, .recursos, .precos { grid-template-columns: 1fr; }
+  .balao { max-width: 260px; font-size: 13px; }
+  #app { grid-template-columns: 1fr; }
+  .lateral { display: none; }
+  .baixa { display: flex; position: fixed; z-index: 50; left: 0; right: 0; bottom: 0; padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); background: rgba(10, 15, 26, .95); backdrop-filter: blur(10px); border-top: 1px solid var(--borda); justify-content: space-around; }
+  .baixa .nav-it { flex-direction: column; gap: 3px; font-size: 10.5px; padding: 6px 4px; width: auto; flex: 1; align-items: center; }
+  .baixa .nav-it.ativo::before { display: none; }
+  .baixa .nav-it.ativo { background: none; color: var(--ciano2); }
+  .chat { grid-template-columns: 1fr; height: calc(100vh - 170px); }
+  .chat .convs { display: none; }
+  .form-linha { grid-template-columns: 1fr; }
+  #grafo-cerebro { height: 380px; }
+  .barra h1 { font-size: 22px; }
+  .msg { gap: 9px; }
 }
 </style>
 </head>
 <body>
+<canvas id="ceu"></canvas>
 
-<section id="entrada" class="oculto">
-  <form class="caixa" id="form-entrada">
-    <h1>Jarvis</h1>
-    <p id="subtitulo">Seu assistente de IA, em português, sem complicação.</p>
-    <div id="campo-nome"><label for="nome">Seu nome</label><input id="nome" autocomplete="name"></div>
-    <label for="email">E-mail</label><input id="email" type="email" autocomplete="email" required>
-    <label for="senha">Senha</label><input id="senha" type="password" minlength="8" autocomplete="current-password" required>
-    <button class="primario" id="botao-entrada" type="submit">Criar conta grátis</button>
-    <div class="erro" id="erro-entrada"></div>
-    <button class="link" type="button" id="alternar">Já tenho conta</button>
-  </form>
-</section>
-
-<section id="app" class="oculto">
-  <header>
-    <button class="icone" id="menu" aria-label="Conversas">☰</button>
-    <strong>Jarvis</strong>
-    <span class="saldo" id="saldo"></span>
-    <button class="icone" id="nova">+ Nova</button>
-    <button class="icone" id="sair">Sair</button>
+<!-- ============================================================ LANDING -->
+<div id="landing" class="oculto">
+  <header class="topo">
+    <div class="marca"><svg viewBox="0 0 40 40" data-logo></svg>Jarvis</div>
+    <nav>
+      <a class="oc" href="#como">Como funciona</a>
+      <a class="oc" href="#recursos">Recursos</a>
+      <a class="oc" href="#precos">Preços</a>
+      <button class="btn fantasma peq" data-abrir="entrar">Entrar</button>
+      <button class="btn prim peq" data-abrir="cadastro">Começar grátis</button>
+    </nav>
   </header>
-  <div id="corpo">
-    <aside id="lateral" class="oculto"></aside>
-    <main>
-      <div id="mensagens"><div class="coluna" id="lista"></div></div>
-      <form id="envio"><div class="coluna">
-        <textarea id="texto" rows="1" placeholder="Escreva o que você precisa…"></textarea>
-        <button id="enviar" type="submit">Enviar</button>
-      </div></form>
-    </main>
-  </div>
-</section>
+
+  <section class="secao hero">
+    <div>
+      <span class="selo"><i></i> Seu assistente que trabalha nos seus computadores</span>
+      <h1>Converse.<br>O Jarvis <span class="grad">faz o resto.</span></h1>
+      <p class="lead">Um assistente de IA em português que lembra de tudo, cuida de cada computador da sua casa ou empresa e executa tarefas por você, do celular, até enquanto você dorme.</p>
+      <div class="acoes">
+        <button class="btn prim grande" data-abrir="cadastro">Criar meu Jarvis grátis →</button>
+        <a class="btn grande fantasma" href="#como">Ver como funciona</a>
+      </div>
+      <div class="prova"><span><b>Sem cartão</b> para começar</span><span><b>2 minutos</b> para conectar um PC</span><span>Windows · Mac · Linux</span></div>
+    </div>
+    <div class="cena" id="cena">
+      <svg class="orbita" id="orbita-hero" viewBox="0 0 500 500"></svg>
+      <div class="balao eu" id="b1"><small>Você · pelo celular</small>Meu notebook está lento. Dá um jeito?</div>
+      <div class="balao ele" id="b2"><small>Jarvis</small>O <b>Notebook</b> está com o disco 94% cheio. Preparei uma limpeza dos arquivos temporários (3,1 GB). Posso rodar?<div class="acao"><span>Aprovar</span><span class="n">Ver comando</span></div></div>
+    </div>
+  </section>
+
+  <section class="secao" id="como">
+    <div class="titulo-secao"><div class="sobre">como funciona</div><h2>Três passos e seus computadores<br>passam a <span class="grad">trabalhar sozinhos</span></h2><p>Nada de configurar servidor, abrir porta ou instalar programa complicado.</p></div>
+    <div class="passos">
+      <div class="passo"><div class="n">01</div><h3>Converse</h3><p>Peça o que quiser, do seu jeito: “escreve um e-mail”, “lembra que minha reunião é quinta”, “o PC do escritório está lento”.</p></div>
+      <div class="passo"><div class="n">02</div><h3>Conecte</h3><p>Em cada computador, cole um comando com o código que o Jarvis te dá. Ele aparece no seu mapa na hora.</p></div>
+      <div class="passo"><div class="n">03</div><h3>Delegue</h3><p>O Jarvis prepara a tarefa, você aprova com um toque, e acompanha tudo ao vivo de qualquer lugar.</p></div>
+    </div>
+  </section>
+
+  <section class="secao" id="recursos">
+    <div class="titulo-secao"><div class="sobre">recursos</div><h2>Um centro de comando<br>para a sua vida digital</h2></div>
+    <div class="recursos">
+      <div class="recurso"><div class="ic" data-ico="mapa"></div><div><h3>Mapa do parque</h3><p>Todas as suas máquinas num só lugar: quem está ligado, uso de CPU, memória e disco, e o que cada uma está fazendo agora.</p></div></div>
+      <div class="recurso"><div class="ic" data-ico="cerebro"></div><div><h3>Cérebro que lembra</h3><p>O Jarvis guarda o que importa em notas ligadas entre si. Ele aprende sobre você e nunca esquece um detalhe.</p></div></div>
+      <div class="recurso"><div class="ic" data-ico="tarefas"></div><div><h3>Tarefas com aprovação</h3><p>Nada roda sem você deixar. Veja o comando, aprove e acompanhe o resultado em tempo real.</p></div></div>
+      <div class="recurso"><div class="ic" data-ico="rotinas"></div><div><h3>Rotinas e sugestões</h3><p>Backup toda manhã, limpeza semanal, relatórios. E sugestões diárias do que fazer com as máquinas que você tem.</p></div></div>
+    </div>
+  </section>
+
+  <section class="secao">
+    <div class="titulo-secao"><div class="sobre">na prática</div><h2>Peça como pediria a uma pessoa</h2></div>
+    <div class="casos">
+      <span class="caso"><b>“Libera espaço</b> no notebook”</span>
+      <span class="caso"><b>“Faz backup</b> das fotos toda noite”</span>
+      <span class="caso"><b>“Qual PC</b> está mais livre agora?”</span>
+      <span class="caso"><b>“Organiza</b> minha pasta Downloads”</span>
+      <span class="caso"><b>“Lembra que</b> meu filho faz aniversário dia 12”</span>
+      <span class="caso"><b>“Responde</b> esse cliente no WhatsApp”</span>
+      <span class="caso"><b>“Me avisa</b> se o servidor cair”</span>
+      <span class="caso"><b>“Explica</b> esse boleto em palavras simples”</span>
+    </div>
+  </section>
+
+  <section class="secao" id="precos">
+    <div class="titulo-secao"><div class="sobre">preços</div><h2>Comece grátis. Cresça quando quiser.</h2><p>Sem fidelidade. Cancele quando quiser.</p></div>
+    <div class="precos" id="precos-landing"></div>
+  </section>
+
+  <section class="secao">
+    <div class="cta-final">
+      <h2>Seu Jarvis está a <span class="grad">um clique</span>.</h2>
+      <p>Crie sua conta em 10 segundos e converse com ele agora mesmo.</p>
+      <button class="btn prim grande" data-abrir="cadastro">Criar meu Jarvis grátis →</button>
+    </div>
+  </section>
+  <footer>Jarvis · feito no Brasil · <a href="#" data-abrir="entrar">Entrar</a></footer>
+</div>
+
+<!-- ================================================================ APP -->
+<div id="app" class="oculto">
+  <aside class="lateral">
+    <div class="marca"><svg viewBox="0 0 40 40" data-logo></svg>Jarvis</div>
+    <div id="nav-lateral"></div>
+    <div class="rodape">
+      <div class="cartao-plano" id="cartao-plano"></div>
+      <div class="usuario"><div class="avatar" id="avatar"></div><div style="min-width:0"><div class="nm" id="nome-usuario"></div><button class="link-btn" id="sair" style="font-size:12px;color:var(--tenue)">Sair</button></div></div>
+    </div>
+  </aside>
+  <main class="conteudo" id="conteudo"></main>
+  <nav class="baixa" id="nav-baixa"></nav>
+</div>
+
+<div id="modais"></div>
 
 <script>
-const $ = (s) => document.querySelector(s);
-let modoCadastro = true, conversaId = null, tarefas = [], ocupado = false;
+"use strict";
+/* ------------------------------------------------------------ utilidades */
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+const esc = (t) => String(t ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const brl = (v) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+const ICONES = {
+  inicio: '<path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/>',
+  jarvis: '<circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/>',
+  mapa: '<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/>',
+  tarefas: '<path d="M9 6h11M9 12h11M9 18h11"/><path d="m3.5 6 1.5 1.5L7.5 5M3.5 12l1.5 1.5 2.5-2.5M3.5 18l1.5 1.5 2.5-2.5"/>',
+  cerebro: '<circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="7" r="2.5"/><circle cx="12" cy="18" r="2.5"/><circle cx="19" cy="17" r="1.8"/><path d="M8.3 7 15.6 7M7.2 8.2l3.7 7.6M16.9 9.3l-3.7 6.6M14.4 18.3l2.9-.8"/>',
+  rotinas: '<path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v5h-5"/><path d="M12 8v4l3 2"/>',
+  planos: '<path d="m12 3 2.6 5.6 6 .7-4.5 4.1 1.2 6-5.3-3-5.3 3 1.2-6L3.4 9.3l6-.7z"/>',
+  mais: '<path d="M12 5v14M5 12h14"/>',
+  pc: '<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/>',
+  copiar: '<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8"/>',
+};
+const ico = (n, tam = 20) => `<svg width="${tam}" height="${tam}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${ICONES[n] || ""}</svg>`;
+const LOGO = `<defs><radialGradient id="lg" cx="35%" cy="35%"><stop offset="0" stop-color="#b6fff9"/><stop offset=".45" stop-color="#3fd0c9"/><stop offset="1" stop-color="#173f63"/></radialGradient></defs>
+  <circle cx="20" cy="20" r="11" fill="url(#lg)"/><ellipse cx="20" cy="20" rx="18" ry="6.5" fill="none" stroke="#8b7bff" stroke-width="1.6" transform="rotate(-24 20 20)"/>
+  <circle cx="34.5" cy="13.5" r="2.2" fill="#e8eef8"/>`;
+$$("[data-logo]").forEach((s) => (s.innerHTML = LOGO));
+$$("[data-ico]").forEach((d) => (d.innerHTML = ico(d.dataset.ico, 24)));
+
+function toast(msg, ms = 3200) {
+  const t = document.createElement("div"); t.className = "toast"; t.textContent = msg;
+  document.body.appendChild(t); setTimeout(() => t.remove(), ms);
+}
 
 async function api(caminho, opcoes = {}) {
   const r = await fetch(caminho, { headers: { "Content-Type": "application/json" }, ...opcoes });
   if (!r.ok) {
     let msg = "Algo deu errado. Tente de novo.";
-    try { msg = (await r.json()).detail || msg; } catch {}
-    if (typeof msg !== "string") msg = "Confira os dados digitados.";
-    const e = new Error(msg); e.status = r.status; throw e;
+    try { const d = (await r.json()).detail; msg = typeof d === "string" ? d : "Confira os dados digitados."; } catch {}
+    const e = new Error(msg); e.status = r.status;
+    if (r.status === 401 && estado.usuario) { estado.usuario = null; mostrarLanding(); }
+    if (r.status === 402) modalUpgrade(msg);
+    throw e;
   }
   return r.json();
 }
+const post = (c, corpo) => api(c, { method: "POST", body: corpo ? JSON.stringify(corpo) : undefined });
 
-function mostrarEntrada() { $("#app").classList.add("oculto"); $("#entrada").classList.remove("oculto"); }
-function mostrarSaldo(c) { $("#saldo").textContent = `${c} créditos`; }
+function quando(iso) {
+  if (!iso) return "—";
+  const s = (Date.now() - new Date(iso).getTime()) / 1000;
+  if (s < 60) return "agora"; if (s < 3600) return `há ${Math.floor(s / 60)} min`;
+  if (s < 86400) return `há ${Math.floor(s / 3600)} h`; return new Date(iso).toLocaleDateString("pt-BR");
+}
+const NOME_STATUS = { concluido: "concluída", executando: "executando", pendente: "na fila", aguardando: "aguarda você", falhou: "falhou", cancelado: "cancelada" };
+const st = (s) => `<span class="st ${esc(s)}">${esc(NOME_STATUS[s] || s)}</span>`;
 
-$("#alternar").onclick = () => {
-  modoCadastro = !modoCadastro;
-  $("#campo-nome").classList.toggle("oculto", !modoCadastro);
-  $("#botao-entrada").textContent = modoCadastro ? "Criar conta grátis" : "Entrar";
-  $("#alternar").textContent = modoCadastro ? "Já tenho conta" : "Quero criar uma conta";
-  $("#erro-entrada").textContent = "";
-};
+/* ------------------------------------------------------------ céu animado */
+(function ceu() {
+  const c = $("#ceu"), x = c.getContext("2d"); let pts = [];
+  function tam() {
+    c.width = innerWidth * devicePixelRatio; c.height = innerHeight * devicePixelRatio;
+    const n = Math.min(90, Math.floor(innerWidth * innerHeight / 16000));
+    pts = Array.from({ length: n }, () => ({ x: Math.random() * c.width, y: Math.random() * c.height,
+      vx: (Math.random() - .5) * .15 * devicePixelRatio, vy: (Math.random() - .5) * .15 * devicePixelRatio, r: Math.random() * 1.4 + .3 }));
+  }
+  tam(); addEventListener("resize", tam);
+  const mov = !matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function q() {
+    x.clearRect(0, 0, c.width, c.height);
+    const g = x.createRadialGradient(c.width * .75, c.height * .1, 0, c.width * .75, c.height * .1, c.width * .7);
+    g.addColorStop(0, "rgba(63,208,201,.08)"); g.addColorStop(.5, "rgba(139,123,255,.04)"); g.addColorStop(1, "transparent");
+    x.fillStyle = g; x.fillRect(0, 0, c.width, c.height);
+    const d = 130 * devicePixelRatio;
+    for (const p of pts) {
+      if (mov) { p.x += p.vx; p.y += p.vy; if (p.x < 0 || p.x > c.width) p.vx *= -1; if (p.y < 0 || p.y > c.height) p.vy *= -1; }
+      x.fillStyle = "rgba(160,220,230,.55)"; x.beginPath(); x.arc(p.x, p.y, p.r * devicePixelRatio, 0, 7); x.fill();
+    }
+    for (let i = 0; i < pts.length; i++) for (let j = i + 1; j < pts.length; j++) {
+      const a = pts[i], b = pts[j], dd = Math.hypot(a.x - b.x, a.y - b.y);
+      if (dd < d) { x.strokeStyle = `rgba(63,208,201,${.12 * (1 - dd / d)})`; x.lineWidth = devicePixelRatio * .7; x.beginPath(); x.moveTo(a.x, a.y); x.lineTo(b.x, b.y); x.stroke(); }
+    }
+    if (mov) requestAnimationFrame(q);
+  }
+  q();
+})();
 
-$("#form-entrada").onsubmit = async (ev) => {
-  ev.preventDefault();
-  const corpo = { email: $("#email").value, senha: $("#senha").value };
-  if (modoCadastro) corpo.nome = $("#nome").value || $("#email").value.split("@")[0];
-  try {
-    const u = await api(modoCadastro ? "/api/cadastro" : "/api/entrar", { method: "POST", body: JSON.stringify(corpo) });
-    iniciar(u);
-  } catch (e) { $("#erro-entrada").textContent = e.message; }
-};
-
-$("#sair").onclick = async () => { await api("/api/sair", { method: "POST" }); location.reload(); };
-$("#nova").onclick = () => { conversaId = null; boasVindas(); };
-$("#menu").onclick = () => $("#lateral").classList.toggle("oculto");
-
-async function iniciar(u) {
-  $("#entrada").classList.add("oculto"); $("#app").classList.remove("oculto");
-  mostrarSaldo(u.creditos);
-  if (window.innerWidth > 720) $("#lateral").classList.remove("oculto");
-  tarefas = await api("/api/tarefas");
-  boasVindas(u.nome);
-  carregarConversas();
+/* --------------------------------------------- mapa (hero e painel usam) */
+// Desenha o Jarvis no centro e as máquinas em órbita. Linhas pulsam quando a
+// máquina está trabalhando. Estado sempre com texto, não só cor.
+function desenharMapa(svg, maquinas, { demo = false, aoClicar } = {}) {
+  // Em tela estreita (celular) o mapa vira quadrado, com nós maiores.
+  const estreito = !demo && svg.clientWidth && svg.clientWidth < 560;
+  const W = demo || estreito ? 500 : 800, H = 500, cx = W / 2, cy = H / 2;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  if (estreito) svg.style.aspectRatio = "1 / 1";
+  const n = maquinas.length, rx = demo ? 175 : estreito ? 170 : Math.min(330, 230 + n * 25), ry = demo ? 175 : estreito ? 165 : 185;
+  const k = demo ? 1 : estreito ? 1.25 : 1.3; // escala dos nós
+  let s = `<defs>
+    <radialGradient id="nucleo" cx="38%" cy="35%"><stop offset="0" stop-color="#d4fffb"/><stop offset=".4" stop-color="#3fd0c9"/><stop offset="1" stop-color="#103457"/></radialGradient>
+    <radialGradient id="halo"><stop offset="0" stop-color="rgba(63,208,201,.35)"/><stop offset="1" stop-color="rgba(63,208,201,0)"/></radialGradient>
+    <filter id="brilho"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>`;
+  s += `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="none" stroke="#1d2940" stroke-dasharray="2 6"/>`;
+  s += `<ellipse cx="${cx}" cy="${cy}" rx="${rx * .55}" ry="${ry * .55}" fill="none" stroke="#162033"/>`;
+  const pos = maquinas.map((m, i) => {
+    const a = -Math.PI / 2 + (i / Math.max(n, 1)) * Math.PI * 2 + (demo || n === 2 ? Math.PI / 4 : 0);
+    return [cx + Math.cos(a) * rx, cy + Math.sin(a) * ry];
+  });
+  maquinas.forEach((m, i) => {
+    const [x, y] = pos[i], on = m.online, ex = on && m.job_atual;
+    const cor = ex ? "#5aa9ff" : on ? "#3fd0c9" : "#3a4558";
+    s += `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="${cor}" stroke-opacity="${on ? .55 : .35}" stroke-width="${on ? 1.6 : 1}" ${on ? "" : 'stroke-dasharray="4 5"'}/>`;
+    if (on) s += `<circle r="${ex ? 4 : 2.8}" fill="${ex ? "#5aa9ff" : "#7ae5df"}" filter="url(#brilho)"><animateMotion dur="${ex ? 1.4 : 3 + i * .4}s" repeatCount="indefinite" path="M${cx},${cy} L${x},${y}" ${ex ? "" : 'keyPoints="1;0" keyTimes="0;1" calcMode="linear"'}/></circle>`;
+  });
+  s += `<circle cx="${cx}" cy="${cy}" r="110" fill="url(#halo)"><animate attributeName="r" values="95;118;95" dur="4s" repeatCount="indefinite"/></circle>`;
+  s += `<circle cx="${cx}" cy="${cy}" r="46" fill="url(#nucleo)" filter="url(#brilho)"/>`;
+  s += `<ellipse cx="${cx}" cy="${cy}" rx="74" ry="20" fill="none" stroke="#8b7bff" stroke-width="2" transform="rotate(-22 ${cx} ${cy})" opacity=".9"/>`;
+  s += `<text x="${cx}" y="${cy + 80}" text-anchor="middle" fill="#e8eef8" font-size="15" font-weight="700" font-family="Space Grotesk" letter-spacing="2">JARVIS</text>`;
+  maquinas.forEach((m, i) => {
+    const [x, y] = pos[i], on = m.online, ex = on && m.job_atual;
+    const cor = ex ? "#5aa9ff" : on ? "#3fd0c9" : "#4b566b";
+    const rotulo = ex ? "trabalhando" : on ? "ligada" : "desligada";
+    const cpu = on && m.metricas && m.metricas.cpu_pct != null ? ` · CPU ${Math.round(m.metricas.cpu_pct)}%` : "";
+    s += `<g class="no-maq" data-i="${i}" tabindex="0" role="button" aria-label="${esc(m.apelido)}: ${rotulo}">
+      <g transform="translate(${x} ${y}) scale(${k})">
+      ${on ? `<circle r="30" fill="${cor}" opacity=".12"><animate attributeName="opacity" values=".08;.22;.08" dur="${ex ? 1.2 : 3}s" repeatCount="indefinite"/></circle>` : ""}
+      <rect x="-22" y="-22" width="44" height="44" rx="12" fill="#0e1522" stroke="${cor}" stroke-width="1.6"/>
+      <g transform="translate(-11 -11)" fill="none" stroke="${on ? cor : "#66717f"}" stroke-width="1.7" stroke-linecap="round"><rect x="1.5" y="3" width="19" height="12" rx="2"/><path d="M7 19h8M11 15v4"/></g>
+      <text y="40" text-anchor="middle" fill="#e8eef8" font-size="13" font-weight="600">${esc(m.apelido)}</text>
+      <text y="56" text-anchor="middle" fill="${on ? cor : "#8a95a8"}" font-size="11">${on ? "● " : "○ "}${rotulo}${esc(cpu)}</text></g></g>`;
+  });
+  if (!n && !demo) s += `<text x="${cx}" y="${cy + 120}" text-anchor="middle" fill="#9aa8bf" font-size="14">Nenhuma máquina conectada ainda</text>`;
+  svg.innerHTML = s;
+  if (aoClicar) $$(".no-maq", svg).forEach((g) => { const f = () => aoClicar(maquinas[+g.dataset.i]); g.onclick = f; g.onkeydown = (e) => e.key === "Enter" && f(); });
 }
 
-function boasVindas(nome) {
-  const lista = $("#lista"); lista.innerHTML = "";
-  const div = document.createElement("div"); div.className = "boas-vindas";
-  const h = document.createElement("h2"); h.textContent = nome ? `Olá, ${nome.split(" ")[0]}! Como posso ajudar?` : "Como posso ajudar?";
-  const p = document.createElement("p"); p.textContent = "Escolha uma ideia abaixo ou escreva do seu jeito.";
-  const grade = document.createElement("div"); grade.className = "grade";
-  for (const t of tarefas) {
-    const b = document.createElement("button"); b.className = "tarefa"; b.type = "button";
-    b.innerHTML = `<div></div><b></b><span></span>`;
-    b.children[0].textContent = t.icone; b.children[1].textContent = t.titulo; b.children[2].textContent = t.descricao;
-    b.onclick = () => { const ta = $("#texto"); ta.value = t.prompt; ta.focus(); ajustar(); };
-    grade.appendChild(b);
+/* ------------------------------------------------------------- landing */
+const estado = { usuario: null, planos: [], aba: "inicio", parque: null, conversaId: null, tarefas: [], ocupado: false, timers: [] };
+
+async function carregarPlanos() {
+  if (!estado.planos.length) estado.planos = await api("/api/planos");
+  return estado.planos;
+}
+function cartoesPreco(planos, atual) {
+  return planos.map((p) => `<div class="preco ${p.destaque ? "destaque" : ""}">
+    ${p.destaque ? '<span class="rot">Mais escolhido</span>' : ""}
+    <h3>${esc(p.nome)}</h3><p class="desc">${esc(p.descricao)}</p>
+    <div class="valor">${p.preco_brl ? brl(p.preco_brl) : "R$ 0"}<small>${p.preco_brl ? " /mês" : ""}</small></div>
+    <ul>${p.itens.map((i) => `<li>${esc(i)}</li>`).join("")}</ul>
+    ${atual === undefined ? `<button class="btn ${p.destaque ? "prim" : ""}" data-abrir="cadastro">${p.preco_brl ? "Começar grátis" : "Criar conta grátis"}</button>`
+      : atual === p.id ? `<button class="btn" disabled>Seu plano atual</button>`
+      : p.preco_brl ? `<button class="btn ${p.destaque ? "prim" : ""}" data-assinar="${p.id}">Quero o ${esc(p.nome)}</button>` : ""}
+  </div>`).join("");
+}
+
+function animarHero() {
+  const demo = [
+    { apelido: "Notebook", online: true, job_atual: 1, metricas: { cpu_pct: 71 } },
+    { apelido: "PC do escritório", online: true, metricas: { cpu_pct: 12 } },
+    { apelido: "Servidor", online: true, metricas: { cpu_pct: 4 } },
+    { apelido: "PC da sala", online: false },
+  ];
+  desenharMapa($("#orbita-hero"), demo, { demo: true });
+  setTimeout(() => $("#b1").classList.add("vis"), 600);
+  setTimeout(() => $("#b2").classList.add("vis"), 1900);
+}
+
+async function mostrarLanding() {
+  pararTimers();
+  $("#app").classList.add("oculto"); $("#landing").classList.remove("oculto");
+  animarHero();
+  $("#precos-landing").innerHTML = cartoesPreco(await carregarPlanos());
+}
+
+document.addEventListener("click", (e) => {
+  const a = e.target.closest("[data-abrir]");
+  if (a) { e.preventDefault(); modalConta(a.dataset.abrir); }
+  const s = e.target.closest("[data-assinar]");
+  if (s) assinar(s.dataset.assinar);
+});
+
+function abrirModal(html, largo = false) {
+  const m = $("#modais");
+  m.innerHTML = `<div class="modal-fundo"><div class="modal ${largo ? "largo" : ""}" role="dialog" aria-modal="true"><button class="fechar" aria-label="Fechar">×</button>${html}</div></div>`;
+  const fechar = () => { m.innerHTML = ""; estado.aoFecharModal && estado.aoFecharModal(); estado.aoFecharModal = null; };
+  $(".fechar", m).onclick = fechar;
+  $(".modal-fundo", m).onclick = (e) => e.target.classList.contains("modal-fundo") && fechar();
+  return { el: $(".modal", m), fechar };
+}
+
+function modalConta(modo) {
+  const cad = modo === "cadastro";
+  const { el } = abrirModal(`<h2>${cad ? "Crie seu Jarvis" : "Bem-vindo de volta"}</h2>
+    <p class="sub">${cad ? "Grátis, sem cartão. Leva 10 segundos." : "Entre para ver seu parque."}</p>
+    <form id="f-conta">
+      ${cad ? '<label class="campo"><span>Seu nome</span><input name="nome" autocomplete="name" required></label>' : ""}
+      <label class="campo"><span>E-mail</span><input name="email" type="email" autocomplete="email" required></label>
+      <label class="campo"><span>Senha ${cad ? "(mínimo 8 caracteres)" : ""}</span><input name="senha" type="password" minlength="8" autocomplete="${cad ? "new-password" : "current-password"}" required></label>
+      <button class="btn prim grande" style="width:100%;margin-top:8px">${cad ? "Criar conta grátis" : "Entrar"}</button>
+      <div class="erro-txt" id="erro-conta"></div>
+    </form>
+    <p style="text-align:center;margin:8px 0 0;color:var(--suave);font-size:14px">${cad ? "Já tem conta?" : "Ainda não tem conta?"} <button class="link-btn" data-abrir="${cad ? "entrar" : "cadastro"}">${cad ? "Entrar" : "Criar grátis"}</button></p>`);
+  $("input", el).focus();
+  $("#f-conta").onsubmit = async (ev) => {
+    ev.preventDefault();
+    const f = new FormData(ev.target), corpo = Object.fromEntries(f);
+    const b = $("button.prim", el); b.disabled = true;
+    try {
+      const u = await post(cad ? "/api/cadastro" : "/api/entrar", corpo);
+      $("#modais").innerHTML = ""; iniciarApp(u, cad);
+    } catch (e) { $("#erro-conta").textContent = e.message; b.disabled = false; }
+  };
+}
+
+function modalUpgrade(motivo) {
+  carregarPlanos().then((planos) => {
+    abrirModal(`<h2>Desbloqueie o <span class="grad">parque inteiro</span></h2>
+      <p class="sub">${esc(motivo || "Recurso do plano Pro.")}</p>
+      <div class="precos" style="grid-template-columns:1fr;gap:12px">${cartoesPreco(planos.filter((p) => p.id !== "gratis"), estado.usuario?.plano)}</div>`, true);
+  });
+}
+
+async function assinar(plano) {
+  try {
+    await post(`/api/planos/${plano}/interesse`);
+    abrirModal(`<h2>Você está na lista! 🎉</h2><p class="sub">O pagamento por Pix e cartão está chegando. Você será um dos primeiros a poder assinar, e quem entrou na lista ganha um desconto de lançamento.</p><button class="btn prim" style="width:100%" onclick="document.getElementById('modais').innerHTML=''">Combinado</button>`);
+  } catch (e) { toast(e.message); }
+}
+
+/* ----------------------------------------------------------------- app */
+const ABAS = [["inicio", "Início"], ["jarvis", "Jarvis"], ["parque", "Parque"], ["tarefas", "Tarefas"], ["cerebro", "Cérebro"], ["rotinas", "Rotinas"], ["planos", "Planos"]];
+
+function pararTimers() { estado.timers.forEach(clearInterval); estado.timers = []; }
+function repetir(fn, ms) { estado.timers.push(setInterval(fn, ms)); }
+
+function montarNav() {
+  const html = (baixa) => ABAS.filter(([id]) => !baixa || id !== "rotinas").map(([id, nome]) =>
+    `<button class="nav-it ${estado.aba === id ? "ativo" : ""}" data-aba="${id}">${ico(id === "parque" ? "mapa" : id)}<span>${nome}</span>${id === "tarefas" && estado.aguardando ? `<span class="cont">${estado.aguardando}</span>` : ""}</button>`).join("");
+  $("#nav-lateral").innerHTML = html(false); $("#nav-baixa").innerHTML = html(true);
+  $$("[data-aba]").forEach((b) => (b.onclick = () => irPara(b.dataset.aba)));
+  const u = estado.usuario, plano = estado.planos.find((p) => p.id === u.plano);
+  $("#cartao-plano").innerHTML = u.plano === "pro"
+    ? `<b>Plano Pro</b><p>${u.creditos} créditos disponíveis.</p>`
+    : `<b>Plano ${esc(plano?.nome || u.plano)}</b><p>${u.creditos} créditos · conecte o parque inteiro no Pro.</p><button class="btn prim peq" style="width:100%" data-assinar-ir>Conhecer o Pro</button>`;
+  const bt = $("[data-assinar-ir]"); if (bt) bt.onclick = () => irPara("planos");
+  $("#avatar").textContent = (u.nome || "?")[0].toUpperCase(); $("#nome-usuario").textContent = u.nome;
+}
+
+async function iniciarApp(u, novo = false) {
+  estado.usuario = u;
+  await carregarPlanos();
+  $("#landing").classList.add("oculto"); $("#app").classList.remove("oculto");
+  $("#sair").onclick = async () => { await post("/api/sair"); location.reload(); };
+  const destino = location.hash.slice(1);
+  irPara(ABAS.some(([a]) => a === destino) ? destino : "inicio");
+  if (novo) setTimeout(() => toast(`Bem-vindo, ${u.nome.split(" ")[0]}! Você ganhou ${u.creditos} créditos para começar.`, 5000), 400);
+}
+
+async function atualizarUsuario() {
+  try { estado.usuario = await api("/api/eu"); montarNav(); } catch {}
+}
+
+function irPara(aba) {
+  pararTimers(); estado.fecharGaveta && estado.fecharGaveta(); $("#modais").innerHTML = ""; estado.aba = aba; if (location.hash !== "#" + aba) history.pushState(null, "", "#" + aba);
+  montarNav(); window.scrollTo(0, 0);
+  ({ inicio: telaInicio, jarvis: telaJarvis, parque: telaParque, tarefas: telaTarefas, cerebro: telaCerebro, rotinas: telaRotinas, planos: telaPlanos })[aba]();
+}
+
+function barra(titulo, dir = "") {
+  const u = estado.usuario;
+  return `<div class="barra"><h1>${titulo}</h1><div class="dir">${dir}<span class="pilula ${u.creditos < 50 ? "alerta" : ""}" title="Créditos pagam o uso da IA">⚡ <b>${u.creditos}</b> créditos</span></div></div>`;
+}
+
+/* ---- início */
+async function telaInicio() {
+  const c = $("#conteudo"), u = estado.usuario;
+  const hora = new Date().getHours(), saud = hora < 12 ? "Bom dia" : hora < 18 ? "Boa tarde" : "Boa noite";
+  c.innerHTML = barra(`${saud}, ${esc(u.nome.split(" ")[0])}`) + `
+    <div class="stats" id="stats"></div>
+    <div class="grade-inicio">
+      <div class="painel"><h2>Mapa do parque <span class="acao-dir"><button class="btn peq" id="b-conectar">${ico("mais", 16)} Conectar máquina</button></span></h2>
+        <svg class="mapa" id="mapa"></svg>
+        <div class="legenda"><span style="color:var(--ciano)">● ligada</span><span style="color:var(--exec)">● trabalhando</span><span style="color:var(--morto)">○ desligada</span></div>
+      </div>
+      <div style="display:grid;gap:18px;align-content:start">
+        <div class="painel"><h2>Sugestões do Jarvis <span class="acao-dir"><button class="btn peq" id="b-sug">Atualizar</button></span></h2><div class="sugestoes" id="sugs"></div></div>
+        <div class="painel"><h2>Atividade recente <span class="acao-dir"><button class="btn peq fantasma" data-ir="tarefas">Ver tudo</button></span></h2><div class="lista-jobs" id="recentes"></div></div>
+      </div>
+    </div>`;
+  $("#b-conectar").onclick = modalConectar;
+  $("[data-ir]").onclick = () => irPara("tarefas");
+  $("#b-sug").onclick = gerarSugestoes;
+  const atualizar = async () => {
+    const [p, jobs] = await Promise.all([api("/api/parque"), api("/api/jobs?limite=6")]);
+    estado.parque = p; estado.aguardando = jobs.filter((j) => j.status === "aguardando").length;
+    const r = p.resumo;
+    $("#stats").innerHTML = `
+      <div class="stat"><div class="rot">Máquinas ligadas</div><div class="num">${r.online}<small> / ${r.maquinas}</small></div><div class="det">${r.maquinas ? "no seu parque" : "conecte a primeira"}</div></div>
+      <div class="stat"><div class="rot">Tarefas concluídas</div><div class="num">${r.concluidos_24h}</div><div class="det">nas últimas 24 h</div></div>
+      <div class="stat"><div class="rot">Trabalhando agora</div><div class="num">${r.executando}</div><div class="det">${r.na_fila} na fila</div></div>
+      <div class="stat"><div class="rot">Créditos</div><div class="num">${estado.usuario.creditos}</div><div class="det">${estado.usuario.plano === "gratis" ? "plano Grátis" : "plano " + estado.usuario.plano}</div></div>`;
+    desenharMapa($("#mapa"), p.maquinas, { aoClicar: (m) => irPara("parque") });
+    const cta = $("#cta-mapa");
+    if (!p.maquinas.length && !cta) {
+      $("#mapa").insertAdjacentHTML("afterend", `<div id="cta-mapa" style="text-align:center;margin:-70px 0 18px;position:relative"><button class="btn prim">${ico("mais", 16)} Conectar meu primeiro computador</button><div style="color:var(--tenue);font-size:13px;margin-top:8px">Leva 2 minutos · Windows, Mac ou Linux</div></div>`);
+      $("#cta-mapa button").onclick = modalConectar;
+    } else if (p.maquinas.length && cta) cta.remove();
+    $("#recentes").innerHTML = jobs.length ? jobs.map(linhaJob).join("") :
+      `<div class="vazio" style="padding:16px"><p>Nenhuma tarefa ainda. Peça algo ao Jarvis!</p><button class="btn prim peq" data-ir2>Falar com o Jarvis</button></div>`;
+    ligarJobs($("#recentes")); const b2 = $("[data-ir2]"); if (b2) b2.onclick = () => irPara("jarvis");
+  };
+  await atualizar(); repetir(atualizar, 6000);
+  carregarSugestoes();
+}
+
+async function carregarSugestoes() {
+  const d = await api("/api/sugestoes"), el = $("#sugs"); if (!el) return;
+  if (!d.sugestoes.length) {
+    el.innerHTML = `<div class="vazio" style="padding:14px"><p>O Jarvis analisa seu parque e sugere o que fazer hoje.</p><button class="btn prim peq" id="b-sug2">Gerar sugestões</button></div>`;
+    $("#b-sug2").onclick = gerarSugestoes; return;
   }
-  div.append(h, p, grade); lista.appendChild(div);
+  el.innerHTML = d.sugestoes.map((s, i) => `<div class="sug"><span class="tg">${esc(s.tag)}${s.maquina ? " · " + esc(s.maquina) : ""}</span><b>${esc(s.titulo)}</b><p>${esc(s.descricao)}</p><span class="mot">Por quê: ${esc(s.motivo)}</span><button class="btn peq" data-sug="${i}">Pedir ao Jarvis →</button></div>`).join("")
+    + `<div style="font-size:12px;color:var(--tenue)">Atualizadas ${quando(d.gerado_em)}</div>`;
+  $$("[data-sug]", el).forEach((b) => (b.onclick = () => { estado.rascunho = d.sugestoes[+b.dataset.sug].pergunta; irPara("jarvis"); }));
+}
+async function gerarSugestoes() {
+  const el = $("#sugs"); el.innerHTML = `<div class="esperando"><i></i>O Jarvis está analisando seu parque…</div>`;
+  try { const d = await post("/api/sugestoes/gerar"); estado.usuario.creditos = d.creditos; montarNav(); } catch (e) { toast(e.message); }
+  carregarSugestoes();
+}
+
+function linhaJob(j) {
+  return `<button class="job" data-job="${j.id}">${st(j.status)}<div style="min-width:0"><div class="tt">${esc(j.titulo || j.tipo)}</div>
+    <div class="mt">${esc(j.agente || j.tags)} · ${quando(j.criado_em)}${j.mensagem ? " · " + esc(j.mensagem) : ""}</div>
+    ${j.status === "executando" ? `<div class="barra-prog"><i style="width:${Math.max(8, j.progresso)}%"></i></div>` : ""}</div><span class="id">#${j.id}</span></button>`;
+}
+function ligarJobs(el) { $$("[data-job]", el).forEach((b) => (b.onclick = () => abrirJob(+b.dataset.job))); }
+
+/* ---- conectar máquina */
+async function modalConectar() {
+  let d;
+  try { d = await post("/api/parque/parear"); } catch (e) { return; }
+  const antes = (estado.parque?.maquinas || []).length;
+  const so = /Win/.test(navigator.platform) ? "windows" : "linux";
+  const { el, fechar } = abrirModal(`<h2>Conectar um computador</h2>
+    <p class="sub">No computador que você quer conectar, abra o terminal e cole o comando abaixo. Precisa ter Python 3 instalado.</p>
+    <div class="codigo-grande">${esc(d.codigo)}</div>
+    <p style="text-align:center;color:var(--tenue);font-size:12px;margin:0 0 6px">seu código · vale por 15 minutos</p>
+    <div class="abas"><button class="aba" data-so="windows">Windows (PowerShell)</button><button class="aba" data-so="linux">Mac / Linux (Terminal)</button></div>
+    <div class="cmd" id="cmd"><span id="cmd-txt"></span><button class="btn peq" id="copiar">${ico("copiar", 14)} Copiar</button></div>
+    <p style="color:var(--suave);font-size:13px">Esse computador vai executar as tarefas que <b>você aprovar</b> na sua conta. Você pode desconectá-lo quando quiser.</p>
+    <div class="esperando" id="esperando"><i></i>Esperando o computador se conectar…</div>`, true);
+  const mostrar = (s) => { $$("[data-so]", el).forEach((b) => b.classList.toggle("ativa", b.dataset.so === s)); $("#cmd-txt").textContent = d.comandos[s]; };
+  $$("[data-so]", el).forEach((b) => (b.onclick = () => mostrar(b.dataset.so))); mostrar(so);
+  $("#copiar").onclick = async () => { try { await navigator.clipboard.writeText($("#cmd-txt").textContent); toast("Comando copiado!"); } catch { toast("Selecione e copie o comando."); } };
+  const t = setInterval(async () => {
+    const p = await api("/api/parque");
+    if (p.maquinas.length > antes) {
+      clearInterval(t); const m = p.maquinas[p.maquinas.length - 1];
+      $("#esperando").innerHTML = `<span style="color:var(--ok);font-size:16px">✔ <b>${esc(m.apelido)}</b> conectado ao seu parque!</span>`;
+      setTimeout(() => { fechar(); irPara(estado.aba); }, 1800);
+    }
+  }, 3000);
+  estado.aoFecharModal = () => clearInterval(t);
+}
+
+/* ---- parque */
+async function telaParque() {
+  const c = $("#conteudo");
+  c.innerHTML = barra("Parque", `<button class="btn prim" id="b-con">${ico("mais", 16)} Conectar máquina</button>`) + `
+    <div class="painel" style="margin-bottom:18px"><svg class="mapa" id="mapa" style="aspect-ratio:16/7;min-height:260px"></svg></div>
+    <div class="maquinas" id="maqs"></div>`;
+  $("#b-con").onclick = modalConectar;
+  const atualizar = async () => {
+    const p = await api("/api/parque"); estado.parque = p;
+    desenharMapa($("#mapa"), p.maquinas, { aoClicar: (m) => document.getElementById("maq-" + m.id)?.scrollIntoView({ behavior: "smooth", block: "center" }) });
+    $("#maqs").innerHTML = p.maquinas.length ? p.maquinas.map(cartaoMaquina).join("") :
+      `<div class="painel vazio" style="grid-column:1/-1"><h3>Monte seu parque</h3><p>Conecte o primeiro computador e o Jarvis passa a cuidar dele: ver como está, rodar tarefas, avisar de problemas.</p><button class="btn prim" id="b-con2">Conectar meu computador</button></div>`;
+    const b2 = $("#b-con2"); if (b2) b2.onclick = modalConectar;
+    $$("[data-acao]").forEach((b) => (b.onclick = () => acaoMaquina(b.dataset.acao, p.maquinas.find((m) => m.id === +b.dataset.id))));
+  };
+  await atualizar(); repetir(atualizar, 8000);
+}
+
+function cartaoMaquina(m) {
+  const i = m.info || {}, mt = m.metricas || {};
+  const ias = [["tem_claude", "Claude Code"], ["tem_gemini", "Gemini"], ["tem_codex", "Codex"]].filter(([k]) => i[k]).map(([, n]) => `<span class="ficha ia">✦ ${n}</span>`).join("");
+  const med = (rot, v) => v == null ? "" : `<div class="medidor"><span>${rot}</span><div class="trilho"><i style="width:${Math.min(100, v)}%;${v > 85 ? "background:var(--pend)" : ""}"></i></div><b>${Math.round(v)}%</b></div>`;
+  const disco = (mt.discos || [])[0];
+  const discoPct = disco && disco.total_gb ? 100 - (disco.livre_gb / disco.total_gb) * 100 : null;
+  return `<div class="maq ${m.online ? "on" : ""}" id="maq-${m.id}">
+    <div class="cab"><div class="ico">${ico("pc", 22)}</div><div style="min-width:0"><div class="nm">${esc(m.apelido)}</div><div class="so">${esc(i.so || m.hostname)}${m.versao ? " · agente " + esc(m.versao.split("/")[0]) : ""}</div></div>
+      <span class="st ${m.online ? (m.job_atual ? "executando" : "online") : "offline"}">${m.online ? (m.job_atual ? "trabalhando" : "ligada") : "desligada"}</span></div>
+    <div class="fichas">${i.cpu ? `<span class="ficha">${esc(i.cpu.replace(/\(R\)|\(TM\)|CPU|Processor/g, "").trim())}</span>` : ""}${i.ram_total_mb ? `<span class="ficha">${Math.round(i.ram_total_mb / 1024)} GB RAM</span>` : ""}${i.gpu ? `<span class="ficha">${esc(i.gpu)}</span>` : ""}${ias}</div>
+    ${m.online ? med("CPU", mt.cpu_pct) + med("RAM", mt.ram_pct) + med("Disco", discoPct) : `<div style="color:var(--tenue);font-size:13px">Visto ${quando(m.visto_em)}. Tarefas para ela esperam na fila até ligar.</div>`}
+    <div class="acoes"><button class="btn peq" data-acao="tarefa" data-id="${m.id}">Nova tarefa</button><button class="btn peq fantasma" data-acao="renomear" data-id="${m.id}">Renomear</button><button class="btn peq fantasma perigo" data-acao="remover" data-id="${m.id}">Desconectar</button></div>
+  </div>`;
+}
+
+async function acaoMaquina(acao, m) {
+  if (acao === "tarefa") return modalNovaTarefa(m.hostname);
+  if (acao === "renomear") {
+    const { el, fechar } = abrirModal(`<h2>Renomear</h2><form id="f"><label class="campo"><span>Nome no painel</span><input name="apelido" value="${esc(m.apelido)}" maxlength="40" required></label><button class="btn prim" style="width:100%">Salvar</button></form>`);
+    $("#f", el).onsubmit = async (e) => { e.preventDefault(); await api(`/api/maquinas/${m.id}`, { method: "PATCH", body: JSON.stringify({ apelido: new FormData(e.target).get("apelido") }) }); fechar(); irPara("parque"); };
+  }
+  if (acao === "remover") {
+    const { el, fechar } = abrirModal(`<h2>Desconectar ${esc(m.apelido)}?</h2><p class="sub">O agente nesse computador perde o acesso na hora. O histórico de tarefas continua aqui.</p><div style="display:flex;gap:10px"><button class="btn" id="n" style="flex:1">Voltar</button><button class="btn perigo" id="s" style="flex:1">Desconectar</button></div>`);
+    $("#n", el).onclick = fechar;
+    $("#s", el).onclick = async () => { await api(`/api/maquinas/${m.id}`, { method: "DELETE" }); fechar(); irPara("parque"); };
+  }
+}
+
+function opcoesMaquinas(sel) {
+  return (estado.parque?.maquinas || []).map((m) => `<option value="${esc(m.hostname)}" ${m.hostname === sel ? "selected" : ""}>${esc(m.apelido)}${m.online ? "" : " (desligada)"}</option>`).join("");
+}
+
+async function modalNovaTarefa(maquina) {
+  if (!estado.parque) estado.parque = await api("/api/parque");
+  if (!estado.parque.maquinas.length) return modalConectar();
+  const { el, fechar } = abrirModal(`<h2>Nova tarefa</h2><p class="sub">Roda direto na máquina. Dica: peça ao Jarvis no chat e ele monta o comando para você.</p>
+    <form id="f"><div class="form-linha"><label class="campo"><span>Máquina</span><select name="maquina">${opcoesMaquinas(maquina)}</select></label>
+    <label class="campo"><span>Tipo</span><select name="tipo"><option value="shell">Comando (terminal)</option><option value="claude">Pedido ao Claude Code</option><option value="gemini">Pedido ao Gemini</option></select></label></div>
+    <label class="campo"><span>Título</span><input name="titulo" placeholder="Ex.: Ver espaço em disco" maxlength="120"></label>
+    <label class="campo"><span>Comando ou pedido</span><textarea name="texto" rows="4" required placeholder="df -h"></textarea></label>
+    <button class="btn prim" style="width:100%">Enviar para a máquina</button><div class="erro-txt" id="erro"></div></form>`, true);
+  $("#f", el).onsubmit = async (e) => {
+    e.preventDefault();
+    try { const r = await post("/api/jobs", Object.fromEntries(new FormData(e.target))); fechar(); abrirJob(r.id); }
+    catch (x) { $("#erro", el).textContent = x.message; }
+  };
+}
+
+/* ---- tarefas */
+async function telaTarefas() {
+  const c = $("#conteudo");
+  c.innerHTML = barra("Tarefas", `<button class="btn prim" id="b-nova">${ico("mais", 16)} Nova tarefa</button>`) + `
+    <div class="abas" id="filtros">${[["", "Todas"], ["aguardando", "Aguardando você"], ["executando", "Executando"], ["pendente", "Na fila"], ["concluido", "Concluídas"], ["falhou", "Falharam"]].map(([v, n]) => `<button class="aba ${(estado.filtro || "") === v ? "ativa" : ""}" data-f="${v}">${n}</button>`).join("")}</div>
+    <div class="lista-jobs" id="jobs"></div>`;
+  $("#b-nova").onclick = () => modalNovaTarefa();
+  $$("[data-f]").forEach((b) => (b.onclick = () => { estado.filtro = b.dataset.f; telaTarefas(); }));
+  const atualizar = async () => {
+    const jobs = await api("/api/jobs?limite=100" + (estado.filtro ? "&status=" + estado.filtro : ""));
+    $("#jobs").innerHTML = jobs.length ? jobs.map(linhaJob).join("") : `<div class="painel vazio"><h3>Nada por aqui</h3><p>As tarefas que você ou o Jarvis criarem aparecem nesta lista, com o resultado de cada uma.</p></div>`;
+    ligarJobs($("#jobs"));
+  };
+  await atualizar(); repetir(atualizar, 5000);
+}
+
+async function abrirJob(id) {
+  const fundo = document.createElement("div"); fundo.className = "gaveta-fundo";
+  const g = document.createElement("div"); g.className = "gaveta";
+  document.body.append(fundo, g);
+  let t;
+  estado.fecharGaveta && estado.fecharGaveta();
+  const fechar = () => { clearInterval(t); fundo.remove(); g.remove(); estado.fecharGaveta = null; };
+  estado.fecharGaveta = fechar;
+  fundo.onclick = fechar;
+  const render = async () => {
+    const j = await api(`/api/jobs/${id}`);
+    const comando = j.payload.comando || j.payload.prompt || "";
+    const saida = j.resultado?.stdout || j.resultado?.resposta || "";
+    g.innerHTML = `<button class="btn peq fantasma" id="fx">← Voltar</button>
+      <h2>${esc(j.titulo || j.tipo)}</h2>
+      <div class="meta">${st(j.status)}<span>#${j.id}</span><span>${esc(j.agente || j.tags)}</span><span>${j.tipo === "shell" ? "comando" : esc(j.tipo)}</span><span>criada ${quando(j.criado_em)}</span>${j.origem === "jarvis" ? "<span>✦ pelo Jarvis</span>" : ""}</div>
+      ${j.status === "executando" ? `<div class="barra-prog" style="margin-bottom:12px"><i style="width:${Math.max(8, j.progresso)}%"></i></div>` : ""}
+      <div class="painel" style="margin-bottom:12px"><h2>${j.tipo === "shell" ? "Comando" : "Pedido"}</h2><pre class="log">${esc(comando)}</pre></div>
+      ${j.mensagem ? `<p style="color:var(--suave)">${esc(j.mensagem)}</p>` : ""}
+      <div class="painel"><h2>Saída ${j.status === "executando" ? '<span class="digitando"></span>' : ""}</h2><pre class="log" id="log">${esc(j.log || saida || (j.status === "pendente" ? "Esperando a máquina pegar a tarefa…" : j.status === "aguardando" ? "Esta tarefa espera a sua aprovação." : "Sem saída."))}</pre></div>
+      <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap">
+        ${j.status === "aguardando" ? '<button class="btn prim" data-j="aprovar">Aprovar e executar</button>' : ""}
+        ${["aguardando", "pendente", "executando"].includes(j.status) ? '<button class="btn perigo" data-j="cancelar">Cancelar</button>' : '<button class="btn" data-j="repetir">Rodar de novo</button>'}
+      </div>`;
+    $("#fx", g).onclick = fechar;
+    const lg = $("#log", g); lg.scrollTop = lg.scrollHeight;
+    $$("[data-j]", g).forEach((b) => (b.onclick = async () => {
+      const r = await post(`/api/jobs/${id}/${b.dataset.j}`);
+      if (b.dataset.j === "repetir") { fechar(); return abrirJob(r.id); }
+      render();
+    }));
+    if (!["executando", "pendente", "aguardando"].includes(j.status)) clearInterval(t);
+  };
+  await render(); t = setInterval(render, 2000);
+}
+
+/* ---- jarvis (chat) */
+const ATALHOS = [
+  ["Como está meu parque?", "Me diga como estão minhas máquinas agora e se alguma precisa de atenção."],
+  ["Liberar espaço", "Veja qual máquina está com o disco mais cheio e prepare uma limpeza segura dos arquivos temporários."],
+  ["Lembrar algo", "Lembre que "],
+  ["Organizar Downloads", "Organize a pasta Downloads da minha máquina em pastas por tipo de arquivo."],
+  ["Escrever um e-mail", "Escreva um e-mail educado para "],
+  ["Explicar algo", "Explique em palavras simples: "],
+];
+
+async function telaJarvis() {
+  const c = $("#conteudo");
+  c.innerHTML = barra("Jarvis", `<button class="btn peq" id="nova">${ico("mais", 16)} Nova conversa</button>`) + `
+    <div class="chat"><div class="convs" id="convs"></div>
+      <div class="area"><div class="msgs" id="msgs"></div>
+        <form class="envio" id="envio"><textarea id="texto" rows="1" placeholder="Peça qualquer coisa ao Jarvis…"></textarea><button class="btn prim" id="enviar">Enviar</button></form></div></div>`;
+  $("#nova").onclick = () => { estado.conversaId = null; boasVindas(); carregarConversas(); };
+  const ta = $("#texto");
+  ta.addEventListener("input", ajustar);
+  ta.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey && innerWidth > 760) { e.preventDefault(); $("#envio").requestSubmit(); } });
+  $("#envio").onsubmit = (e) => { e.preventDefault(); enviar(); };
+  if (estado.conversaId) await abrirConversa(estado.conversaId); else boasVindas();
+  carregarConversas();
+  if (estado.rascunho) { ta.value = estado.rascunho; estado.rascunho = null; ajustar(); ta.focus(); }
+}
+function ajustar() { const ta = $("#texto"); ta.style.height = "auto"; ta.style.height = Math.min(ta.scrollHeight, 200) + "px"; }
+
+function boasVindas() {
+  const n = estado.usuario.nome.split(" ")[0];
+  $("#msgs").innerHTML = `<div class="boas"><svg class="orb" viewBox="0 0 40 40">${LOGO}</svg><h2>Olá, ${esc(n)}. Em que posso ajudar?</h2>
+    <p>Eu converso, lembro do que importa e trabalho nos seus computadores.</p>
+    <div class="atalhos">${ATALHOS.map(([t, p], i) => `<button class="atalho" data-at="${i}"><b>${esc(t)}</b><span>${esc(p.slice(0, 60))}${p.length > 60 ? "…" : ""}</span></button>`).join("")}</div></div>`;
+  $$("[data-at]").forEach((b) => (b.onclick = () => { const ta = $("#texto"); ta.value = ATALHOS[+b.dataset.at][1]; ta.focus(); ajustar(); }));
 }
 
 async function carregarConversas() {
-  const convs = await api("/api/conversas");
-  const lat = $("#lateral"); lat.innerHTML = "";
-  for (const c of convs) {
-    const b = document.createElement("button"); b.className = "conv" + (c.id === conversaId ? " ativa" : "");
-    b.textContent = c.titulo; b.onclick = () => abrirConversa(c.id);
-    lat.appendChild(b);
-  }
+  const convs = await api("/api/conversas"), el = $("#convs"); if (!el) return;
+  el.innerHTML = convs.map((c) => `<button class="conv ${c.id === estado.conversaId ? "ativa" : ""}" data-c="${c.id}">${esc(c.titulo)}</button>`).join("");
+  $$("[data-c]", el).forEach((b) => (b.onclick = () => abrirConversa(+b.dataset.c)));
 }
-
 async function abrirConversa(id) {
-  const c = await api(`/api/conversas/${id}`);
-  conversaId = id; $("#lista").innerHTML = "";
-  for (const m of c.mensagens) adicionar(m.papel, m.texto);
-  if (window.innerWidth <= 720) $("#lateral").classList.add("oculto");
-  carregarConversas();
+  const c = await api(`/api/conversas/${id}`); estado.conversaId = id; $("#msgs").innerHTML = "";
+  c.mensagens.forEach((m) => addMsg(m.papel, m.texto)); carregarConversas();
 }
+function addMsg(papel, texto) {
+  const boas = $(".boas"); if (boas) boas.remove();
+  const d = document.createElement("div"); d.className = "msg " + papel;
+  d.innerHTML = `<div class="quem">${papel === "user" ? esc((estado.usuario.nome || "?")[0].toUpperCase()) : ""}</div><div class="corpo"></div>`;
+  $(".corpo", d).textContent = texto; $("#msgs").appendChild(d); rolar(); return $(".corpo", d);
+}
+function rolar() { const m = $("#msgs"); if (m) m.scrollTop = m.scrollHeight; }
 
-function adicionar(papel, texto) {
-  const boas = $(".boas-vindas"); if (boas) boas.remove();
-  const d = document.createElement("div"); d.className = `msg ${papel}`; d.textContent = texto;
-  $("#lista").appendChild(d); $("#mensagens").scrollTop = $("#mensagens").scrollHeight;
+function cartaoTarefa(t) {
+  const d = document.createElement("div"); d.className = "cartao-tarefa";
+  d.innerHTML = `<div class="cab">${st("aguardando")}<b>${esc(t.titulo)}</b><span style="color:var(--suave);font-size:13px">em ${esc(t.maquina)}</span></div>
+    <div style="font-size:13px;color:var(--suave)">${t.tipo === "shell" ? "Comando que vai rodar:" : "Pedido para o Claude Code:"}</div><pre>${esc(t.comando)}</pre>
+    <div class="acoes"><button class="btn prim peq" data-a="aprovar">Aprovar e executar</button><button class="btn peq perigo" data-a="cancelar">Não rodar</button></div>`;
+  $$("[data-a]", d).forEach((b) => (b.onclick = async () => {
+    await post(`/api/jobs/${t.id}/${b.dataset.a}`);
+    if (b.dataset.a === "cancelar") { $(".acoes", d).innerHTML = st("cancelado"); return; }
+    $(".acoes", d).innerHTML = `${st("pendente")} <button class="btn peq">Acompanhar</button>`;
+    $(".acoes button", d).onclick = () => abrirJob(t.id);
+    const acompanhar = setInterval(async () => {
+      const j = await api(`/api/jobs/${t.id}`); if (!d.isConnected) return clearInterval(acompanhar);
+      $(".st", d)?.replaceWith(Object.assign(document.createElement("span"), { innerHTML: st(j.status) }).firstChild);
+      if (["concluido", "falhou", "cancelado"].includes(j.status)) {
+        clearInterval(acompanhar);
+        const saida = (j.resultado?.stdout || j.log || j.mensagem || "").trim();
+        if (saida) d.insertAdjacentHTML("beforeend", `<pre>${esc(saida.slice(-1500))}</pre>`);
+      }
+    }, 2000);
+  }));
   return d;
 }
 
-function ajustar() { const ta = $("#texto"); ta.style.height = "auto"; ta.style.height = Math.min(ta.scrollHeight, 200) + "px"; }
-$("#texto").addEventListener("input", ajustar);
-$("#texto").addEventListener("keydown", (e) => {
-  if (e.key === "Enter" && !e.shiftKey && window.innerWidth > 720) { e.preventDefault(); $("#envio").requestSubmit(); }
-});
-
-$("#envio").onsubmit = async (ev) => {
-  ev.preventDefault();
-  const texto = $("#texto").value.trim();
-  if (!texto || ocupado) return;
-  ocupado = true; $("#enviar").disabled = true;
-  $("#texto").value = ""; ajustar();
-  adicionar("user", texto);
-  const resposta = adicionar("assistant", "…");
-  let recebido = "";
+async function enviar() {
+  const ta = $("#texto"), texto = ta.value.trim();
+  if (!texto || estado.ocupado) return;
+  estado.ocupado = true; $("#enviar").disabled = true; ta.value = ""; ajustar();
+  addMsg("user", texto);
+  const corpo = addMsg("assistant", ""); corpo.classList.add("digitando");
+  let recebido = "", aposCartao = false, noTexto = document.createTextNode(""); corpo.appendChild(noTexto);
   try {
-    const r = await fetch("/api/mensagens", { method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ texto, conversa_id: conversaId }) });
-    if (!r.ok) { let d = "Algo deu errado."; try { d = (await r.json()).detail; } catch {}
-      if (r.status === 401) return mostrarEntrada(); throw new Error(d); }
-    const leitor = r.body.getReader(); const dec = new TextDecoder(); let buffer = "";
-    while (true) {
+    const r = await fetch("/api/mensagens", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ texto, conversa_id: estado.conversaId }) });
+    if (!r.ok) {
+      let d = "Algo deu errado."; try { d = (await r.json()).detail; } catch {}
+      if (r.status === 401) return mostrarLanding();
+      if (r.status === 402) modalUpgrade(d);
+      throw new Error(d);
+    }
+    const leitor = r.body.getReader(), dec = new TextDecoder(); let buf = "";
+    for (;;) {
       const { value, done } = await leitor.read(); if (done) break;
-      buffer += dec.decode(value, { stream: true });
-      let i;
-      while ((i = buffer.indexOf("\n\n")) >= 0) {
-        const bloco = buffer.slice(0, i); buffer = buffer.slice(i + 2);
-        const ev = /^event: (.*)$/m.exec(bloco)?.[1]; const dados = JSON.parse(/^data: (.*)$/m.exec(bloco)?.[1] ?? "null");
-        if (ev === "conversa") conversaId = dados.id;
-        else if (ev === "texto") { recebido += dados; resposta.textContent = recebido; $("#mensagens").scrollTop = $("#mensagens").scrollHeight; }
-        else if (ev === "fim") mostrarSaldo(dados.creditos);
+      buf += dec.decode(value, { stream: true }); let i;
+      while ((i = buf.indexOf("\n\n")) >= 0) {
+        const bloco = buf.slice(0, i); buf = buf.slice(i + 2);
+        const ev = /^event: (.*)$/m.exec(bloco)?.[1], dados = JSON.parse(/^data: (.*)$/m.exec(bloco)?.[1] ?? "null");
+        if (ev === "conversa") estado.conversaId = dados.id;
+        else if (ev === "texto") {
+          // logo depois de um cartão, a quebra de linha entre rodadas sobra: pula
+          if (aposCartao && !dados.trim()) continue;
+          aposCartao = false; recebido += dados; noTexto.textContent += dados; rolar();
+        }
+        else if (ev === "tarefa") { corpo.appendChild(cartaoTarefa(dados)); noTexto = document.createTextNode(""); corpo.appendChild(noTexto); aposCartao = true; rolar(); }
+        else if (ev === "nota") { const s = document.createElement("span"); s.className = "chip-nota"; s.textContent = `✦ Anotado no cérebro: ${dados.nota}`; corpo.appendChild(s); noTexto = document.createTextNode(""); corpo.appendChild(noTexto); }
+        else if (ev === "fim") { estado.usuario.creditos = dados.creditos; montarNav(); const p = $(".pilula b"); if (p) p.textContent = dados.creditos; }
         else if (ev === "erro") throw new Error(dados);
       }
     }
     carregarConversas();
-  } catch (e) {
-    resposta.classList.add("falha"); resposta.textContent = e.message;
-  } finally { ocupado = false; $("#enviar").disabled = false; }
-};
+  } catch (e) { corpo.closest(".msg").classList.add("falha"); noTexto.textContent = e.message; }
+  finally { corpo.classList.remove("digitando"); estado.ocupado = false; const b = $("#enviar"); if (b) b.disabled = false; }
+}
 
-api("/api/eu").then(iniciar).catch(mostrarEntrada);
+/* ---- cérebro */
+async function telaCerebro() {
+  const c = $("#conteudo");
+  c.innerHTML = barra("Cérebro", `<button class="btn prim" id="b-nota">${ico("mais", 16)} Nova nota</button>`) + `
+    <p style="color:var(--suave);margin:-8px 0 16px">A memória do Jarvis. Cada bolinha é uma nota; as linhas são os [[links]] entre elas. Arraste para explorar.</p>
+    <div class="cerebro"><div class="painel" style="padding:8px"><svg id="grafo-cerebro"></svg></div><div class="painel editor" id="editor"></div></div>`;
+  $("#b-nota").onclick = () => editarNota(null);
+  const d = await api("/api/cerebro"); estado.cerebro = d;
+  grafoCerebro(d);
+  editarNota(d.notas.find((n) => n.nome === "Jarvis")?.nome || d.notas[0]?.nome || null);
+}
+
+function grafoCerebro(d) {
+  const svg = $("#grafo-cerebro"), W = svg.clientWidth || 700, H = svg.clientHeight || 560;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  const nomes = new Set(d.notas.map((n) => n.nome));
+  const nos = [...d.notas.map((n) => ({ id: n.nome, real: true, grau: 0 })),
+    ...[...new Set(d.arestas.filter((a) => !a.existe).map((a) => a.para))].map((id) => ({ id, real: false, grau: 0 }))];
+  const idx = Object.fromEntries(nos.map((n, i) => [n.id, i]));
+  const ar = d.arestas.filter((a) => idx[a.de] != null && idx[a.para] != null).map((a) => [idx[a.de], idx[a.para]]);
+  ar.forEach(([a, b]) => { nos[a].grau++; nos[b].grau++; });
+  nos.forEach((n, i) => { const a = i / nos.length * Math.PI * 2; n.x = W / 2 + Math.cos(a) * W * .3; n.y = H / 2 + Math.sin(a) * H * .3; n.vx = n.vy = 0; });
+  let arrasto = null, passos = 0;
+  svg.innerHTML = `<g id="ls"></g><g id="ns"></g>`;
+  const gl = $("#ls", svg), gn = $("#ns", svg);
+  gl.innerHTML = ar.map(() => `<line stroke="#2a3a57" stroke-width="1.2"/>`).join("");
+  gn.innerHTML = nos.map((n) => {
+    const r = 6 + Math.min(10, n.grau * 1.6);
+    return `<g data-n="${esc(n.id)}" style="cursor:pointer"><circle r="${r + 8}" fill="${n.real ? "rgba(63,208,201,.1)" : "transparent"}"/>
+      <circle r="${r}" fill="${n.real ? (n.id === "Jarvis" ? "url(#nucleoC)" : "#3fd0c9") : "none"}" stroke="${n.real ? "#7ae5df" : "#66748c"}" stroke-dasharray="${n.real ? "" : "3 3"}" stroke-width="1.4"/>
+      <text y="${r + 15}" text-anchor="middle">${esc(n.id)}</text></g>`;
+  }).join("");
+  svg.insertAdjacentHTML("afterbegin", `<defs><radialGradient id="nucleoC" cx="35%" cy="35%"><stop offset="0" stop-color="#d4fffb"/><stop offset=".5" stop-color="#3fd0c9"/><stop offset="1" stop-color="#8b7bff"/></radialGradient></defs>`);
+  const lns = $$("line", gl), gs = $$("g[data-n]", gn);
+  gs.forEach((g, i) => {
+    g.onclick = () => { if (!nos[i].movido) editarNota(nos[i].real ? nos[i].id : null, nos[i].real ? null : nos[i].id); };
+    g.onpointerdown = (e) => { arrasto = i; nos[i].movido = false; svg.setPointerCapture(e.pointerId); passos = 0; loop(); };
+  });
+  svg.onpointermove = (e) => {
+    if (arrasto == null) return;
+    const r = svg.getBoundingClientRect(); const n = nos[arrasto];
+    n.x = (e.clientX - r.left) * W / r.width; n.y = (e.clientY - r.top) * H / r.height; n.movido = true;
+  };
+  svg.onpointerup = () => { arrasto = null; };
+  function passo() {
+    for (let i = 0; i < nos.length; i++) for (let j = i + 1; j < nos.length; j++) {
+      const a = nos[i], b = nos[j]; let dx = a.x - b.x, dy = a.y - b.y, d2 = dx * dx + dy * dy + .01; const f = 5200 / d2;
+      const dd = Math.sqrt(d2); dx /= dd; dy /= dd; a.vx += dx * f; a.vy += dy * f; b.vx -= dx * f; b.vy -= dy * f;
+    }
+    ar.forEach(([i, j]) => { const a = nos[i], b = nos[j]; const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 1, f = (d - 140) * .02; a.vx += dx / d * f; a.vy += dy / d * f; b.vx -= dx / d * f; b.vy -= dy / d * f; });
+    nos.forEach((n, i) => {
+      n.vx += (W / 2 - n.x) * .004; n.vy += (H / 2 - n.y) * .004;
+      if (i !== arrasto) { n.x += n.vx; n.y += n.vy; }
+      n.vx *= .82; n.vy *= .82; n.x = Math.max(30, Math.min(W - 30, n.x)); n.y = Math.max(24, Math.min(H - 34, n.y));
+    });
+    ar.forEach(([i, j], k) => { lns[k].setAttribute("x1", nos[i].x); lns[k].setAttribute("y1", nos[i].y); lns[k].setAttribute("x2", nos[j].x); lns[k].setAttribute("y2", nos[j].y); });
+    gs.forEach((g, i) => g.setAttribute("transform", `translate(${nos[i].x},${nos[i].y})`));
+  }
+  function loop() { passo(); if (++passos < 400 || arrasto != null) requestAnimationFrame(loop); }
+  loop();
+}
+
+async function editarNota(nome, novoNome) {
+  const ed = $("#editor"); let n = { nome: novoNome || "", conteudo: novoNome ? `# ${novoNome}\n\n` : "" };
+  if (nome) n = await api(`/api/cerebro/${encodeURIComponent(nome)}`);
+  ed.innerHTML = `<div class="cab">${nome ? `<b>${esc(n.nome)}</b>` : `<input id="nome-nota" placeholder="Nome da nota" value="${esc(n.nome)}" style="flex:1;padding:9px 11px;border-radius:9px;border:1px solid var(--borda2);background:var(--fundo)">`}
+    ${nome ? '<button class="btn peq perigo" id="apagar">Apagar</button>' : ""}<button class="btn peq prim" id="salvar">Salvar</button></div>
+    ${nome ? `<div style="font-size:12px;color:var(--tenue);margin-bottom:8px">${n.origem === "jarvis" ? "✦ escrita pelo Jarvis" : n.origem === "painel" ? "escrita por você" : "veio de " + esc(n.origem)} · ${quando(n.atualizado_em)}</div>` : ""}
+    <textarea id="txt-nota" spellcheck="false"></textarea>
+    <div style="font-size:12px;color:var(--tenue);margin-top:8px">Use [[Nome de outra nota]] para ligar ideias.</div>`;
+  $("#txt-nota").value = n.conteudo;
+  $("#salvar").onclick = async () => {
+    const alvo = nome || $("#nome-nota").value.trim(); if (!alvo) return toast("Dê um nome para a nota.");
+    await api(`/api/cerebro/${encodeURIComponent(alvo)}`, { method: "PUT", body: JSON.stringify({ conteudo: $("#txt-nota").value }) });
+    toast("Nota salva."); const d = await api("/api/cerebro"); grafoCerebro(d); editarNota(alvo);
+  };
+  const ap = $("#apagar"); if (ap) ap.onclick = async () => { await api(`/api/cerebro/${encodeURIComponent(nome)}`, { method: "DELETE" }); telaCerebro(); };
+}
+
+/* ---- rotinas */
+async function telaRotinas() {
+  const c = $("#conteudo");
+  c.innerHTML = barra("Rotinas", `<button class="btn prim" id="b-rot">${ico("mais", 16)} Nova rotina</button>`) + `
+    <p style="color:var(--suave);margin:-8px 0 16px">Tarefas que se repetem. Rode com um clique, ou deixe o Jarvis rodar sozinho toda manhã (plano Pro).</p>
+    <div class="maquinas" id="rots"></div>`;
+  $("#b-rot").onclick = modalRotina;
+  const rots = await api("/api/rotinas");
+  $("#rots").innerHTML = rots.length ? rots.map((r) => `<div class="maq">
+      <div class="cab"><div class="ico">${ico("rotinas", 22)}</div><div style="min-width:0"><div class="nm">${esc(r.nome)}</div><div class="so">${esc(r.maquina)} · ${r.frequencia === "diaria" ? "todo dia de manhã" : "quando você mandar"}</div></div></div>
+      ${r.descricao ? `<div style="color:var(--suave);font-size:14px">${esc(r.descricao)}</div>` : ""}
+      <pre class="log" style="max-height:90px">${esc(r.texto)}</pre>
+      <div style="font-size:13px;color:var(--tenue)">Última vez: ${r.ultimo ? st(r.ultimo.status) + " " + quando(r.ultimo.criado_em) : "nunca rodou"}</div>
+      <div class="acoes"><button class="btn peq prim" data-rodar="${r.id}">Rodar agora</button>${r.ultimo ? `<button class="btn peq" data-ver="${r.ultimo.id}">Ver resultado</button>` : ""}<button class="btn peq fantasma perigo" data-del="${r.id}">Apagar</button></div></div>`).join("")
+    : `<div class="painel vazio" style="grid-column:1/-1"><h3>Automatize o que se repete</h3><p>Backup das fotos, limpeza da pasta Temp, relatório do dia… crie uma vez e esqueça.</p><button class="btn prim" id="b-rot2">Criar minha primeira rotina</button></div>`;
+  const b2 = $("#b-rot2"); if (b2) b2.onclick = modalRotina;
+  $$("[data-rodar]").forEach((b) => (b.onclick = async () => { const r = await post(`/api/rotinas/${b.dataset.rodar}/rodar`); abrirJob(r.id); telaRotinas(); }));
+  $$("[data-ver]").forEach((b) => (b.onclick = () => abrirJob(+b.dataset.ver)));
+  $$("[data-del]").forEach((b) => (b.onclick = async () => { await api(`/api/rotinas/${b.dataset.del}`, { method: "DELETE" }); telaRotinas(); }));
+}
+
+async function modalRotina() {
+  if (!estado.parque) estado.parque = await api("/api/parque");
+  if (!estado.parque.maquinas.length) return modalConectar();
+  const pro = estado.usuario.plano === "pro";
+  const { el, fechar } = abrirModal(`<h2>Nova rotina</h2><form id="f">
+    <label class="campo"><span>Nome</span><input name="nome" required maxlength="80" placeholder="Backup das fotos"></label>
+    <label class="campo"><span>Para que serve</span><input name="descricao" maxlength="300" placeholder="Copia as fotos para o HD externo"></label>
+    <div class="form-linha"><label class="campo"><span>Máquina</span><select name="maquina">${opcoesMaquinas()}</select></label>
+    <label class="campo"><span>Quando</span><select name="frequencia"><option value="manual">Quando eu mandar</option><option value="diaria" ${pro ? "" : "disabled"}>Todo dia de manhã ${pro ? "" : "(Pro)"}</option></select></label></div>
+    <label class="campo"><span>Tipo</span><select name="tipo"><option value="shell">Comando (terminal)</option><option value="claude">Pedido ao Claude Code</option></select></label>
+    <label class="campo"><span>Comando ou pedido</span><textarea name="texto" rows="3" required></textarea></label>
+    <button class="btn prim" style="width:100%">Criar rotina</button><div class="erro-txt" id="erro"></div></form>
+    ${pro ? "" : '<p style="font-size:13px;color:var(--suave);margin:12px 0 0">✦ No <b>Pro</b> o Jarvis roda suas rotinas sozinho todo dia. <button class="link-btn" id="ver-pro">Conhecer</button></p>'}`, true);
+  const vp = $("#ver-pro", el); if (vp) vp.onclick = () => { fechar(); irPara("planos"); };
+  $("#f", el).onsubmit = async (e) => {
+    e.preventDefault();
+    try { await post("/api/rotinas", Object.fromEntries(new FormData(e.target))); fechar(); telaRotinas(); } catch (x) { $("#erro", el).textContent = x.message; }
+  };
+}
+
+/* ---- planos */
+async function telaPlanos() {
+  const c = $("#conteudo"), u = estado.usuario;
+  const [planos, extrato] = await Promise.all([carregarPlanos(), api("/api/extrato")]);
+  c.innerHTML = barra("Planos") + `
+    <div class="painel" style="margin-bottom:22px;background:linear-gradient(120deg,rgba(63,208,201,.12),rgba(139,123,255,.12));border-color:var(--borda2)">
+      <h2 style="color:var(--texto);font-family:var(--titulo);font-size:24px;letter-spacing:-.02em;text-transform:none">Seu parque inteiro, trabalhando sozinho</h2>
+      <p style="color:var(--suave);margin:0">No <b style="color:var(--texto)">Pro</b> você conecta todos os computadores, o Jarvis usa a IA mais inteligente, roda suas rotinas toda manhã e sugere o que fazer a cada dia.</p></div>
+    <div class="precos" style="margin-bottom:26px">${cartoesPreco(planos, u.plano)}</div>
+    <div class="painel"><h2>Extrato de créditos</h2><table class="tabela">${extrato.map((e) => `<tr><td>${esc(e.motivo)}</td><td style="color:var(--tenue);font-family:Inter">${quando(e.criado_em)}</td><td style="color:${e.delta > 0 ? "var(--ok)" : "var(--suave)"}">${e.delta > 0 ? "+" : ""}${e.delta}</td></tr>`).join("")}</table></div>`;
+}
+
+/* ---- partida */
+addEventListener("hashchange", () => {
+  const a = location.hash.slice(1);
+  if (estado.usuario && a !== estado.aba && ABAS.some(([x]) => x === a)) irPara(a);
+});
+api("/api/eu").then((u) => iniciarApp(u)).catch(() => mostrarLanding());
 </script>
 </body>
 </html>

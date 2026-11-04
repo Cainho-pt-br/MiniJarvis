@@ -1,32 +1,11 @@
 import json
 import os
 
-import pytest
-from fastapi.testclient import TestClient
 
 os.environ["IA_FAKE"] = "1"
 os.environ["COOKIE_SEGURO"] = "0"
 
 from nuvem import app as modulo  # noqa: E402
-
-
-@pytest.fixture()
-def cliente(tmp_path, monkeypatch):
-    """SQLite por padrão; com TEST_DATABASE_URL roda os mesmos testes em Postgres."""
-    monkeypatch.delenv("DATABASE_URL", raising=False)
-    monkeypatch.delenv("POSTGRES_URL", raising=False)
-    monkeypatch.setattr(modulo, "DB_PATH", tmp_path / "teste.db")
-    url = os.environ.get("TEST_DATABASE_URL")
-    if url:
-        import psycopg
-
-        with psycopg.connect(url, autocommit=True) as con:
-            con.execute("DROP TABLE IF EXISTS extrato, mensagens, conversas, sessoes, usuarios CASCADE")
-        monkeypatch.setenv("DATABASE_URL", url)
-    modulo._bancos.clear()
-    monkeypatch.setattr(modulo, "COOKIE_SEGURO", False)
-    modulo._tentativas.clear()
-    return TestClient(modulo.app)
 
 
 def cadastrar(c, email="ana@exemplo.com"):
@@ -110,7 +89,7 @@ def test_limite_de_tentativas(cliente):
 
 def test_falha_da_ia_vai_para_o_log_sem_cobrar(cliente, monkeypatch, caplog):
     class IAQuebrada:
-        def responder(self, historico, final, modelo):
+        def responder(self, historico, final, modelo, ferramentas=None):
             final.modelo = modelo
             raise RuntimeError("chave inválida")
             yield  # pragma: no cover
@@ -119,6 +98,7 @@ def test_falha_da_ia_vai_para_o_log_sem_cobrar(cliente, monkeypatch, caplog):
     cadastrar(cliente)
     with caplog.at_level("ERROR", logger="minijarvis"):
         ev = eventos(cliente.post("/api/mensagens", json={"texto": "Oi"}).text)
-    assert ev[-1][0] == "erro"
+    assert ("erro", "A IA não respondeu agora. Tente de novo em instantes.") in ev
+    assert ev[-1] == ("fim", {"custo": 0, "creditos": modulo.CREDITOS_INICIAIS})
     assert "RuntimeError" in caplog.text and "chave inválida" in caplog.text
     assert cliente.get("/api/eu").json()["creditos"] == modulo.CREDITOS_INICIAIS
