@@ -44,15 +44,15 @@ existe a variável `DATABASE_URL` (ou `POSTGRES_URL`). O jeito mais simples é o
 **Neon**, que a própria Vercel cria e liga ao projeto em dois cliques, com
 plano gratuito. Supabase também serve.
 
-Arquivos que fazem isso funcionar: `vercel.json` (manda toda requisição para o
-app), `api/index.py` (ponto de entrada), `requirements.txt` e `.vercelignore`
-(só a versão online sobe; broker e agente ficam de fora).
+Arquivos que fazem isso funcionar: `index.py` na raiz (onde o preset FastAPI
+da Vercel procura o `app`), `requirements.txt` e `.vercelignore` (só a versão
+online sobe; broker e agente ficam de fora).
 
 ### Passo a passo (pelo painel, sem terminal)
 
 1. Em vercel.com, **Add New → Project** e importe o repositório
-   `Cainho-pt-br/MiniJarvis` do GitHub. Framework: **Other**. Não precisa
-   mudar comando de build.
+   `Cainho-pt-br/MiniJarvis` do GitHub. Root Directory: `./`. Application
+   Preset: **FastAPI** (detectado sozinho). Não precisa mudar o build.
 2. Antes de publicar, em **Environment Variables**, adicione:
    - `ANTHROPIC_API_KEY`: gerada em console.anthropic.com (coloque um limite
      de gasto mensal lá também).
@@ -79,8 +79,8 @@ vercel --prod
 
 ### Limites a conhecer
 
-- **Duração da função:** `vercel.json` pede até 60 s por resposta, aceito
-  em todos os planos. Respostas de chat cabem nisso com folga.
+- **Duração da função:** o padrão da Vercel (Fluid compute) cobre com folga
+  o tempo de uma resposta de chat.
 - **Streaming:** o app envia a resposta aos pedaços (SSE). Confira no
   primeiro deploy se o texto aparece aos poucos; se vier tudo de uma vez,
   funciona do mesmo jeito, só sem o efeito de digitação.
@@ -93,7 +93,7 @@ vercel --prod
 Para testar no seu computador antes:
 ```bash
 pip install -r nuvem/requirements.txt
-COOKIE_SEGURO=0 IA_FAKE=1 uvicorn api.index:app --reload
+COOKIE_SEGURO=0 IA_FAKE=1 uvicorn index:app --reload
 ```
 
 O `Dockerfile` continua no repositório, caso um dia queira sair da Vercel
