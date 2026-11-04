@@ -130,7 +130,8 @@ def test_jarvis_prepara_tarefa_que_espera_aprovacao(cliente):
     ev = eventos(cliente.post("/api/mensagens", json={"texto": "execute `ls ~/Downloads` em pc-sala"}).text)
     tarefa = next(d for e, d in ev if e == "tarefa")
     assert tarefa["comando"] == "ls ~/Downloads" and tarefa["maquina"] == "pc-sala"
-    assert "".join(d for e, d in ev if e == "texto").endswith("só roda depois disso.")
+    texto = "".join(d for e, d in ev if e == "texto")
+    assert texto.startswith("Vou preparar isso.\n\nPronto!") and texto.endswith("só roda depois disso.")
     # não roda antes de aprovar
     assert cliente.get("/api/trabalho?espera=0", headers=ag).status_code == 204
     cliente.post(f"/api/jobs/{tarefa['id']}/aprovar")
@@ -205,3 +206,21 @@ def test_interesse_e_agente_para_baixar(cliente):
     r = cliente.get("/agente.py")
     assert r.status_code == 200 and "def main()" in r.text
     assert json.loads(json.dumps(cliente.get("/api/planos").json()))[2]["destaque"] is True
+
+
+def test_sem_linha_em_branco_quando_a_primeira_rodada_so_usa_ferramenta(cliente, monkeypatch):
+    from nuvem.ia import FakeIA
+
+    class SoFerramenta(FakeIA):
+        def responder(self, historico, final, modelo, ferramentas=None):
+            if isinstance(historico[-1]["content"], str):
+                final.modelo, final.stop_reason = modelo, "tool_use"
+                final.conteudo = [{"type": "tool_use", "id": "t1", "name": "ver_parque", "input": {}}]
+                final.chamadas = final.conteudo
+                return iter(())
+            return super().responder(historico, final, modelo, ferramentas)
+
+    monkeypatch.setattr(modulo, "_ia", SoFerramenta())
+    cadastrar(cliente)
+    ev = eventos(cliente.post("/api/mensagens", json={"texto": "como está o parque?"}).text)
+    assert "".join(d for e, d in ev if e == "texto").startswith("Pronto! O usuário ainda não conectou")

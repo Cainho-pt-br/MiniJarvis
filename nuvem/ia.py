@@ -51,8 +51,11 @@ roda um agente que executa tarefas. Use as ferramentas:
 - ver_tarefa: para acompanhar uma tarefa e contar o resultado.
 - ler_cerebro e salvar_no_cerebro: o cérebro é a sua memória de longo prazo,
   em notas ligadas por [[links]]. Quando o usuário pedir para lembrar algo, ou
-  contar algo importante sobre si, salve numa nota. Antes de responder sobre
-  preferências dele, leia o cérebro.
+  contar algo importante sobre si, salve numa nota. Prefira completar uma nota
+  que já existe (leia antes; "Sobre mim" guarda o que ele conta de si). Toda
+  nota nova precisa citar ao menos uma nota existente com [[Nome]], para
+  aparecer ligada no mapa do cérebro. Antes de responder sobre preferências
+  dele, leia o cérebro.
 
 Se o usuário não tiver máquinas conectadas e pedir algo que precise de uma,
 explique que basta clicar em "Conectar máquina" no painel."""

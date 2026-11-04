@@ -311,12 +311,16 @@ def enviar_mensagem(m: NovaMensagem, u: Any = Depends(usuario_atual)) -> Streami
     def gerar() -> Iterator[str]:
         yield _sse("conversa", {"id": cid})
         custo_total = 0
-        for rodada in range(MAX_RODADAS):
+        ja_escreveu = False
+        for _rodada in range(MAX_RODADAS):
             final = Resposta()
             try:
-                if rodada:
-                    yield _sse("texto", "\n\n")
+                separar = ja_escreveu  # quebra de linha só entre trechos de texto
                 for pedaco in motor.responder(historico, final, modelo, FERRAMENTAS):
+                    if separar:
+                        yield _sse("texto", "\n\n")
+                        separar = False
+                    ja_escreveu = True
                     yield _sse("texto", pedaco)
             except Exception as exc:  # noqa: BLE001 - a pessoa precisa ver algo amigável
                 # Vai para os logs (Vercel → Logs); a pessoa vê só a mensagem amigável.
