@@ -1,0 +1,26 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Ambientes virtuais
+.venv/
+venv/
+ENV/
+env/
+
+# Banco de dados e uploads locais
+*.db
+*.db-journal
+uploads/
+sugestoes-gemini.json
+
+# Variáveis de ambiente e segredos locais
+.env
+.env.local
+
+# Logs e arquivos temporários
+*.log
+*.tmp
+.DS_Store
+Thumbs.db

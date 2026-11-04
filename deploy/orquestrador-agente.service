@@ -1,0 +1,32 @@
+[Unit]
+Description=Orquestrador - agente
+After=network-online.target tailscaled.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/opt/orquestrador/agente
+# Ajustar por máquina: BROKER_URL é o nome MagicDNS do host do broker.
+Environment=BROKER_URL=http://127.0.0.1:8080
+Environment=TAGS=edge,sempre-ligado
+
+# Configuração DESTA máquina, que o deploy nunca sobrescreve.
+#
+# O que vem acima é modelo, e o deploy reescreve este arquivo inteiro a cada
+# instalação. Em 2026-09-09 isso apagou `TAGS=claude` e `CLAUDE_CWD` do Pi: o
+# cérebro parou de responder e a fila de leads das 8h ficou pendente para
+# sempre, porque ninguém mais oferecia a tag `claude`. Passou meses invisível
+# porque o deploy antigo não reiniciava o serviço — trocava o arquivo e deixava
+# o processo velho rodando com a configuração certa.
+#
+# O `-` na frente faz o systemd ignorar o arquivo se ele não existir. O que
+# estiver nele VENCE o que está acima, porque vem depois.
+EnvironmentFile=-/etc/default/orquestrador-agente
+ExecStart=/usr/bin/python3 /opt/orquestrador/agente/agente.py
+Restart=always
+RestartSec=5
+# NÃO adicionar WatchdogSec aqui: mataria job longo no meio.
+
+[Install]
+WantedBy=multi-user.target

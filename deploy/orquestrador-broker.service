@@ -1,0 +1,20 @@
+[Unit]
+Description=Orquestrador - broker
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/opt/orquestrador/broker
+Environment=BROKER_DB=/opt/orquestrador/broker/orquestrador.db
+# Bind em 127.0.0.1: a exposição no tailnet é feita pelo `tailscale serve`.
+# Zero porta aberta na internet, zero autenticação própria (regra 6 da spec).
+ExecStart=/opt/orquestrador/venv/bin/uvicorn app:app --host 127.0.0.1 --port 8080 --no-access-log
+Restart=always
+RestartSec=5
+# NÃO adicionar WatchdogSec aqui: é o watchdog de sd_notify, mataria job longo.
+# O watchdog de hardware é o RuntimeWatchdogSec global em system.conf.
+
+[Install]
+WantedBy=multi-user.target
