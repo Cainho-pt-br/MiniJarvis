@@ -13,6 +13,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+import logging
 import math
 import os
 import re
@@ -40,6 +41,7 @@ COOKIE_SEGURO = os.environ.get("COOKIE_SEGURO", "1") != "0"  # desligue só em h
 MAX_MENSAGEM = 20_000
 HISTORICO_MAX_MSGS = 40
 
+log = logging.getLogger("minijarvis")
 app = FastAPI(title="MiniJarvis Nuvem")
 _ia = None
 
@@ -285,7 +287,9 @@ def enviar_mensagem(m: NovaMensagem, u: Any = Depends(usuario_atual)) -> Streami
             for pedaco in motor.responder(historico, final, modelo_do_plano(u["plano"])):
                 yield _sse("texto", pedaco)
         except Exception as exc:  # noqa: BLE001 - a pessoa precisa ver algo amigável
-            app.state.ultimo_erro = repr(exc)
+            # Vai para os logs (Vercel → Logs); a pessoa vê só a mensagem amigável.
+            log.exception("Falha ao chamar a IA (conversa %s, modelo %s): %s",
+                          cid, final.modelo, type(exc).__name__)
             yield _sse("erro", "A IA não respondeu agora. Tente de novo em instantes.")
             return
         if final.recusada and not final.texto:

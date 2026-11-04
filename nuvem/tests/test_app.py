@@ -106,3 +106,19 @@ def test_limite_de_tentativas(cliente):
     for _ in range(10):
         cliente.post("/api/entrar", json={"email": "x@exemplo.com", "senha": "errada"})
     assert cliente.post("/api/entrar", json={"email": "x@exemplo.com", "senha": "errada"}).status_code == 429
+
+
+def test_falha_da_ia_vai_para_o_log_sem_cobrar(cliente, monkeypatch, caplog):
+    class IAQuebrada:
+        def responder(self, historico, final, modelo):
+            final.modelo = modelo
+            raise RuntimeError("chave inválida")
+            yield  # pragma: no cover
+
+    monkeypatch.setattr(modulo, "_ia", IAQuebrada())
+    cadastrar(cliente)
+    with caplog.at_level("ERROR", logger="minijarvis"):
+        ev = eventos(cliente.post("/api/mensagens", json={"texto": "Oi"}).text)
+    assert ev[-1][0] == "erro"
+    assert "RuntimeError" in caplog.text and "chave inválida" in caplog.text
+    assert cliente.get("/api/eu").json()["creditos"] == modulo.CREDITOS_INICIAIS
