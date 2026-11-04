@@ -1,10 +1,17 @@
 #!/usr/bin/env python3
-"""Agente do orquestrador. Arquivo único, roda em qualquer máquina do tailnet.
+"""Agente do MiniJarvis. Arquivo único, roda em qualquer computador.
 
-Configuração por variável de ambiente:
-    BROKER_URL   ex: https://raspberrypi.tailXXXX.ts.net  (obrigatório)
-    TAGS         ex: gpu-5060ti,cpu-forte
-    AGENTE_NOME  default: hostname da máquina
+Conectar este computador ao seu Jarvis na nuvem (uma vez só):
+    python agente.py --parear CODIGO --broker https://seu-jarvis.vercel.app
+O código aparece no painel, em "Conectar máquina". Depois disso basta rodar
+    python agente.py
+
+Configuração (variáveis de ambiente, opcionais; valem mais que o arquivo
+salvo pelo pareamento em ~/.minijarvis/agente.json):
+    BROKER_URL    endereço do Jarvis (nuvem) ou do broker local
+    AGENTE_TOKEN  token deste agente (o pareamento grava sozinho)
+    TAGS          ex: gpu-5060ti,cpu-forte
+    AGENTE_NOME   default: hostname da máquina
 
 Só depende da stdlib: nada de pip na máquina worker.
 """
@@ -30,10 +37,23 @@ from pathlib import Path
 
 # Subir a cada mudança que o painel precise distinguir: é por ela que o quadro
 # de sugestões acusa máquina rodando agente velho (0.2.0 = Codex).
-VERSAO = "0.2.6"
+VERSAO = "0.3.0"
 
-BROKER = os.environ.get("BROKER_URL", "http://127.0.0.1:8080").rstrip("/")
-NOME = os.environ.get("AGENTE_NOME") or socket.gethostname()
+# Configuração gravada pelo pareamento. Variável de ambiente vale mais.
+CONFIG_ARQUIVO = Path(os.environ.get("AGENTE_CONFIG", str(Path.home() / ".minijarvis" / "agente.json")))
+
+
+def _ler_config() -> dict:
+    try:
+        return json.loads(CONFIG_ARQUIVO.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+_CONFIG = _ler_config()
+BROKER = (os.environ.get("BROKER_URL") or _CONFIG.get("broker") or "http://127.0.0.1:8080").rstrip("/")
+TOKEN = os.environ.get("AGENTE_TOKEN") or _CONFIG.get("token") or ""
+NOME = os.environ.get("AGENTE_NOME") or _CONFIG.get("nome") or socket.gethostname()
 # O nome da máquina é sempre uma tag. Assim "rodar no celeron" não precisa de
 # uma tag inventada para representar o celeron, e as tags configuradas ficam
 # só para capacidade de verdade (ter GPU, ter Claude Code, viver ligado).
@@ -42,6 +62,9 @@ TAGS = ",".join(dict.fromkeys(
 
 HEARTBEAT_S = 10
 POLL_OCIOSO_S = 5
+# Quanto a busca por trabalho espera no servidor. Na nuvem o próprio servidor
+# diz os valores na resposta do heartbeat (menos requisições = custo menor).
+ESPERA_S = 20
 # De quanto em quanto tempo o agente puxa o cérebro mesmo sem job. Antes o pull
 # só acontecia antes de raciocinar, e uma máquina que passava o dia sem job
 # `claude` ficava dias atrás — e o painel mostrava o commit da partida, que era
@@ -76,6 +99,9 @@ def chamar(metodo: str, caminho: str, corpo: dict | None = None,
     req = urllib.request.Request(url, data=dados, method=metodo)
     if dados:
         req.add_header("Content-Type", "application/json")
+    if TOKEN:
+        req.add_header("Authorization", "Bearer " + TOKEN)
+    req.add_header("User-Agent", "MiniJarvis-Agente/" + VERSAO)
     with urllib.request.urlopen(req, timeout=timeout) as r:
         bruto = r.read()
         if r.status == 204 or not bruto:
@@ -612,6 +638,7 @@ def sincronizador_cerebro() -> None:
         antes = CEREBRO.get("commit")
         if puxar_cerebro(cwd) and CEREBRO.get("commit") != antes:
             log("cérebro sincronizado:", antes, "->", CEREBRO.get("commit"))
+            enviar_cerebro_nuvem()
 
 
 def inventario() -> dict:
@@ -681,9 +708,49 @@ def batedor() -> None:
             if resp.get("cancelar"):
                 with _lock:
                     _estado["cancelar"] = True
+            _ajustar_ritmo(resp)
+        except urllib.error.HTTPError as e:
+            if e.code == 401:
+                log("o Jarvis recusou este agente (token inválido ou máquina removida). "
+                    "Gere um código no painel e rode: python agente.py --parear CODIGO")
+            else:
+                log("heartbeat falhou:", e)
         except Exception as e:
             log("heartbeat falhou:", e)
         time.sleep(HEARTBEAT_S)
+
+
+def _ajustar_ritmo(resp: dict) -> None:
+    """A nuvem diz de quanto em quanto tempo bater e quanto esperar por trabalho."""
+    global HEARTBEAT_S, ESPERA_S
+    try:
+        if resp.get("heartbeat_s"):
+            HEARTBEAT_S = max(5, min(int(resp["heartbeat_s"]), 300))
+        if resp.get("espera_s"):
+            ESPERA_S = max(5, min(int(resp["espera_s"]), 120))
+    except (TypeError, ValueError):
+        pass
+
+
+def enviar_cerebro_nuvem() -> None:
+    """Na nuvem, manda as notas .md do cérebro local para aparecerem no painel."""
+    cwd = os.environ.get("CLAUDE_CWD") or None
+    pasta = os.path.join(cwd, "cerebro") if cwd else None
+    if not (TOKEN and pasta and os.path.isdir(pasta)):
+        return
+    notas = []
+    for arq in sorted(os.listdir(pasta))[:300]:
+        if arq.endswith(".md"):
+            try:
+                with open(os.path.join(pasta, arq), encoding="utf-8", errors="replace") as f:
+                    notas.append({"nome": arq[:-3], "conteudo": f.read(100_000)})
+            except OSError:
+                continue
+    try:
+        _, r = chamar("POST", "/api/agente/cerebro", {"notas": notas}, timeout=60)
+        log("cérebro enviado ao painel:", r.get("gravadas"), "notas")
+    except Exception as e:
+        log("não consegui enviar o cérebro (segue o jogo):", e)
 
 
 # ------------------------------------------------------------- execução
@@ -1667,7 +1734,42 @@ def instancia_unica() -> socket.socket:
     return s
 
 
+def parear(codigo: str, broker: str, nome: str) -> None:
+    """Troca o código mostrado no painel por um token, e grava a configuração."""
+    global BROKER, TOKEN, NOME, TAGS
+    BROKER, TOKEN, NOME = broker.rstrip("/"), "", nome
+    try:
+        _, r = chamar("POST", "/api/agente/parear", {"codigo": codigo, "hostname": nome})
+    except urllib.error.HTTPError as e:
+        try:
+            detalhe = json.loads(e.read()).get("detail")
+        except Exception:
+            detalhe = str(e)
+        raise SystemExit("Não deu para conectar: " + str(detalhe))
+    TOKEN, NOME = r["token"], r.get("hostname") or nome
+    TAGS = ",".join(dict.fromkeys([t for t in TAGS.split(",") if t and t != socket.gethostname()] + [NOME]))
+    CONFIG_ARQUIVO.parent.mkdir(parents=True, exist_ok=True)
+    CONFIG_ARQUIVO.write_text(json.dumps({"broker": BROKER, "token": TOKEN, "nome": NOME}), encoding="utf-8")
+    try:
+        os.chmod(CONFIG_ARQUIVO, 0o600)   # o token dá acesso a esta máquina
+    except OSError:
+        pass
+    log("conectado ao Jarvis como", NOME, "| configuração salva em", CONFIG_ARQUIVO)
+
+
+def _argumentos() -> None:
+    import argparse
+    ap = argparse.ArgumentParser(description="Agente do MiniJarvis")
+    ap.add_argument("--parear", metavar="CODIGO", help="código mostrado no painel em 'Conectar máquina'")
+    ap.add_argument("--broker", metavar="URL", help="endereço do Jarvis (ex: https://seu-jarvis.vercel.app)")
+    ap.add_argument("--nome", help="nome desta máquina no painel (padrão: hostname)")
+    a = ap.parse_args()
+    if a.parear:
+        parear(a.parear, a.broker or BROKER, a.nome or NOME)
+
+
 def main() -> None:
+    _argumentos()
     trava = instancia_unica()   # precisa continuar viva enquanto o agente roda
     INVENTARIO.update(inventario())
     # Puxa já na partida: o estado que vai no primeiro heartbeat é o real, não
@@ -1680,6 +1782,7 @@ def main() -> None:
         INVENTARIO.get("ram_total_mb"), "MB |", INVENTARIO.get("so"))
     threading.Thread(target=batedor, daemon=True).start()
     threading.Thread(target=sincronizador_cerebro, daemon=True).start()
+    threading.Thread(target=enviar_cerebro_nuvem, daemon=True).start()
     threading.Thread(target=reavaliador_ias, daemon=True).start()
     espera = POLL_OCIOSO_S
     while True:
@@ -1691,7 +1794,8 @@ def main() -> None:
             t0 = time.monotonic()
             status, job = chamar(
                 "GET", "/api/trabalho?agente=" + urllib.parse.quote(NOME) +
-                "&tags=" + urllib.parse.quote(TAGS) + "&espera=20", timeout=40)
+                "&tags=" + urllib.parse.quote(TAGS) + "&espera=" + str(ESPERA_S),
+                timeout=ESPERA_S + 30)
             espera = POLL_OCIOSO_S          # broker respondeu: zera o backoff
             if status == 204 or not job:
                 # Broker anterior ignora `espera` e responde na hora: aí o
