@@ -24,6 +24,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 
+from . import acoes
 from . import app as nucleo
 
 router = APIRouter()
@@ -119,7 +120,7 @@ def limite_maquinas(plano: str) -> int | None:
 
 
 @router.post("/api/parque/parear")
-def gerar_codigo(request: Request, u: Any = Depends(nucleo.usuario_atual)) -> dict[str, Any]:
+def gerar_codigo(request: Request, u: Any = Depends(nucleo.usuario_verificado)) -> dict[str, Any]:
     limite = limite_maquinas(u["plano"])
     if limite is not None:
         n = nucleo.db().execute("SELECT COUNT(*) AS n FROM agentes WHERE usuario_id = ?", (u["id"],)).fetchone()["n"]
@@ -131,16 +132,9 @@ def gerar_codigo(request: Request, u: Any = Depends(nucleo.usuario_atual)) -> di
     with nucleo.transacao() as con:
         con.execute("DELETE FROM pareamentos WHERE usuario_id = ? OR expira_em < ?", (u["id"], nucleo.agora()))
         con.execute("INSERT INTO pareamentos VALUES (?, ?, ?)", (codigo, u["id"], expira))
-    base = str(request.base_url).rstrip("/")
-    if request.headers.get("x-forwarded-proto") == "https":
-        base = base.replace("http://", "https://", 1)
-    return {
-        "codigo": codigo, "expira_em": expira,
-        "comandos": {
-            "windows": f'iwr {base}/agente.py -OutFile agente.py; python agente.py --parear {codigo} --broker {base}',
-            "linux": f"curl -fsSL {base}/agente.py -o agente.py && python3 agente.py --parear {codigo} --broker {base}",
-        },
-    }
+    from .instaladores import _base, comandos
+
+    return {"codigo": codigo, "expira_em": expira, "comandos": comandos(_base(request), codigo)}
 
 
 class Parear(BaseModel):
@@ -150,7 +144,7 @@ class Parear(BaseModel):
 
 @router.post("/api/agente/parear")
 def parear(p: Parear, request: Request) -> dict[str, Any]:
-    nucleo.limitar_tentativas("parear:" + (request.client.host if request.client else "?"), 20)
+    nucleo.limitar(f"parear:{nucleo.ip_cliente(request)}", 20, 300)
     codigo = p.codigo.strip().upper().replace("-", "")
     hostname = re.sub(r"[^\w.\-]", "-", p.hostname.strip())[:80]
     token = "mjag_" + secrets.token_urlsafe(32)
@@ -344,7 +338,7 @@ def maquinas(uid: int) -> list[dict[str, Any]]:
     for r in rows:
         online = _idade(r["visto_em"]) < ONLINE_S
         saida.append({
-            "id": r["id"], "hostname": r["hostname"], "apelido": r["apelido"] or r["hostname"],
+            "id": r["id"], "hostname": r["hostname"], "apelido": r["apelido"] or r["hostname"], "modo": r["modo"],
             "online": online, "visto_em": r["visto_em"], "versao": r["versao"],
             "tags": sorted(_tags(r["tags"])), "info": _json(r["info"], {}),
             "metricas": _json(r["metricas"], {}) if online else {},
@@ -354,7 +348,7 @@ def maquinas(uid: int) -> list[dict[str, Any]]:
 
 
 @router.get("/api/parque")
-def ver_parque(u: Any = Depends(nucleo.usuario_atual)) -> dict[str, Any]:
+def ver_parque(u: Any = Depends(nucleo.usuario_verificado)) -> dict[str, Any]:
     zelar(u["id"])
     ms = maquinas(u["id"])
     desde = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat(timespec="seconds")
@@ -381,15 +375,40 @@ def _maquina(mid: int, uid: int) -> Any:
 
 
 @router.patch("/api/maquinas/{mid}")
-def renomear_maquina(mid: int, e: EditarMaquina, u: Any = Depends(nucleo.usuario_atual)) -> dict[str, bool]:
+def renomear_maquina(mid: int, e: EditarMaquina, u: Any = Depends(nucleo.usuario_verificado)) -> dict[str, bool]:
     _maquina(mid, u["id"])
     with nucleo.transacao() as con:
         con.execute("UPDATE agentes SET apelido=? WHERE id=?", (e.apelido.strip(), mid))
     return {"ok": True}
 
 
+class Modo(BaseModel):
+    modo: str
+    senha: str = Field(default="", max_length=200)
+
+
+@router.post("/api/maquinas/{mid}/modo")
+def mudar_modo(mid: int, m: Modo, request: Request, u: Any = Depends(nucleo.usuario_verificado)) -> dict[str, bool]:
+    """Modo livre deixa a máquina rodar qualquer comando: exige a senha da conta."""
+    _maquina(mid, u["id"])
+    if m.modo not in ("seguro", "livre"):
+        raise HTTPException(400, "Modo inválido.")
+    if m.modo == "livre":
+        nucleo.limitar(f"modo:{u['id']}", 5, 900)
+        if not nucleo.conferir_senha(m.senha, u["senha_hash"]):
+            raise HTTPException(403, "Senha incorreta.")
+    with nucleo.transacao() as con:
+        con.execute("UPDATE agentes SET modo=? WHERE id=?", (m.modo, mid))
+    return {"ok": True}
+
+
+@router.get("/api/acoes")
+def listar_acoes() -> list[dict[str, str]]:
+    return acoes.catalogo()
+
+
 @router.delete("/api/maquinas/{mid}")
-def remover_maquina(mid: int, u: Any = Depends(nucleo.usuario_atual)) -> dict[str, bool]:
+def remover_maquina(mid: int, u: Any = Depends(nucleo.usuario_verificado)) -> dict[str, bool]:
     """Desconecta a máquina: o token dela deixa de valer na hora."""
     _maquina(mid, u["id"])
     with nucleo.transacao() as con:
@@ -399,18 +418,35 @@ def remover_maquina(mid: int, u: Any = Depends(nucleo.usuario_atual)) -> dict[st
 
 # ------------------------------------------------------------- painel: jobs ---
 
+MODO_SEGURO_MSG = ("A máquina '{}' está no modo seguro: ela só roda ações prontas. "
+                   "Para rodar comandos livres, mude a máquina para o modo livre no painel.")
+
+
 def criar_job(uid: int, maquina: str, tipo: str, texto: str, titulo: str = "",
               origem: str = "painel", status: str = "pendente") -> int:
-    if tipo not in TIPOS:
+    """Cria uma tarefa. Com tipo 'acao', `texto` é o id de uma ação pronta, e o
+    comando vem do catálogo (nuvem/acoes.py), para o sistema daquela máquina."""
+    if tipo not in TIPOS and tipo != "acao":
         raise HTTPException(400, "Tipo de tarefa inválido.")
     texto = (texto or "").strip()
     if not texto:
         raise HTTPException(400, "Diga o que a máquina deve fazer.")
-    m = nucleo.db().execute("SELECT hostname FROM agentes WHERE usuario_id=? AND (hostname=? OR apelido=?)",
-                            (uid, maquina, maquina)).fetchone()
+    m = nucleo.db().execute("SELECT hostname, apelido, info, modo FROM agentes WHERE usuario_id=? "
+                            "AND (hostname=? OR apelido=?)", (uid, maquina, maquina)).fetchone()
     if m is None:
         raise HTTPException(404, f"Máquina '{maquina}' não está no seu parque.")
-    payload = {"comando": texto} if tipo == "shell" else {"prompt": texto}
+    if tipo == "acao":
+        if texto not in acoes.ACOES:
+            raise HTTPException(400, "Ação desconhecida.")
+        try:
+            payload = {"comando": acoes.comando(texto, _json(m["info"], {})), "acao": texto}
+        except ValueError as exc:
+            raise HTTPException(409, f"Ainda não dá: {exc}.")
+        tipo, titulo = "shell", titulo or acoes.ACOES[texto]["titulo"]
+    else:
+        if m["modo"] != "livre":
+            raise HTTPException(403, MODO_SEGURO_MSG.format(m["apelido"] or m["hostname"]))
+        payload = {"comando": texto} if tipo == "shell" else {"prompt": texto}
     with nucleo.transacao() as con:
         return con.inserir(
             "INSERT INTO jobs (usuario_id, tipo, titulo, payload, tags, origem, status, criado_em) "
@@ -427,7 +463,7 @@ class NovoJob(BaseModel):
 
 
 @router.post("/api/jobs")
-def novo_job(j: NovoJob, u: Any = Depends(nucleo.usuario_atual)) -> dict[str, int]:
+def novo_job(j: NovoJob, u: Any = Depends(nucleo.usuario_verificado)) -> dict[str, int]:
     return {"id": criar_job(u["id"], j.maquina, j.tipo, j.texto, j.titulo)}
 
 
@@ -438,7 +474,7 @@ def _resumo_job(r: Any) -> dict[str, Any]:
 
 @router.get("/api/jobs")
 def listar_jobs(status: str | None = None, limite: int = 50,
-                u: Any = Depends(nucleo.usuario_atual)) -> list[dict[str, Any]]:
+                u: Any = Depends(nucleo.usuario_verificado)) -> list[dict[str, Any]]:
     zelar(u["id"])
     sql = ("SELECT id, tipo, titulo, status, agente, progresso, mensagem, origem, criado_em, "
            "iniciado_em, terminado_em, tags FROM jobs WHERE usuario_id = ?")
@@ -452,7 +488,7 @@ def listar_jobs(status: str | None = None, limite: int = 50,
 
 
 @router.get("/api/jobs/{jid}")
-def detalhe_job(jid: int, u: Any = Depends(nucleo.usuario_atual)) -> dict[str, Any]:
+def detalhe_job(jid: int, u: Any = Depends(nucleo.usuario_verificado)) -> dict[str, Any]:
     j = _ver_job(jid, u["id"])
     d = _resumo_job(j)
     d.update(payload=_json(j["payload"], {}), resultado=_json(j["resultado"]), log=j["log"][-LOG_MAX:],
@@ -461,7 +497,7 @@ def detalhe_job(jid: int, u: Any = Depends(nucleo.usuario_atual)) -> dict[str, A
 
 
 @router.post("/api/jobs/{jid}/aprovar")
-def aprovar_job(jid: int, u: Any = Depends(nucleo.usuario_atual)) -> dict[str, bool]:
+def aprovar_job(jid: int, u: Any = Depends(nucleo.usuario_verificado)) -> dict[str, bool]:
     _ver_job(jid, u["id"])
     with nucleo.transacao() as con:
         con.execute("UPDATE jobs SET status='pendente', mensagem='aprovada; esperando a máquina' "
@@ -470,7 +506,7 @@ def aprovar_job(jid: int, u: Any = Depends(nucleo.usuario_atual)) -> dict[str, b
 
 
 @router.post("/api/jobs/{jid}/cancelar")
-def cancelar_job(jid: int, u: Any = Depends(nucleo.usuario_atual)) -> dict[str, bool]:
+def cancelar_job(jid: int, u: Any = Depends(nucleo.usuario_verificado)) -> dict[str, bool]:
     j = _ver_job(jid, u["id"])
     with nucleo.transacao() as con:
         if j["status"] in ("pendente", "aguardando"):
@@ -482,9 +518,11 @@ def cancelar_job(jid: int, u: Any = Depends(nucleo.usuario_atual)) -> dict[str, 
 
 
 @router.post("/api/jobs/{jid}/repetir")
-def repetir_job(jid: int, u: Any = Depends(nucleo.usuario_atual)) -> dict[str, int]:
+def repetir_job(jid: int, u: Any = Depends(nucleo.usuario_verificado)) -> dict[str, int]:
     j = _ver_job(jid, u["id"])
     p = _json(j["payload"], {})
+    if p.get("acao"):
+        return {"id": criar_job(u["id"], j["tags"].split(",")[0], "acao", p["acao"], j["titulo"], "repetida")}
     return {"id": criar_job(u["id"], j["tags"].split(",")[0], j["tipo"], p.get("comando") or p.get("prompt", ""),
                             j["titulo"], "repetida")}
 
@@ -523,7 +561,7 @@ def _semear_cerebro(uid: int) -> None:
 
 
 @router.get("/api/cerebro")
-def listar_cerebro(u: Any = Depends(nucleo.usuario_atual)) -> dict[str, Any]:
+def listar_cerebro(u: Any = Depends(nucleo.usuario_verificado)) -> dict[str, Any]:
     _semear_cerebro(u["id"])
     rows = nucleo.db().execute("SELECT nome, conteudo, origem, atualizado_em FROM notas WHERE usuario_id=? "
                                "ORDER BY nome", (u["id"],)).fetchall()
@@ -538,7 +576,7 @@ def listar_cerebro(u: Any = Depends(nucleo.usuario_atual)) -> dict[str, Any]:
 
 
 @router.get("/api/cerebro/{nome}")
-def ler_nota(nome: str, u: Any = Depends(nucleo.usuario_atual)) -> dict[str, Any]:
+def ler_nota(nome: str, u: Any = Depends(nucleo.usuario_verificado)) -> dict[str, Any]:
     r = nucleo.db().execute("SELECT * FROM notas WHERE usuario_id=? AND nome=?", (u["id"], nome)).fetchone()
     if r is None:
         raise HTTPException(404, "Nota não encontrada.")
@@ -550,7 +588,7 @@ class Nota(BaseModel):
 
 
 @router.put("/api/cerebro/{nome}")
-def gravar_nota(nome: str, n: Nota, u: Any = Depends(nucleo.usuario_atual)) -> dict[str, bool]:
+def gravar_nota(nome: str, n: Nota, u: Any = Depends(nucleo.usuario_verificado)) -> dict[str, bool]:
     nome = nome.strip()[:120]
     if not nome:
         raise HTTPException(400, "Dê um nome para a nota.")
@@ -559,7 +597,7 @@ def gravar_nota(nome: str, n: Nota, u: Any = Depends(nucleo.usuario_atual)) -> d
 
 
 @router.delete("/api/cerebro/{nome}")
-def apagar_nota(nome: str, u: Any = Depends(nucleo.usuario_atual)) -> dict[str, bool]:
+def apagar_nota(nome: str, u: Any = Depends(nucleo.usuario_verificado)) -> dict[str, bool]:
     with nucleo.transacao() as con:
         con.execute("DELETE FROM notas WHERE usuario_id=? AND nome=?", (u["id"], nome))
     return {"ok": True}
@@ -577,26 +615,37 @@ class NovaRotina(BaseModel):
 
 
 @router.get("/api/rotinas")
-def listar_rotinas(u: Any = Depends(nucleo.usuario_atual)) -> list[dict[str, Any]]:
+def listar_rotinas(u: Any = Depends(nucleo.usuario_verificado)) -> list[dict[str, Any]]:
     saida = []
     for r in nucleo.db().execute("SELECT * FROM rotinas WHERE usuario_id=? ORDER BY id", (u["id"],)).fetchall():
         ultimo = nucleo.db().execute("SELECT id, status, criado_em, terminado_em FROM jobs WHERE usuario_id=? "
                                      "AND origem=? ORDER BY id DESC LIMIT 1",
                                      (u["id"], f"rotina:{r['id']}")).fetchone()
         p = _json(r["payload"], {})
+        texto = acoes.ACOES[p["acao"]]["titulo"] if p.get("acao") in acoes.ACOES else \
+            (p.get("comando") or p.get("prompt", ""))
         saida.append({"id": r["id"], "nome": r["nome"], "descricao": r["descricao"], "maquina": r["maquina"],
-                      "tipo": r["tipo"], "texto": p.get("comando") or p.get("prompt", ""),
+                      "tipo": r["tipo"], "texto": texto,
                       "frequencia": r["frequencia"], "ultimo": dict(ultimo) if ultimo else None})
     return saida
 
 
 @router.post("/api/rotinas")
-def criar_rotina(r: NovaRotina, u: Any = Depends(nucleo.usuario_atual)) -> dict[str, int]:
-    if r.tipo not in TIPOS or r.frequencia not in ("manual", "diaria"):
+def criar_rotina(r: NovaRotina, u: Any = Depends(nucleo.usuario_verificado)) -> dict[str, int]:
+    if (r.tipo not in TIPOS and r.tipo != "acao") or r.frequencia not in ("manual", "diaria"):
         raise HTTPException(400, "Rotina inválida.")
+    if r.tipo == "acao" and r.texto not in acoes.ACOES:
+        raise HTTPException(400, "Ação desconhecida.")
     if r.frequencia == "diaria" and u["plano"] != "pro":
         raise HTTPException(402, "Rotinas diárias automáticas são do plano Pro.")
-    payload = {"comando": r.texto} if r.tipo == "shell" else {"prompt": r.texto}
+    m = nucleo.db().execute("SELECT modo, apelido, hostname FROM agentes WHERE usuario_id=? AND hostname=?",
+                            (u["id"], r.maquina)).fetchone()
+    if m is None:
+        raise HTTPException(404, "Máquina não encontrada.")
+    if r.tipo != "acao" and m["modo"] != "livre":
+        raise HTTPException(403, MODO_SEGURO_MSG.format(m["apelido"] or m["hostname"]))
+    payload = {"acao": r.texto} if r.tipo == "acao" else \
+        {"comando": r.texto} if r.tipo == "shell" else {"prompt": r.texto}
     with nucleo.transacao() as con:
         rid = con.inserir("INSERT INTO rotinas (usuario_id, nome, descricao, tipo, payload, maquina, frequencia, "
                           "criado_em) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
@@ -607,7 +656,7 @@ def criar_rotina(r: NovaRotina, u: Any = Depends(nucleo.usuario_atual)) -> dict[
 
 def _rodar_rotina(r: Any) -> int:
     p = _json(r["payload"], {})
-    jid = criar_job(r["usuario_id"], r["maquina"], r["tipo"], p.get("comando") or p.get("prompt", ""),
+    jid = criar_job(r["usuario_id"], r["maquina"], r["tipo"], p.get("acao") or p.get("comando") or p.get("prompt", ""),
                     r["nome"], f"rotina:{r['id']}")
     with nucleo.transacao() as con:
         con.execute("UPDATE rotinas SET ultima_execucao=? WHERE id=?", (nucleo.agora(), r["id"]))
@@ -615,7 +664,7 @@ def _rodar_rotina(r: Any) -> int:
 
 
 @router.post("/api/rotinas/{rid}/rodar")
-def rodar_rotina(rid: int, u: Any = Depends(nucleo.usuario_atual)) -> dict[str, int]:
+def rodar_rotina(rid: int, u: Any = Depends(nucleo.usuario_verificado)) -> dict[str, int]:
     r = nucleo.db().execute("SELECT * FROM rotinas WHERE id=? AND usuario_id=?", (rid, u["id"])).fetchone()
     if r is None:
         raise HTTPException(404, "Rotina não encontrada.")
@@ -623,7 +672,7 @@ def rodar_rotina(rid: int, u: Any = Depends(nucleo.usuario_atual)) -> dict[str, 
 
 
 @router.delete("/api/rotinas/{rid}")
-def apagar_rotina(rid: int, u: Any = Depends(nucleo.usuario_atual)) -> dict[str, bool]:
+def apagar_rotina(rid: int, u: Any = Depends(nucleo.usuario_verificado)) -> dict[str, bool]:
     with nucleo.transacao() as con:
         con.execute("DELETE FROM rotinas WHERE id=? AND usuario_id=?", (rid, u["id"]))
     return {"ok": True}
@@ -656,7 +705,7 @@ def resumo_do_parque(uid: int) -> str:
     for m in ms:
         i, mt = m["info"], m["metricas"]
         if not m["online"]:
-            linhas.append(f"- {m['apelido']} ({m['hostname']}): DESLIGADA (visto em {m['visto_em']})")
+            linhas.append(f"- {m['apelido']} ({m['hostname']}) [modo {m['modo']}]: DESLIGADA (visto em {m['visto_em']})")
             continue
         ias = [n for n, k in (("Claude Code", "tem_claude"), ("Gemini", "tem_gemini"), ("Codex", "tem_codex"))
                if i.get(k)]
@@ -664,9 +713,12 @@ def resumo_do_parque(uid: int) -> str:
         uso = f"CPU {mt.get('cpu_pct')}%, RAM {mt.get('ram_pct')}%" if mt.get("cpu_pct") is not None else ""
         discos = ", ".join(f"{d.get('unidade')} {d.get('livre_gb')} GB livres" for d in (mt.get("discos") or []))
         estado = f"rodando a tarefa #{m['job_atual']}" if m["job_atual"] else "livre"
-        linhas.append(f"- {m['apelido']} ({m['hostname']}): LIGADA, {i.get('so', '?')}, {i.get('cpu', '?')}, "
+        linhas.append(f"- {m['apelido']} ({m['hostname']}) [modo {m['modo']}]: LIGADA, {i.get('so', '?')}, {i.get('cpu', '?')}, "
                       f"{ram}{', GPU ' + i['gpu'] if i.get('gpu') else ''}; IAs: {'/'.join(ias) or 'nenhuma'}; "
                       f"{uso}; {discos}; {estado}")
+    if ms:
+        linhas.append("\nAÇÕES PRONTAS (as únicas permitidas em máquinas no modo seguro; use tipo 'acao'):")
+        linhas += [f"- {k}: {v['titulo']} — {v['descricao']}" for k, v in acoes.ACOES.items()]
     jobs = nucleo.db().execute("SELECT id, titulo, status, agente, mensagem, criado_em FROM jobs WHERE usuario_id=? "
                                "ORDER BY id DESC LIMIT 10", (uid,)).fetchall()
     if jobs:

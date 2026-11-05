@@ -42,10 +42,14 @@ roda um agente que executa tarefas. Use as ferramentas:
 - ver_parque: para saber quais máquinas existem, se estão ligadas, o que têm
   instalado e o que rodou por último. Consulte antes de propor tarefas.
 - criar_tarefa: para fazer algo numa máquina. A tarefa só roda depois que o
-  usuário aprovar no painel, então explique em uma frase o que ela vai fazer.
-  Use tipo "shell" para comandos curtos e seguros (no Windows, comandos do cmd;
-  no Linux/macOS, bash). Use tipo "claude" quando a máquina tiver Claude Code e
-  a tarefa precisar de raciocínio (organizar arquivos, analisar algo).
+  usuário aprovar no painel. Preencha "explicacao" em linguagem simples, para
+  um leigo entender o que vai acontecer e se há algum risco.
+  Prefira sempre tipo "acao" (ações prontas e revisadas, listadas em
+  ver_parque). Máquinas no "modo seguro" SÓ aceitam ações prontas: se o pedido
+  não couber em nenhuma, explique isso e diga que o dono pode liberar o modo
+  livre no painel. Em máquinas no "modo livre", tipo "shell" roda um comando
+  (no Windows, do cmd; no Linux/macOS, sh) e tipo "claude" manda um pedido ao
+  Claude Code da máquina, se ela tiver.
   Nunca apague, formate ou sobrescreva nada sem o usuário pedir com todas as
   letras.
 - ver_tarefa: para acompanhar uma tarefa e contar o resultado.
@@ -73,10 +77,14 @@ FERRAMENTAS = [
     _ferramenta("criar_tarefa", "Prepara uma tarefa para rodar numa máquina do parque. Ela fica aguardando "
                 "a aprovação do usuário no painel.", {
                     "maquina": {"type": "string", "description": "Nome da máquina, como aparece em ver_parque"},
-                    "tipo": {"type": "string", "enum": ["shell", "claude"]},
-                    "comando": {"type": "string", "description": "Comando (shell) ou pedido em texto (claude)"},
+                    "tipo": {"type": "string", "enum": ["acao", "shell", "claude"],
+                             "description": "'acao' (preferido): uma ação pronta. 'shell'/'claude': só no modo livre."},
+                    "acao": {"type": "string", "description": "Id da ação pronta, quando tipo='acao'"},
+                    "comando": {"type": "string", "description": "Comando (shell) ou pedido (claude), quando não é ação"},
                     "titulo": {"type": "string", "description": "Título curto, para leigos"},
-                }, ["maquina", "tipo", "comando", "titulo"]),
+                    "explicacao": {"type": "string",
+                                   "description": "Em 1 ou 2 frases simples: o que vai acontecer e se há risco"},
+                }, ["maquina", "tipo", "titulo", "explicacao"]),
     _ferramenta("ver_tarefa", "Mostra o estado, o log e o resultado de uma tarefa.",
                 {"id": {"type": "integer"}}, ["id"]),
     _ferramenta("ler_cerebro", "Lê uma nota do cérebro. Sem nome, lista as notas existentes.",
@@ -194,10 +202,13 @@ class FakeIA:
                 ultima = " ".join(b.get("text", "") for b in ultima if isinstance(b, dict))
             pedido = re.search(r"execute `(.+?)` em (\S+)", str(ultima))
             if pedido and ferramentas:
+                cmd = pedido.group(1)
+                entrada = ({"tipo": "acao", "acao": cmd[1:]} if cmd.startswith(":") else
+                           {"tipo": "shell", "comando": cmd})
                 final.conteudo = [{"type": "text", "text": "Vou preparar isso."},
                                   {"type": "tool_use", "id": "toolu_fake1", "name": "criar_tarefa",
-                                   "input": {"maquina": pedido.group(2), "tipo": "shell",
-                                             "comando": pedido.group(1), "titulo": "Comando pedido no chat"}}]
+                                   "input": {"maquina": pedido.group(2), "titulo": "Comando pedido no chat",
+                                             "explicacao": "Roda o que você pediu.", **entrada}}]
                 final.chamadas = [final.conteudo[1]]
                 final.stop_reason = "tool_use"
                 final.texto = "Vou preparar isso."

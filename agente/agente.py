@@ -1734,9 +1734,19 @@ def instancia_unica() -> socket.socket:
     return s
 
 
+def _exigir_https(url: str) -> None:
+    """O token do agente dá acesso a esta máquina: nunca trafega sem criptografia,
+    a não ser para um broker local (desenvolvimento ou rede da casa)."""
+    p = urllib.parse.urlparse(url)
+    local = p.hostname in ("localhost", "127.0.0.1", "::1")
+    if p.scheme != "https" and not local and os.environ.get("AGENTE_PERMITIR_HTTP") != "1":
+        raise SystemExit("Recusado: o endereço do Jarvis precisa começar com https:// (" + url + ")")
+
+
 def parear(codigo: str, broker: str, nome: str) -> None:
     """Troca o código mostrado no painel por um token, e grava a configuração."""
     global BROKER, TOKEN, NOME, TAGS
+    _exigir_https(broker)
     BROKER, TOKEN, NOME = broker.rstrip("/"), "", nome
     try:
         _, r = chamar("POST", "/api/agente/parear", {"codigo": codigo, "hostname": nome})
@@ -1763,9 +1773,14 @@ def _argumentos() -> None:
     ap.add_argument("--parear", metavar="CODIGO", help="código mostrado no painel em 'Conectar máquina'")
     ap.add_argument("--broker", metavar="URL", help="endereço do Jarvis (ex: https://seu-jarvis.vercel.app)")
     ap.add_argument("--nome", help="nome desta máquina no painel (padrão: hostname)")
+    ap.add_argument("--so-parear", action="store_true", help="só conecta e sai (usado pelo instalador)")
     a = ap.parse_args()
     if a.parear:
         parear(a.parear, a.broker or BROKER, a.nome or NOME)
+        if a.so_parear:
+            raise SystemExit(0)
+    if TOKEN:
+        _exigir_https(BROKER)
 
 
 def main() -> None:

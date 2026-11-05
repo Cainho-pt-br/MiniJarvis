@@ -35,16 +35,27 @@ def executar_ferramenta(uid: int, nome: str, entrada: Any) -> tuple[str, dict[st
     if nome == "ver_parque":
         return parque.resumo_do_parque(uid), None
     if nome == "criar_tarefa":
+        from . import acoes
+
         tipo = _texto(entrada, "tipo")
-        if tipo not in ("shell", "claude"):
-            raise EntradaInvalida("tipo precisa ser 'shell' ou 'claude'")
-        maquina, comando = _texto(entrada, "maquina", maximo=80), _texto(entrada, "comando")
+        if tipo not in ("acao", "shell", "claude"):
+            raise EntradaInvalida("tipo precisa ser 'acao', 'shell' ou 'claude'")
+        maquina = _texto(entrada, "maquina", maximo=80)
         titulo = _texto(entrada, "titulo", maximo=120)
+        explicacao = _texto(entrada, "explicacao", maximo=500)
+        if tipo == "acao":
+            alvo = _texto(entrada, "acao", maximo=60)
+            if alvo not in acoes.ACOES:
+                raise EntradaInvalida("acao desconhecida; use um id da lista de ações prontas de ver_parque")
+        else:
+            alvo = _texto(entrada, "comando")
         try:
-            jid = parque.criar_job(uid, maquina, tipo, comando, titulo, "jarvis", "aguardando")
+            jid = parque.criar_job(uid, maquina, tipo, alvo, titulo, "jarvis", "aguardando")
         except HTTPException as exc:
             return f"Não deu para criar a tarefa: {exc.detail}", None
-        evento = {"id": jid, "titulo": titulo, "maquina": maquina, "tipo": tipo, "comando": comando}
+        comando = acoes.ACOES[alvo]["descricao"] if tipo == "acao" else alvo
+        evento = {"id": jid, "titulo": titulo, "maquina": maquina, "tipo": tipo, "comando": comando,
+                  "explicacao": explicacao, "pronta": tipo == "acao"}
         return (f"Tarefa #{jid} preparada em {maquina}. Ela aparece agora para o usuário aprovar; "
                 "só roda depois disso."), evento
     if nome == "ver_tarefa":
