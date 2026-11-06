@@ -1734,9 +1734,19 @@ def instancia_unica() -> socket.socket:
     return s
 
 
+def _exigir_https(url: str) -> None:
+    """O token do agente dá acesso a esta máquina: nunca trafega sem criptografia,
+    a não ser para um broker local (desenvolvimento ou rede da casa)."""
+    p = urllib.parse.urlparse(url)
+    local = p.hostname in ("localhost", "127.0.0.1", "::1")
+    if p.scheme != "https" and not local and os.environ.get("AGENTE_PERMITIR_HTTP") != "1":
+        raise SystemExit("Recusado: o endereço do Jarvis precisa começar com https:// (" + url + ")")
+
+
 def parear(codigo: str, broker: str, nome: str) -> None:
     """Troca o código mostrado no painel por um token, e grava a configuração."""
     global BROKER, TOKEN, NOME, TAGS
+    _exigir_https(broker)
     BROKER, TOKEN, NOME = broker.rstrip("/"), "", nome
     try:
         _, r = chamar("POST", "/api/agente/parear", {"codigo": codigo, "hostname": nome})
@@ -1757,15 +1767,74 @@ def parear(codigo: str, broker: str, nome: str) -> None:
     log("conectado ao Jarvis como", NOME, "| configuração salva em", CONFIG_ARQUIVO)
 
 
+def diagnostico() -> int:
+    """`agente.py --diagnostico`: confere, em português, o que costuma impedir a conexão."""
+    ok = True
+
+    def linha(bom: bool, texto: str, dica: str = "") -> None:
+        nonlocal ok
+        ok = ok and bom
+        print(("  ✔ " if bom else "  ✖ ") + texto)
+        if not bom and dica:
+            print("      → " + dica)
+
+    print("\nJarvis · diagnóstico desta máquina\n")
+    v = sys.version_info
+    linha(v >= (3, 9), f"Python {v.major}.{v.minor}.{v.micro}",
+          "Precisa de Python 3.9 ou mais novo. Instale em python.org e rode o comando do painel de novo.")
+    linha(CONFIG_ARQUIVO.exists(), f"Configuração salva em {CONFIG_ARQUIVO}",
+          "Esta máquina ainda não foi conectada. No painel, clique em 'Conectar máquina' e cole o comando.")
+    linha(bool(TOKEN), "Chave de acesso presente", "Conecte de novo pelo painel (o código vale 15 minutos).")
+    p = urllib.parse.urlparse(BROKER)
+    linha(p.scheme == "https" or p.hostname in ("localhost", "127.0.0.1"), f"Endereço do Jarvis: {BROKER}",
+          "O endereço precisa começar com https://.")
+    try:
+        socket.getaddrinfo(p.hostname, 443 if p.scheme == "https" else (p.port or 80))
+        linha(True, f"Internet e DNS funcionando ({p.hostname})")
+    except OSError as e:
+        linha(False, f"Não consegui achar {p.hostname}", f"Sem internet, ou a rede bloqueia o endereço ({e}).")
+        return 1
+    try:
+        with urllib.request.urlopen(BROKER + "/saude", timeout=15) as r:
+            linha(r.status == 200, "O Jarvis respondeu")
+    except Exception as e:  # noqa: BLE001
+        linha(False, "O Jarvis não respondeu", f"Um firewall, VPN ou antivírus pode estar bloqueando ({e}).")
+        return 1
+    if TOKEN:
+        try:
+            chamar("POST", "/api/agentes/heartbeat", {"hostname": NOME, "versao_agente": VERSAO}, timeout=20)
+            linha(True, "Esta máquina está conectada à sua conta")
+        except urllib.error.HTTPError as e:
+            linha(False, f"O Jarvis recusou esta máquina (erro {e.code})",
+                  "Ela foi removida do painel ou o acesso expirou. Conecte de novo com um código novo.")
+        except Exception as e:  # noqa: BLE001
+            linha(False, "Não consegui falar com o Jarvis", str(e))
+    for nome in ("claude", "gemini", "codex"):
+        achou = shutil.which(nome) is not None
+        print(("  ✔ " if achou else "  · ") + f"{nome} " + ("instalado" if achou else
+              "não instalado (só é preciso para tarefas desse tipo no modo livre)"))
+    print("\n" + ("Tudo certo. Se a máquina ainda não aparece no painel, espere 1 minuto e atualize a página."
+                  if ok else "Resolva o item marcado com ✖ e rode este comando de novo.") + "\n")
+    return 0 if ok else 1
+
+
 def _argumentos() -> None:
     import argparse
     ap = argparse.ArgumentParser(description="Agente do MiniJarvis")
     ap.add_argument("--parear", metavar="CODIGO", help="código mostrado no painel em 'Conectar máquina'")
     ap.add_argument("--broker", metavar="URL", help="endereço do Jarvis (ex: https://seu-jarvis.vercel.app)")
     ap.add_argument("--nome", help="nome desta máquina no painel (padrão: hostname)")
+    ap.add_argument("--so-parear", action="store_true", help="só conecta e sai (usado pelo instalador)")
+    ap.add_argument("--diagnostico", action="store_true", help="confere por que esta máquina não conecta")
     a = ap.parse_args()
+    if a.diagnostico:
+        raise SystemExit(diagnostico())
     if a.parear:
         parear(a.parear, a.broker or BROKER, a.nome or NOME)
+        if a.so_parear:
+            raise SystemExit(0)
+    if TOKEN:
+        _exigir_https(BROKER)
 
 
 def main() -> None:

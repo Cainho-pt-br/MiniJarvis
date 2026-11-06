@@ -1,0 +1,62 @@
+name: testes
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  unitarios:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: teste
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r nuvem/requirements.txt pytest httpx pyflakes
+      - run: python -m pyflakes nuvem
+      - name: testes (SQLite)
+        run: python -m pytest -q nuvem/tests
+      - name: testes (Postgres)
+        run: python -m pytest -q nuvem/tests
+        env:
+          TEST_DATABASE_URL: postgresql://postgres:teste@127.0.0.1:5432/postgres
+
+  instalador:
+    # Instala o agente de verdade com o comando que a pessoa cola no terminal,
+    # e roda cada ação pronta, em cada sistema.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r nuvem/requirements.txt
+      - name: sobe o Jarvis local (IA de mentira)
+        shell: bash
+        run: |
+          IA_FAKE=1 COOKIE_SEGURO=0 NUVEM_DB="$RUNNER_TEMP/n.db" PARQUE_ESPERA_S=5 PARQUE_HEARTBEAT_S=5 \
+            nohup python -m uvicorn index:app --host 127.0.0.1 --port 8000 > "$RUNNER_TEMP/srv.log" 2>&1 &
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:8000/saude && break; sleep 1; done
+      - name: instala, conecta e roda as ações
+        run: python nuvem/tests/e2e_instalador.py
+      - name: log do servidor
+        if: always()
+        shell: bash
+        run: tail -n 80 "$RUNNER_TEMP/srv.log"

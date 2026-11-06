@@ -129,6 +129,32 @@ CREATE TABLE IF NOT EXISTS sugestoes (
     conteudo TEXT NOT NULL,
     gerado_em TEXT NOT NULL
 );
+-- Códigos de 6 dígitos mandados por e-mail (confirmar conta, entrar de um
+-- dispositivo novo). Só o hash do código fica guardado.
+CREATE TABLE IF NOT EXISTS codigos (
+    id {pk},
+    usuario_id BIGINT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    finalidade TEXT NOT NULL,
+    codigo_hash TEXT NOT NULL,
+    expira_em TEXT NOT NULL,
+    tentativas INTEGER NOT NULL DEFAULT 0,
+    criado_em TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_codigos_usuario ON codigos(usuario_id, finalidade);
+-- Navegadores em que a pessoa já confirmou o e-mail: não pedem código de novo.
+CREATE TABLE IF NOT EXISTS dispositivos (
+    token_hash TEXT PRIMARY KEY,
+    usuario_id BIGINT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    criado_em TEXT NOT NULL
+);
+-- Contador de tentativas (cadastro, login, códigos) por IP ou por conta.
+-- Fica no banco porque na Vercel cada requisição pode cair numa instância.
+CREATE TABLE IF NOT EXISTS limites (
+    id {pk},
+    chave TEXT NOT NULL,
+    criado_em TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_limites ON limites(chave, criado_em);
 CREATE TABLE IF NOT EXISTS interesses (
     id {pk},
     usuario_id BIGINT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
@@ -141,6 +167,12 @@ CREATE TABLE IF NOT EXISTS interesses (
 # "coluna já existe" é ignorado.
 _MIGRACOES = [
     "ALTER TABLE mensagens ADD COLUMN oculta INTEGER NOT NULL DEFAULT 0",
+    # Contas que já existiam antes da confirmação por e-mail contam como confirmadas;
+    # as novas são gravadas com 0 explicitamente.
+    "ALTER TABLE usuarios ADD COLUMN email_verificado INTEGER NOT NULL DEFAULT 1",
+    "ALTER TABLE usuarios ADD COLUMN email_canonico TEXT",
+    # Máquina nova nasce no modo seguro: só roda ações prontas.
+    "ALTER TABLE agentes ADD COLUMN modo TEXT NOT NULL DEFAULT 'seguro'",
 ]
 
 

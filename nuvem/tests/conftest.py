@@ -24,7 +24,6 @@ def cliente(tmp_path, monkeypatch):
         monkeypatch.setenv("DATABASE_URL", url)
     modulo._bancos.clear()
     monkeypatch.setattr(modulo, "COOKIE_SEGURO", False)
-    modulo._tentativas.clear()
     return TestClient(modulo.app)
 
 

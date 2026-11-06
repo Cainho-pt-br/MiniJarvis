@@ -7,11 +7,16 @@ from nuvem import parque
 from .test_app import cadastrar, eventos
 
 
-def parear(c, hostname="pc-sala"):
+def parear(c, hostname="pc-sala", livre=True, so="Linux"):
     codigo = c.post("/api/parque/parear").json()["codigo"]
     r = c.post("/api/agente/parear", json={"codigo": codigo, "hostname": hostname})
     assert r.status_code == 200, r.text
-    return {"Authorization": "Bearer " + r.json()["token"]}
+    ag = {"Authorization": "Bearer " + r.json()["token"]}
+    c.post("/api/agentes/heartbeat", json={"info": {"so": so}}, headers=ag)
+    if livre:
+        mid = next(m["id"] for m in c.get("/api/parque").json()["maquinas"] if m["hostname"] == hostname)
+        assert c.post(f"/api/maquinas/{mid}/modo", json={"modo": "livre", "senha": "senha-forte-1"}).status_code == 200
+    return ag
 
 
 def batida(c, ag, **extra):
@@ -24,7 +29,8 @@ def batida(c, ag, **extra):
 def test_pareamento_e_maquina_no_parque(cliente):
     cadastrar(cliente)
     r = cliente.post("/api/parque/parear").json()
-    assert len(r["codigo"]) == 6 and "agente.py --parear " + r["codigo"] in r["comandos"]["linux"]
+    assert len(r["codigo"]) == 6 and f'instalar.sh?c={r["codigo"]}" | sh' in r["comandos"]["linux"]
+    assert r["comandos"]["windows"].startswith("irm ") and r["comandos"]["windows"].endswith("| iex")
     ag = {"Authorization": "Bearer " + cliente.post(
         "/api/agente/parear", json={"codigo": r["codigo"], "hostname": "pc-sala"}).json()["token"]}
     # código só vale uma vez
@@ -224,3 +230,68 @@ def test_sem_linha_em_branco_quando_a_primeira_rodada_so_usa_ferramenta(cliente,
     cadastrar(cliente)
     ev = eventos(cliente.post("/api/mensagens", json={"texto": "como está o parque?"}).text)
     assert "".join(d for e, d in ev if e == "texto").startswith("Pronto! O usuário ainda não conectou")
+
+
+def test_modo_seguro_so_roda_acoes_prontas(cliente):
+    cadastrar(cliente)
+    ag = parear(cliente, livre=False)
+    m = cliente.get("/api/parque").json()["maquinas"][0]
+    assert m["modo"] == "seguro"
+    r = cliente.post("/api/jobs", json={"maquina": "pc-sala", "tipo": "shell", "texto": "rm -rf ~"})
+    assert r.status_code == 403 and "modo seguro" in r.json()["detail"]
+    assert cliente.post("/api/jobs", json={"maquina": "pc-sala", "tipo": "acao", "texto": "nao-existe"}).status_code == 400
+    jid = cliente.post("/api/jobs", json={"maquina": "pc-sala", "tipo": "acao", "texto": "espaco_disco"}).json()["id"]
+    job = cliente.get("/api/trabalho?espera=0", headers=ag).json()
+    assert job["tipo"] == "shell" and job["payload"]["acao"] == "espaco_disco" and "df -h" in job["payload"]["comando"]
+    assert cliente.get(f"/api/jobs/{jid}").json()["titulo"] == "Ver espaço em disco"
+    # repetir continua sendo a ação pronta
+    assert cliente.post(f"/api/jobs/{jid}/repetir").status_code == 200
+    # rotina livre recusada; rotina de ação aceita
+    assert cliente.post("/api/rotinas", json={"nome": "x", "maquina": "pc-sala", "texto": "ls"}).status_code == 403
+    assert cliente.post("/api/rotinas", json={"nome": "Limpeza", "maquina": "pc-sala", "tipo": "acao",
+                                              "texto": "limpar_temporarios"}).status_code == 200
+    assert cliente.get("/api/rotinas").json()[0]["texto"] == "Limpar arquivos temporários"
+
+
+def test_acao_no_windows_usa_powershell_codificado(cliente):
+    import base64
+
+    cadastrar(cliente)
+    ag = parear(cliente, livre=False, so="Windows 11 Pro")
+    cliente.post("/api/jobs", json={"maquina": "pc-sala", "tipo": "acao", "texto": "info_sistema"})
+    cmd = cliente.get("/api/trabalho?espera=0", headers=ag).json()["payload"]["comando"]
+    assert cmd.startswith("powershell -NoProfile")
+    assert "Win32_OperatingSystem" in base64.b64decode(cmd.split()[-1]).decode("utf-16-le")
+
+
+def test_modo_livre_exige_senha(cliente):
+    cadastrar(cliente)
+    parear(cliente, livre=False)
+    mid = cliente.get("/api/parque").json()["maquinas"][0]["id"]
+    assert cliente.post(f"/api/maquinas/{mid}/modo", json={"modo": "livre", "senha": "errada"}).status_code == 403
+    assert cliente.post(f"/api/maquinas/{mid}/modo", json={"modo": "livre", "senha": "senha-forte-1"}).status_code == 200
+    assert cliente.post(f"/api/maquinas/{mid}/modo", json={"modo": "seguro"}).status_code == 200  # voltar não pede senha
+
+
+def test_instaladores_trazem_endereco_e_codigo(cliente):
+    sh = cliente.get("/instalar.sh?c=abc234").text
+    assert 'CODIGO="ABC234"' in sh and 'JARVIS="http://testserver"' in sh and "--so-parear" in sh
+    assert 'CODIGO=""' in cliente.get("/instalar.sh?c=;rm -rf /").text  # código estranho não entra no script
+    ps = cliente.get("/instalar.ps1?c=ABC234").text
+    assert "$Codigo = 'ABC234'" in ps and "Register-ScheduledTask" in ps and ps.rstrip().endswith("Instalar-Jarvis")
+    assert "minijarvis" in cliente.get("/desinstalar.sh").text
+    assert "Unregister-ScheduledTask" in cliente.get("/desinstalar.ps1").text
+
+
+def test_jarvis_usa_acao_pronta_no_modo_seguro(cliente):
+    cadastrar(cliente)
+    ag = parear(cliente, livre=False)
+    ev = eventos(cliente.post("/api/mensagens", json={"texto": "execute `:limpar_temporarios` em pc-sala"}).text)
+    t = next(d for e, d in ev if e == "tarefa")
+    assert t["pronta"] is True and "temporários" in t["comando"] and t["explicacao"]
+    cliente.post(f"/api/jobs/{t['id']}/aprovar")
+    assert cliente.get("/api/trabalho?espera=0", headers=ag).json()["payload"]["acao"] == "limpar_temporarios"
+    # comando livre no modo seguro: a ferramenta devolve o motivo ao modelo, sem criar nada
+    ev = eventos(cliente.post("/api/mensagens", json={"texto": "execute `rm -rf ~` em pc-sala"}).text)
+    assert not any(e == "tarefa" for e, _ in ev)
+    assert "modo seguro" in "".join(d for e, d in ev if e == "texto")
