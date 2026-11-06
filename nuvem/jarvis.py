@@ -69,7 +69,8 @@ def executar_ferramenta(uid: int, nome: str, entrada: Any) -> tuple[str, dict[st
         resultado = j["resultado"] or {}
         saida = resultado.get("stdout") or resultado.get("resposta") or ""
         return (f"Tarefa #{jid} '{j['titulo']}' em {j['agente'] or j['tags']}: {j['status']}"
-                f" ({j['mensagem'] or ''}).\nSaída:\n{(saida or j['log'])[-3000:]}"), None
+                f" ({j['mensagem'] or ''}).{(chr(10) + 'Explicação: ' + j['ajuda']) if j.get('ajuda') else ''}\n"
+                f"Saída:\n{(saida or j['log'])[-3000:]}"), None
     if nome == "ler_cerebro":
         alvo = _texto(entrada, "nome", obrigatorio=False, maximo=120).strip()
         if not alvo:

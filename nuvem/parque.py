@@ -25,6 +25,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 
 from . import acoes
+from .falhas import explicar_falha
 from . import app as nucleo
 
 router = APIRouter()
@@ -492,7 +493,7 @@ def detalhe_job(jid: int, u: Any = Depends(nucleo.usuario_verificado)) -> dict[s
     j = _ver_job(jid, u["id"])
     d = _resumo_job(j)
     d.update(payload=_json(j["payload"], {}), resultado=_json(j["resultado"]), log=j["log"][-LOG_MAX:],
-             tentativas=j["tentativas"])
+             tentativas=j["tentativas"], ajuda=explicar_falha(j["status"], j["mensagem"], j["log"]))
     return d
 
 

@@ -311,6 +311,18 @@ pre.log { margin: 0; padding: 14px; border-radius: 12px; background: #02050a; bo
 .tabela-admin th { text-align: left; color: var(--suave); font-weight: 500; font-size: 12px; padding: 6px 4px; }
 .tabela-admin td:last-child { text-align: right; }
 .tabela-admin select { background: var(--fundo); border: 1px solid var(--borda2); border-radius: 8px; padding: 4px 6px; }
+.ajuda-con { margin-top: 14px; padding: 14px; border-radius: 12px; border: 1px solid rgba(227, 179, 65, .4); background: rgba(227, 179, 65, .06); font-size: 14px; color: var(--suave); }
+.ajuda-con ol { padding-left: 20px; margin: 8px 0 0; display: grid; gap: 8px; }
+.ajuda-falha { margin: 0 0 12px; padding: 12px 14px; border-radius: 12px; border: 1px solid rgba(255, 123, 114, .35); background: rgba(255, 123, 114, .06); }
+.ajuda-falha p { margin: 4px 0 0; }
+.comparar { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.comp { padding: 24px; border-radius: var(--r); background: var(--cartao); border: 1px solid var(--borda); }
+.comp h3 { font-size: 18px; margin: 10px 0 6px; }
+.comp p { margin: 0; color: var(--suave); }
+.comp .ic { width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; background: rgba(139, 123, 255, .12); color: var(--violeta); border: 1px solid rgba(139, 123, 255, .3); }
+.transparencia { margin-top: 22px; padding: 16px 18px; border-radius: 14px; border: 1px dashed var(--borda2); color: var(--suave); font-size: 14px; text-align: center; }
+.transparencia b { color: var(--texto); }
+@media (max-width: 760px) { .comparar { grid-template-columns: 1fr; } }
 .toast { position: fixed; left: 50%; bottom: 90px; transform: translateX(-50%); z-index: 200; padding: 12px 18px; border-radius: 12px; background: var(--cartao2); border: 1px solid var(--borda2); box-shadow: 0 20px 40px -10px #000; animation: aparece .2s; max-width: calc(100vw - 32px); }
 .tabela { width: 100%; border-collapse: collapse; font-size: 14px; }
 .tabela td { padding: 9px 4px; border-bottom: 1px solid var(--borda); }
@@ -352,6 +364,7 @@ pre.log { margin: 0; padding: 14px; border-radius: 12px; background: #02050a; bo
     <div class="marca"><svg viewBox="0 0 40 40" data-logo></svg>Jarvis</div>
     <nav>
       <a class="oc" href="#como">Como funciona</a>
+      <a class="oc" href="#sem-dor">Por que o Jarvis</a>
       <a class="oc" href="#recursos">Recursos</a>
       <a class="oc" href="#precos">Preços</a>
       <button class="btn fantasma peq" data-abrir="entrar">Entrar</button>
@@ -384,6 +397,17 @@ pre.log { margin: 0; padding: 14px; border-radius: 12px; background: #02050a; bo
       <div class="passo"><div class="n">02</div><h3>Conecte</h3><p>Em cada computador, cole um comando com o código que o Jarvis te dá. Ele aparece no seu mapa na hora.</p></div>
       <div class="passo"><div class="n">03</div><h3>Delegue</h3><p>O Jarvis prepara a tarefa, você aprova com um toque, e acompanha tudo ao vivo de qualquer lugar.</p></div>
     </div>
+  </section>
+
+  <section class="secao" id="sem-dor">
+    <div class="titulo-secao"><div class="sobre">sem dor de cabeça</div><h2>IA que funciona sem você<br>virar <span class="grad">técnico</span></h2>
+      <p>Quem já tentou rodar IA no próprio computador conhece a lista de problemas. A gente resolveu cada um.</p></div>
+    <div class="comparar">
+      <div class="comp"><div class="ic" data-ico="mapa"></div><h3>Sem placa de vídeo, sem baixar modelos</h3><p>A inteligência roda na nuvem. Funciona até no computador mais simples da casa, sem arquivos de vários gigas e sem driver para atualizar.</p></div>
+      <div class="comp"><div class="ic" data-ico="jarvis"></div><h3>Um comando e pronto</h3><p>Sem Docker, sem arquivo de configuração, sem versão errada. Se algo falhar, o Jarvis explica em português o que houve e o que fazer.</p></div>
+      <div class="comp"><div class="ic" data-ico="escudo"></div><h3>Você sabe o que ele pode fazer</h3><p>Cada computador começa no modo seguro: só ações prontas e revisadas. Nada roda sem o seu "Aprovar", e você desconecta quando quiser.</p></div>
+    </div>
+    <div class="transparencia"><b>Transparência:</b> seus pedidos passam pela IA da Anthropic na nuvem, e as notas do seu cérebro ficam guardadas na sua conta. Você pode apagar tudo, inclusive a conta, a qualquer momento.</div>
   </section>
 
   <section class="secao" id="recursos">
@@ -801,8 +825,14 @@ async function modalConectar() {
     <li>Espere a mensagem <b>"Pronto!"</b>. Este aviso aqui vai mudar sozinho.</li></ol>
     <details class="detalhe"><summary>O que esse comando faz?</summary><p>Baixa o agente do Jarvis (um arquivo pequeno, de código aberto) para uma pasta sua, instala o Python se faltar (no Windows), conecta este computador à sua conta com o código <b class="mono">${esc(d.codigo)}</b> (vale 15 minutos) e deixa o agente ligando junto com o computador. Não pede senha de administrador.</p>
     <p>A máquina começa no <b>modo seguro</b>: só roda ações prontas e revisadas (ver espaço em disco, limpar temporários, organizar Downloads…), e só quando você aprovar. Você pode desconectá-la quando quiser.</p></details>
-    <div class="esperando" id="esperando"><i></i>Esperando o computador se conectar…</div>`, true);
-  const mostrar = (s) => { $$("[data-so]", el).forEach((b) => b.classList.toggle("ativa", b.dataset.so === s)); $("#cmd-txt").textContent = d.comandos[s]; $("#como-abrir", el).innerHTML = COMO_ABRIR[s]; };
+    <div class="esperando" id="esperando"><i></i>Esperando o computador se conectar…</div>
+    <div class="ajuda-con oculto" id="ajuda-con"><b>Já passou um tempo e nada apareceu?</b>
+      <ol><li>Confira se o comando terminou com a mensagem <b>"Pronto!"</b>. Se mostrou um erro, ele diz o que falta.</li>
+      <li>Rode o diagnóstico, que explica em português o que está impedindo:<div class="cmd" id="cmd-diag"><span id="cmd-diag-txt"></span></div></li>
+      <li>Se o código expirou (vale 15 minutos), feche esta janela e clique em "Conectar máquina" de novo.</li></ol></div>`, true);
+  const DIAG = { windows: 'python "$env:LOCALAPPDATA\\MiniJarvis\\agente.py" --diagnostico', mac: "python3 ~/.minijarvis/agente.py --diagnostico", linux: "python3 ~/.minijarvis/agente.py --diagnostico" };
+  const ajudaTimer = setTimeout(() => $("#ajuda-con", el).classList.remove("oculto"), 90000);
+  const mostrar = (s) => { $$("[data-so]", el).forEach((b) => b.classList.toggle("ativa", b.dataset.so === s)); $("#cmd-txt").textContent = d.comandos[s]; $("#como-abrir", el).innerHTML = COMO_ABRIR[s]; $("#cmd-diag-txt", el).textContent = DIAG[s]; };
   $$("[data-so]", el).forEach((b) => (b.onclick = () => mostrar(b.dataset.so))); mostrar(so);
   $("#copiar").onclick = async () => { try { await navigator.clipboard.writeText($("#cmd-txt").textContent); toast("Comando copiado!"); } catch { toast("Selecione e copie o comando."); } };
   const t = setInterval(async () => {
@@ -814,7 +844,7 @@ async function modalConectar() {
       setTimeout(() => { fechar(); irPara(estado.aba); }, 1800);
     } else if (m) $("#esperando").innerHTML = "<i></i>Conectado! Recebendo as informações do computador…";
   }, 3000);
-  estado.aoFecharModal = () => clearInterval(t);
+  estado.aoFecharModal = () => { clearInterval(t); clearTimeout(ajudaTimer); };
 }
 
 /* ---- parque */
@@ -941,13 +971,15 @@ async function abrirJob(id) {
   fundo.onclick = fechar;
   const render = async () => {
     const j = await api(`/api/jobs/${id}`);
-    const comando = j.payload.comando || j.payload.prompt || "";
+    const acao = j.payload.acao && (await carregarAcoes()).find((x) => x.id === j.payload.acao);
+    const comando = acao ? `🛡 Ação pronta e revisada: ${acao.titulo}\n${acao.descricao}` : (j.payload.comando || j.payload.prompt || "");
     const saida = j.resultado?.stdout || j.resultado?.resposta || "";
     g.innerHTML = `<button class="btn peq fantasma" id="fx">← Voltar</button>
       <h2>${esc(j.titulo || j.tipo)}</h2>
       <div class="meta">${st(j.status)}<span>#${j.id}</span><span>${esc(j.agente || j.tags)}</span><span>${j.tipo === "shell" ? "comando" : esc(j.tipo)}</span><span>criada ${quando(j.criado_em)}</span>${j.origem === "jarvis" ? "<span>✦ pelo Jarvis</span>" : ""}</div>
       ${j.status === "executando" ? `<div class="barra-prog" style="margin-bottom:12px"><i style="width:${Math.max(8, j.progresso)}%"></i></div>` : ""}
       <div class="painel" style="margin-bottom:12px"><h2>${j.tipo === "shell" ? "Comando" : "Pedido"}</h2><pre class="log">${esc(comando)}</pre></div>
+      ${j.ajuda ? `<div class="ajuda-falha"><b>O que aconteceu</b><p>${esc(j.ajuda)}</p></div>` : ""}
       ${j.mensagem ? `<p style="color:var(--suave)">${esc(j.mensagem)}</p>` : ""}
       <div class="painel"><h2>Saída ${j.status === "executando" ? '<span class="digitando"></span>' : ""}</h2><pre class="log" id="log">${esc(j.log || saida || (j.status === "pendente" ? "Esperando a máquina pegar a tarefa…" : j.status === "aguardando" ? "Esta tarefa espera a sua aprovação." : "Sem saída."))}</pre></div>
       <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap">
