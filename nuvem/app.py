@@ -18,7 +18,6 @@ import math
 import os
 import re
 import secrets
-import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Iterator
@@ -42,7 +41,20 @@ MAX_MENSAGEM = 20_000
 HISTORICO_MAX_MSGS = 40
 
 log = logging.getLogger("minijarvis")
-app = FastAPI(title="MiniJarvis Nuvem")
+app = FastAPI(title="MiniJarvis Nuvem", docs_url=None, redoc_url=None, openapi_url=None)
+
+
+@app.middleware("http")
+async def cabecalhos_de_seguranca(request: Request, call_next: Any) -> Any:
+    resp = await call_next(request)
+    # Ninguém pode embutir o painel noutro site (evita enganar o clique em "Aprovar").
+    resp.headers.setdefault("X-Frame-Options", "DENY")
+    resp.headers.setdefault("Content-Security-Policy", "frame-ancestors 'none'")
+    resp.headers.setdefault("X-Content-Type-Options", "nosniff")
+    resp.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    if COOKIE_SEGURO:
+        resp.headers.setdefault("Strict-Transport-Security", "max-age=31536000")
+    return resp
 _ia = None
 
 
@@ -119,17 +131,34 @@ def usuario_atual(request: Request) -> Any:
     return row
 
 
-# Limite simples de tentativas de login por IP (memória do processo).
-_tentativas: dict[str, list[float]] = {}
+# ----------------------------------------------------------------- limites ---
+
+def ip_cliente(request: Request) -> str:
+    """IP de quem chamou. Na Vercel, o cabeçalho é posto pela própria Vercel e
+    não dá para falsificar; fora dela só vale o endereço da conexão."""
+    if os.environ.get("VERCEL"):
+        ip = request.headers.get("x-real-ip") or request.headers.get("x-forwarded-for", "").split(",")[0]
+        if ip.strip():
+            return ip.strip()
+    return request.client.host if request.client else "?"
+
+
+def limitar(chave: str, maximo: int, janela_s: int, msg: str = "Muitas tentativas. Espere alguns minutos.") -> None:
+    """Conta tentativas no banco (vale entre instâncias). Estoura com 429."""
+    desde = (datetime.now(timezone.utc) - timedelta(seconds=janela_s)).isoformat(timespec="seconds")
+    n = db().execute("SELECT COUNT(*) AS n FROM limites WHERE chave = ? AND criado_em > ?",
+                     (chave, desde)).fetchone()["n"]
+    if n >= maximo:
+        raise HTTPException(429, msg)
+    with transacao() as con:
+        con.execute("INSERT INTO limites (chave, criado_em) VALUES (?, ?)", (chave, agora()))
+        if secrets.randbelow(50) == 0:  # faxina de vez em quando
+            velho = (datetime.now(timezone.utc) - timedelta(days=2)).isoformat(timespec="seconds")
+            con.execute("DELETE FROM limites WHERE criado_em < ?", (velho,))
 
 
 def limitar_tentativas(chave: str, maximo: int = 10, janela: float = 300) -> None:
-    t = time.monotonic()
-    lista = [x for x in _tentativas.get(chave, []) if t - x < janela]
-    if len(lista) >= maximo:
-        raise HTTPException(429, "Muitas tentativas. Espere alguns minutos.")
-    lista.append(t)
-    _tentativas[chave] = lista
+    limitar(chave, maximo, int(janela))
 
 
 # ------------------------------------------------------------------ contas ---
@@ -141,46 +170,214 @@ class Cadastro(BaseModel):
 
 
 class Entrada(BaseModel):
-    email: str
-    senha: str
+    email: str = Field(max_length=200)
+    senha: str = Field(max_length=200)
 
 
 _RE_EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+# Provedores de e-mail descartável mais usados para criar contas em massa.
+DESCARTAVEIS = {
+    "mailinator.com", "guerrillamail.com", "guerrillamail.net", "sharklasers.com", "10minutemail.com",
+    "10minutemail.net", "tempmail.com", "temp-mail.org", "tempmail.net", "tempmailo.com", "yopmail.com",
+    "yopmail.net", "getnada.com", "nada.email", "trashmail.com", "dispostable.com", "maildrop.cc",
+    "mailnesia.com", "mohmal.com", "emailondeck.com", "fakeinbox.com", "throwawaymail.com",
+    "mintemail.com", "mytemp.email", "tempinbox.com", "spamgourmet.com", "burnermail.io", "inboxkitten.com",
+    "minuteinbox.com", "tmail.ws", "tmpmail.org", "tmpmail.net", "emailfake.com", "crazymailing.com",
+    "mail.tm", "1secmail.com", "1secmail.net", "1secmail.org", "dropmail.me", "linshiyouxiang.net",
+}
+
+
+def email_canonico(email: str) -> str:
+    """O mesmo e-mail escrito de jeitos diferentes vira um só (caio+1@gmail.com,
+    c.a.i.o@gmail.com e caio@gmail.com são a mesma caixa)."""
+    local, _, dominio = email.lower().partition("@")
+    local = local.split("+", 1)[0]
+    if dominio in ("gmail.com", "googlemail.com"):
+        local, dominio = local.replace(".", ""), "gmail.com"
+    return f"{local}@{dominio}"
 
 
 def _publico(u: Any) -> dict[str, Any]:
-    return {"id": u["id"], "nome": u["nome"], "email": u["email"],
-            "creditos": u["creditos"], "plano": u["plano"]}
+    return {"id": u["id"], "nome": u["nome"], "email": u["email"], "creditos": u["creditos"],
+            "plano": u["plano"], "email_verificado": bool(u["email_verificado"]),
+            "admin": eh_admin(u)}
+
+
+def eh_admin(u: Any) -> bool:
+    admins = {e.strip().lower() for e in os.environ.get("ADMIN_EMAILS", "").split(",") if e.strip()}
+    return u["email"].lower() in admins
+
+
+CODIGO_MIN = 15
+COOKIE_DISP = "mj_disp"
+
+
+def _criar_codigo(uid: int, finalidade: str) -> tuple[int, str]:
+    codigo = f"{secrets.randbelow(1_000_000):06d}"
+    expira = (datetime.now(timezone.utc) + timedelta(minutes=CODIGO_MIN)).isoformat(timespec="seconds")
+    with transacao() as con:
+        con.execute("DELETE FROM codigos WHERE usuario_id = ? AND finalidade = ?", (uid, finalidade))
+        cid = con.inserir("INSERT INTO codigos (usuario_id, finalidade, codigo_hash, expira_em, criado_em) "
+                          "VALUES (?, ?, ?, ?, ?)", (uid, finalidade, _hash_token(codigo), expira, agora()))
+    return cid, codigo
+
+
+def _conferir_codigo(uid: int, finalidade: str, codigo: str, cid: int | None = None) -> None:
+    sql = "SELECT * FROM codigos WHERE usuario_id = ? AND finalidade = ?"
+    args: list[Any] = [uid, finalidade]
+    if cid is not None:
+        sql += " AND id = ?"
+        args.append(cid)
+    c = db().execute(sql, args).fetchone()
+    if c is None or c["expira_em"] < agora():
+        raise HTTPException(400, "Código expirado. Peça um novo.")
+    if c["tentativas"] >= 5:
+        raise HTTPException(429, "Tentativas demais com este código. Peça um novo.")
+    if not hmac.compare_digest(c["codigo_hash"], _hash_token(codigo.strip())):
+        with transacao() as con:
+            con.execute("UPDATE codigos SET tentativas = tentativas + 1 WHERE id = ?", (c["id"],))
+        raise HTTPException(400, "Código incorreto.")
+    with transacao() as con:
+        con.execute("DELETE FROM codigos WHERE id = ?", (c["id"],))
+
+
+def _mandar_codigo(u: Any, finalidade: str) -> int:
+    from . import correio
+
+    cid, codigo = _criar_codigo(u["id"], finalidade)
+    try:
+        correio.enviar_codigo(u["email"], u["nome"], codigo, "confirmar" if finalidade == "verificar" else "entrar")
+    except Exception as exc:  # noqa: BLE001
+        log.exception("Falha ao enviar e-mail: %s", type(exc).__name__)
+        raise HTTPException(503, "Não consegui enviar o e-mail agora. Tente de novo em instantes.")
+    return cid
+
+
+def confiar_dispositivo(resp: Response, uid: int) -> None:
+    token = secrets.token_urlsafe(32)
+    with transacao() as con:
+        con.execute("INSERT INTO dispositivos VALUES (?, ?, ?)", (_hash_token(token), uid, agora()))
+    resp.set_cookie(COOKIE_DISP, token, max_age=365 * 86400, httponly=True, secure=COOKIE_SEGURO, samesite="lax")
+
+
+def dispositivo_confiavel(request: Request, uid: int) -> bool:
+    token = request.cookies.get(COOKIE_DISP)
+    return bool(token) and db().execute("SELECT 1 FROM dispositivos WHERE token_hash = ? AND usuario_id = ?",
+                                        (_hash_token(token), uid)).fetchone() is not None
+
+
+def usuario_verificado(u: Any = Depends(usuario_atual)) -> Any:
+    if not u["email_verificado"]:
+        raise HTTPException(403, "Confirme seu e-mail para continuar.")
+    return u
+
+
+def _dar_boas_vindas(uid: int) -> None:
+    with transacao() as con:
+        con.execute("UPDATE usuarios SET email_verificado = 1, creditos = creditos + ? WHERE id = ?",
+                    (CREDITOS_INICIAIS, uid))
+        con.execute("INSERT INTO extrato (usuario_id, delta, motivo, criado_em) VALUES (?, ?, ?, ?)",
+                    (uid, CREDITOS_INICIAIS, "boas-vindas", agora()))
 
 
 @app.post("/api/cadastro")
 def cadastrar(c: Cadastro, request: Request, resp: Response) -> dict[str, Any]:
-    limitar_tentativas("cad:" + (request.client.host if request.client else "?"))
+    from . import correio
+
+    ip = ip_cliente(request)
+    limitar(f"cad-h:{ip}", 3, 3600, "Muitas contas criadas desta rede. Tente de novo mais tarde.")
+    limitar(f"cad-d:{ip}", 8, 86400, "Muitas contas criadas desta rede hoje. Tente amanhã.")
     email = c.email.strip().lower()
     if not _RE_EMAIL.match(email):
         raise HTTPException(400, "E-mail inválido.")
+    canon = email_canonico(email)
+    if canon.split("@")[1] in DESCARTAVEIS:
+        raise HTTPException(400, "Use um e-mail de verdade (endereços temporários não são aceitos).")
+    if db().execute("SELECT 1 FROM usuarios WHERE email_canonico = ? OR email = ?", (canon, email)).fetchone():
+        raise HTTPException(409, "Já existe uma conta com este e-mail.")
+    precisa_confirmar = correio.configurado()
     try:
         with transacao() as con:
             uid = con.inserir(
-                "INSERT INTO usuarios (email, nome, senha_hash, creditos, criado_em) VALUES (?, ?, ?, ?, ?)",
-                (email, c.nome.strip(), gerar_hash(c.senha), CREDITOS_INICIAIS, agora()))
-            con.execute("INSERT INTO extrato (usuario_id, delta, motivo, criado_em) VALUES (?, ?, ?, ?)",
-                        (uid, CREDITOS_INICIAIS, "boas-vindas", agora()))
+                "INSERT INTO usuarios (email, email_canonico, nome, senha_hash, creditos, email_verificado, criado_em) "
+                "VALUES (?, ?, ?, ?, 0, 0, ?)", (email, canon, c.nome.strip(), gerar_hash(c.senha), agora()))
     except ErroDuplicado:
         raise HTTPException(409, "Já existe uma conta com este e-mail.")
     parque._semear_cerebro(uid)  # o cérebro já nasce com as notas de boas-vindas
+    u = db().execute("SELECT * FROM usuarios WHERE id = ?", (uid,)).fetchone()
+    if precisa_confirmar:
+        _mandar_codigo(u, "verificar")
+    else:
+        log.warning("SMTP não configurado: conta %s criada sem confirmação de e-mail", uid)
+        _dar_boas_vindas(uid)
     abrir_sessao(resp, uid)
     return _publico(db().execute("SELECT * FROM usuarios WHERE id = ?", (uid,)).fetchone())
 
 
+class Codigo(BaseModel):
+    codigo: str = Field(min_length=4, max_length=12)
+
+
+@app.post("/api/verificar")
+def verificar_email(c: Codigo, resp: Response, u: Any = Depends(usuario_atual)) -> dict[str, Any]:
+    if u["email_verificado"]:
+        return _publico(u)
+    _conferir_codigo(u["id"], "verificar", c.codigo)
+    _dar_boas_vindas(u["id"])
+    confiar_dispositivo(resp, u["id"])
+    return _publico(db().execute("SELECT * FROM usuarios WHERE id = ?", (u["id"],)).fetchone())
+
+
+@app.post("/api/verificar/reenviar")
+def reenviar_codigo(u: Any = Depends(usuario_atual)) -> dict[str, bool]:
+    if u["email_verificado"]:
+        return {"ok": True}
+    limitar(f"reenv-m:{u['id']}", 1, 60, "Espere um minuto para pedir outro código.")
+    limitar(f"reenv-h:{u['id']}", 6, 3600)
+    _mandar_codigo(u, "verificar")
+    return {"ok": True}
+
+
+def _mascarar(email: str) -> str:
+    local, _, dominio = email.partition("@")
+    return local[:2] + "•" * max(1, len(local) - 2) + "@" + dominio
+
+
 @app.post("/api/entrar")
 def entrar(e: Entrada, request: Request, resp: Response) -> dict[str, Any]:
-    limitar_tentativas("login:" + (request.client.host if request.client else "?"))
-    u = db().execute("SELECT * FROM usuarios WHERE email = ?", (e.email.strip().lower(),)).fetchone()
+    from . import correio
+
+    email = e.email.strip().lower()
+    limitar(f"login-ip:{ip_cliente(request)}", 15, 900)
+    limitar(f"login-conta:{email_canonico(email)}", 8, 900,
+            "Muitas tentativas nesta conta. Espere 15 minutos.")
+    u = db().execute("SELECT * FROM usuarios WHERE email = ?", (email,)).fetchone()
     if u is None or not conferir_senha(e.senha, u["senha_hash"]):
         raise HTTPException(401, "E-mail ou senha incorretos.")
+    # Navegador novo numa conta confirmada: pede o código mandado por e-mail
+    # (verificação em duas etapas sem precisar de aplicativo).
+    if u["email_verificado"] and correio.configurado() and not dispositivo_confiavel(request, u["id"]):
+        cid = _mandar_codigo(u, "entrar")
+        return {"precisa_codigo": True, "desafio": cid, "email": _mascarar(u["email"])}
     abrir_sessao(resp, u["id"])
     return _publico(u)
+
+
+class CodigoEntrada(BaseModel):
+    desafio: int
+    codigo: str = Field(min_length=4, max_length=12)
+
+
+@app.post("/api/entrar/codigo")
+def entrar_com_codigo(c: CodigoEntrada, request: Request, resp: Response) -> dict[str, Any]:
+    limitar(f"login-cod:{ip_cliente(request)}", 20, 900)
+    r = db().execute("SELECT usuario_id FROM codigos WHERE id = ? AND finalidade = 'entrar'", (c.desafio,)).fetchone()
+    if r is None:
+        raise HTTPException(400, "Código expirado. Entre de novo.")
+    _conferir_codigo(r["usuario_id"], "entrar", c.codigo, c.desafio)
+    confiar_dispositivo(resp, r["usuario_id"])
+    abrir_sessao(resp, r["usuario_id"])
+    return _publico(db().execute("SELECT * FROM usuarios WHERE id = ?", (r["usuario_id"],)).fetchone())
 
 
 @app.post("/api/sair")
@@ -190,6 +387,17 @@ def sair(request: Request, resp: Response) -> dict[str, bool]:
         with transacao() as con:
             con.execute("DELETE FROM sessoes WHERE token_hash = ?", (_hash_token(token),))
     resp.delete_cookie(COOKIE)
+    return {"ok": True}
+
+
+@app.post("/api/sair-de-todos")
+def sair_de_todos(resp: Response, u: Any = Depends(usuario_atual)) -> dict[str, bool]:
+    """Encerra todas as sessões e esquece os navegadores confiáveis."""
+    with transacao() as con:
+        con.execute("DELETE FROM sessoes WHERE usuario_id = ?", (u["id"],))
+        con.execute("DELETE FROM dispositivos WHERE usuario_id = ?", (u["id"],))
+    resp.delete_cookie(COOKIE)
+    resp.delete_cookie(COOKIE_DISP)
     return {"ok": True}
 
 
@@ -282,7 +490,7 @@ MAX_RODADAS = 6  # quantas idas e vindas com ferramentas uma mensagem pode ter
 
 
 @app.post("/api/mensagens")
-def enviar_mensagem(m: NovaMensagem, u: Any = Depends(usuario_atual)) -> StreamingResponse:
+def enviar_mensagem(m: NovaMensagem, u: Any = Depends(usuario_verificado)) -> StreamingResponse:
     from .ia import FERRAMENTAS
     from .jarvis import EntradaInvalida, executar_ferramenta
 
@@ -370,7 +578,7 @@ def ver_sugestoes(u: Any = Depends(usuario_atual)) -> dict[str, Any]:
 
 
 @app.post("/api/sugestoes/gerar")
-def gerar_sugestoes(u: Any = Depends(usuario_atual)) -> dict[str, Any]:
+def gerar_sugestoes(u: Any = Depends(usuario_verificado)) -> dict[str, Any]:
     from .jarvis import SCHEMA_SUGESTOES, guardar_sugestoes, prompt_sugestoes, validar_sugestoes
 
     if u["creditos"] <= 0:
@@ -396,12 +604,12 @@ PLANOS = [
      "descricao": "Para conhecer o Jarvis.",
      "itens": ["Chat com o Jarvis", "1 máquina conectada", "Cérebro com memória", "300 créditos para começar"]},
     # Créditos calibrados para a IA custar no máximo ~35% do preço (ver docs/PRODUTO.md).
-    {"id": "basico", "nome": "Básico", "preco_brl": 29.90, "creditos": 2000, "maquinas": 3,
+    {"id": "basico", "nome": "Básico", "preco_brl": 29.90, "creditos": 2000, "maquinas": 2,
      "descricao": "Seu assistente no dia a dia.",
-     "itens": ["IA mais inteligente (Sonnet)", "Até 3 máquinas", "2.000 créditos por mês", "Rotinas manuais"]},
-    {"id": "pro", "nome": "Pro", "preco_brl": 59.90, "creditos": 4500, "maquinas": None, "destaque": True,
+     "itens": ["IA mais inteligente (Sonnet)", "Até 2 máquinas", "2.000 créditos por mês", "Rotinas manuais"]},
+    {"id": "pro", "nome": "Pro", "preco_brl": 59.90, "creditos": 4500, "maquinas": 4, "destaque": True,
      "descricao": "O parque inteiro trabalhando por você.",
-     "itens": ["IA mais inteligente (Sonnet)", "Máquinas ilimitadas", "4.500 créditos por mês",
+     "itens": ["IA mais inteligente (Sonnet)", "Até 4 máquinas", "4.500 créditos por mês",
                "Rotinas diárias automáticas", "Sugestões do parque todo dia"]},
 ]
 
@@ -413,7 +621,7 @@ def planos() -> list[dict[str, Any]]:
 
 
 @app.post("/api/planos/{plano}/interesse")
-def registrar_interesse(plano: str, u: Any = Depends(usuario_atual)) -> dict[str, bool]:
+def registrar_interesse(plano: str, u: Any = Depends(usuario_verificado)) -> dict[str, bool]:
     """Enquanto o pagamento não está ligado, guarda quem quis assinar (lista de espera)."""
     if plano not in {p["id"] for p in PLANOS} - {"gratis"}:
         raise HTTPException(404, "Plano não encontrado.")
@@ -427,6 +635,44 @@ def extrato(u: Any = Depends(usuario_atual)) -> list[dict[str, Any]]:
     rows = db().execute("SELECT delta, motivo, criado_em FROM extrato WHERE usuario_id = ? "
                         "ORDER BY id DESC LIMIT 50", (u["id"],)).fetchall()
     return [dict(r) for r in rows]
+
+
+# ------------------------------------------------------------------- admin ---
+
+def usuario_admin(u: Any = Depends(usuario_atual)) -> Any:
+    if not eh_admin(u):
+        raise HTTPException(404, "não encontrado")
+    return u
+
+
+@app.get("/api/admin/resumo")
+def admin_resumo(_: Any = Depends(usuario_admin)) -> dict[str, Any]:
+    us = db().execute(
+        "SELECT u.id, u.email, u.nome, u.plano, u.creditos, u.email_verificado, u.criado_em, "
+        "(SELECT COUNT(*) FROM agentes a WHERE a.usuario_id = u.id) AS maquinas, "
+        "(SELECT COUNT(*) FROM conversas c WHERE c.usuario_id = u.id) AS conversas "
+        "FROM usuarios u ORDER BY u.id DESC LIMIT 500").fetchall()
+    interesses = db().execute(
+        "SELECT u.email, i.plano, i.criado_em FROM interesses i JOIN usuarios u ON u.id = i.usuario_id "
+        "ORDER BY i.id DESC LIMIT 200").fetchall()
+    return {"usuarios": [dict(r) for r in us], "interesses": [dict(r) for r in interesses]}
+
+
+class TrocaPlano(BaseModel):
+    plano: str
+    creditos: int = Field(default=0, ge=0, le=100_000)
+
+
+@app.post("/api/admin/usuarios/{uid}/plano")
+def admin_trocar_plano(uid: int, t: TrocaPlano, _: Any = Depends(usuario_admin)) -> dict[str, bool]:
+    if t.plano not in {p["id"] for p in PLANOS}:
+        raise HTTPException(400, "Plano inválido.")
+    with transacao() as con:
+        con.execute("UPDATE usuarios SET plano = ?, creditos = creditos + ? WHERE id = ?", (t.plano, t.creditos, uid))
+        if t.creditos:
+            con.execute("INSERT INTO extrato (usuario_id, delta, motivo, criado_em) VALUES (?, ?, ?, ?)",
+                        (uid, t.creditos, f"plano {t.plano}", agora()))
+    return {"ok": True}
 
 
 # -------------------------------------------------------------------- web ---
@@ -461,6 +707,7 @@ def baixar_agente() -> FileResponse:
                         filename="agente.py")
 
 
-from . import parque  # noqa: E402  (precisa das funções acima já definidas)
+from . import instaladores, parque  # noqa: E402  (precisam das funções acima já definidas)
 
 app.include_router(parque.router)
+app.include_router(instaladores.router)

@@ -292,6 +292,37 @@ pre.log { margin: 0; padding: 14px; border-radius: 12px; background: #02050a; bo
 .esperando { display: flex; gap: 10px; align-items: center; justify-content: center; color: var(--suave); font-size: 14px; margin-top: 16px; }
 .esperando i { width: 9px; height: 9px; border-radius: 50%; background: var(--ciano); animation: pisca 1s infinite; }
 
+.modo { font-size: 13px; color: var(--suave); padding: 8px 10px; border-radius: 10px; border: 1px solid var(--borda); background: var(--cartao2); }
+.modo.livre { border-color: rgba(227, 179, 65, .4); color: var(--pend); }
+.passos-con { padding-left: 20px; margin: 4px 0 12px; display: grid; gap: 10px; color: var(--suave); font-size: 14px; }
+.passos-con b { color: var(--texto); }
+.passos-con .cmd { margin-top: 8px; }
+.detalhe { margin: 10px 0; font-size: 14px; color: var(--suave); }
+.detalhe summary { cursor: pointer; color: var(--ciano2); }
+.grade-acoes { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; margin-top: 4px; }
+.acao-pronta { text-align: left; padding: 12px; border-radius: 12px; border: 1px solid var(--borda); background: var(--cartao2); display: grid; gap: 3px; }
+.acao-pronta:hover { border-color: var(--ciano); }
+.acao-pronta span { font-size: 20px; }
+.acao-pronta b { font-size: 14px; }
+.acao-pronta small { color: var(--suave); font-size: 12px; line-height: 1.4; }
+.explica { margin: 2px 0 10px; font-size: 15px; }
+.codigo-input { width: 100%; font-family: var(--mono); font-size: 32px; letter-spacing: .4em; text-align: center; padding: 12px; border-radius: 12px; border: 1px solid var(--borda2); background: var(--fundo); outline: none; }
+.codigo-input:focus { border-color: var(--ciano); }
+.tabela-admin th { text-align: left; color: var(--suave); font-weight: 500; font-size: 12px; padding: 6px 4px; }
+.tabela-admin td:last-child { text-align: right; }
+.tabela-admin select { background: var(--fundo); border: 1px solid var(--borda2); border-radius: 8px; padding: 4px 6px; }
+.ajuda-con { margin-top: 14px; padding: 14px; border-radius: 12px; border: 1px solid rgba(227, 179, 65, .4); background: rgba(227, 179, 65, .06); font-size: 14px; color: var(--suave); }
+.ajuda-con ol { padding-left: 20px; margin: 8px 0 0; display: grid; gap: 8px; }
+.ajuda-falha { margin: 0 0 12px; padding: 12px 14px; border-radius: 12px; border: 1px solid rgba(255, 123, 114, .35); background: rgba(255, 123, 114, .06); }
+.ajuda-falha p { margin: 4px 0 0; }
+.comparar { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.comp { padding: 24px; border-radius: var(--r); background: var(--cartao); border: 1px solid var(--borda); }
+.comp h3 { font-size: 18px; margin: 10px 0 6px; }
+.comp p { margin: 0; color: var(--suave); }
+.comp .ic { width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; background: rgba(139, 123, 255, .12); color: var(--violeta); border: 1px solid rgba(139, 123, 255, .3); }
+.transparencia { margin-top: 22px; padding: 16px 18px; border-radius: 14px; border: 1px dashed var(--borda2); color: var(--suave); font-size: 14px; text-align: center; }
+.transparencia b { color: var(--texto); }
+@media (max-width: 760px) { .comparar { grid-template-columns: 1fr; } }
 .toast { position: fixed; left: 50%; bottom: 90px; transform: translateX(-50%); z-index: 200; padding: 12px 18px; border-radius: 12px; background: var(--cartao2); border: 1px solid var(--borda2); box-shadow: 0 20px 40px -10px #000; animation: aparece .2s; max-width: calc(100vw - 32px); }
 .tabela { width: 100%; border-collapse: collapse; font-size: 14px; }
 .tabela td { padding: 9px 4px; border-bottom: 1px solid var(--borda); }
@@ -333,6 +364,7 @@ pre.log { margin: 0; padding: 14px; border-radius: 12px; background: #02050a; bo
     <div class="marca"><svg viewBox="0 0 40 40" data-logo></svg>Jarvis</div>
     <nav>
       <a class="oc" href="#como">Como funciona</a>
+      <a class="oc" href="#sem-dor">Por que o Jarvis</a>
       <a class="oc" href="#recursos">Recursos</a>
       <a class="oc" href="#precos">Preços</a>
       <button class="btn fantasma peq" data-abrir="entrar">Entrar</button>
@@ -365,6 +397,17 @@ pre.log { margin: 0; padding: 14px; border-radius: 12px; background: #02050a; bo
       <div class="passo"><div class="n">02</div><h3>Conecte</h3><p>Em cada computador, cole um comando com o código que o Jarvis te dá. Ele aparece no seu mapa na hora.</p></div>
       <div class="passo"><div class="n">03</div><h3>Delegue</h3><p>O Jarvis prepara a tarefa, você aprova com um toque, e acompanha tudo ao vivo de qualquer lugar.</p></div>
     </div>
+  </section>
+
+  <section class="secao" id="sem-dor">
+    <div class="titulo-secao"><div class="sobre">sem dor de cabeça</div><h2>IA que funciona sem você<br>virar <span class="grad">técnico</span></h2>
+      <p>Quem já tentou rodar IA no próprio computador conhece a lista de problemas. A gente resolveu cada um.</p></div>
+    <div class="comparar">
+      <div class="comp"><div class="ic" data-ico="mapa"></div><h3>Sem placa de vídeo, sem baixar modelos</h3><p>A inteligência roda na nuvem. Funciona até no computador mais simples da casa, sem arquivos de vários gigas e sem driver para atualizar.</p></div>
+      <div class="comp"><div class="ic" data-ico="jarvis"></div><h3>Um comando e pronto</h3><p>Sem Docker, sem arquivo de configuração, sem versão errada. Se algo falhar, o Jarvis explica em português o que houve e o que fazer.</p></div>
+      <div class="comp"><div class="ic" data-ico="escudo"></div><h3>Você sabe o que ele pode fazer</h3><p>Cada computador começa no modo seguro: só ações prontas e revisadas. Nada roda sem o seu "Aprovar", e você desconecta quando quiser.</p></div>
+    </div>
+    <div class="transparencia"><b>Transparência:</b> seus pedidos passam pela IA da Anthropic na nuvem, e as notas do seu cérebro ficam guardadas na sua conta. Você pode apagar tudo, inclusive a conta, a qualquer momento.</div>
   </section>
 
   <section class="secao" id="recursos">
@@ -439,6 +482,7 @@ const ICONES = {
   rotinas: '<path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v5h-5"/><path d="M12 8v4l3 2"/>',
   planos: '<path d="m12 3 2.6 5.6 6 .7-4.5 4.1 1.2 6-5.3-3-5.3 3 1.2-6L3.4 9.3l6-.7z"/>',
   mais: '<path d="M12 5v14M5 12h14"/>',
+  escudo: '<path d="M12 3 4 6v6c0 4.5 3.4 8.3 8 9 4.6-.7 8-4.5 8-9V6z"/><path d="m9 12 2 2 4-4"/>',
   pc: '<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/>',
   copiar: '<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8"/>',
 };
@@ -606,7 +650,7 @@ function abrirModal(html, largo = false) {
   m.innerHTML = `<div class="modal-fundo"><div class="modal ${largo ? "largo" : ""}" role="dialog" aria-modal="true"><button class="fechar" aria-label="Fechar">×</button>${html}</div></div>`;
   const fechar = () => { m.innerHTML = ""; estado.aoFecharModal && estado.aoFecharModal(); estado.aoFecharModal = null; };
   $(".fechar", m).onclick = fechar;
-  $(".modal-fundo", m).onclick = (e) => e.target.classList.contains("modal-fundo") && fechar();
+  $(".modal-fundo", m).onclick = (e) => { if (e.target.classList.contains("modal-fundo")) fechar(); };
   return { el: $(".modal", m), fechar };
 }
 
@@ -629,7 +673,9 @@ function modalConta(modo) {
     const b = $("button.prim", el); b.disabled = true;
     try {
       const u = await post(cad ? "/api/cadastro" : "/api/entrar", corpo);
-      $("#modais").innerHTML = ""; iniciarApp(u, cad);
+      $("#modais").innerHTML = "";
+      if (u.precisa_codigo) return modalCodigoEntrada(u);
+      iniciarApp(u, cad);
     } catch (e) { $("#erro-conta").textContent = e.message; b.disabled = false; }
   };
 }
@@ -650,14 +696,15 @@ async function assinar(plano) {
 }
 
 /* ----------------------------------------------------------------- app */
-const ABAS = [["inicio", "Início"], ["jarvis", "Jarvis"], ["parque", "Parque"], ["tarefas", "Tarefas"], ["cerebro", "Cérebro"], ["rotinas", "Rotinas"], ["planos", "Planos"]];
+const ABAS = [["inicio", "Início"], ["jarvis", "Jarvis"], ["parque", "Parque"], ["tarefas", "Tarefas"], ["cerebro", "Cérebro"], ["rotinas", "Rotinas"], ["planos", "Planos"], ["admin", "Admin"]];
+const abasVisiveis = () => ABAS.filter(([id]) => id !== "admin" || estado.usuario?.admin);
 
 function pararTimers() { estado.timers.forEach(clearInterval); estado.timers = []; }
 function repetir(fn, ms) { estado.timers.push(setInterval(fn, ms)); }
 
 function montarNav() {
-  const html = (baixa) => ABAS.filter(([id]) => !baixa || id !== "rotinas").map(([id, nome]) =>
-    `<button class="nav-it ${estado.aba === id ? "ativo" : ""}" data-aba="${id}">${ico(id === "parque" ? "mapa" : id)}<span>${nome}</span>${id === "tarefas" && estado.aguardando ? `<span class="cont">${estado.aguardando}</span>` : ""}</button>`).join("");
+  const html = (baixa) => abasVisiveis().filter(([id]) => !baixa || (id !== "rotinas" && id !== "admin")).map(([id, nome]) =>
+    `<button class="nav-it ${estado.aba === id ? "ativo" : ""}" data-aba="${id}">${ico(id === "parque" ? "mapa" : id === "admin" ? "escudo" : id)}<span>${nome}</span>${id === "tarefas" && estado.aguardando ? `<span class="cont">${estado.aguardando}</span>` : ""}</button>`).join("");
   $("#nav-lateral").innerHTML = html(false); $("#nav-baixa").innerHTML = html(true);
   $$("[data-aba]").forEach((b) => (b.onclick = () => irPara(b.dataset.aba)));
   const u = estado.usuario, plano = estado.planos.find((p) => p.id === u.plano);
@@ -671,10 +718,11 @@ function montarNav() {
 async function iniciarApp(u, novo = false) {
   estado.usuario = u;
   await carregarPlanos();
+  if (!u.email_verificado) return telaVerificar(u);
   $("#landing").classList.add("oculto"); $("#app").classList.remove("oculto");
   $("#sair").onclick = async () => { await post("/api/sair"); location.reload(); };
   const destino = location.hash.slice(1);
-  irPara(ABAS.some(([a]) => a === destino) ? destino : "inicio");
+  irPara(abasVisiveis().some(([a]) => a === destino) ? destino : "inicio");
   if (novo) setTimeout(() => toast(`Bem-vindo, ${u.nome.split(" ")[0]}! Você ganhou ${u.creditos} créditos para começar.`, 5000), 400);
 }
 
@@ -685,7 +733,7 @@ async function atualizarUsuario() {
 function irPara(aba) {
   pararTimers(); estado.fecharGaveta && estado.fecharGaveta(); $("#modais").innerHTML = ""; estado.aba = aba; if (location.hash !== "#" + aba) history.pushState(null, "", "#" + aba);
   montarNav(); window.scrollTo(0, 0);
-  ({ inicio: telaInicio, jarvis: telaJarvis, parque: telaParque, tarefas: telaTarefas, cerebro: telaCerebro, rotinas: telaRotinas, planos: telaPlanos })[aba]();
+  ({ inicio: telaInicio, jarvis: telaJarvis, parque: telaParque, tarefas: telaTarefas, cerebro: telaCerebro, rotinas: telaRotinas, planos: telaPlanos, admin: telaAdmin })[aba]();
 }
 
 function barra(titulo, dir = "") {
@@ -759,31 +807,44 @@ function linhaJob(j) {
 function ligarJobs(el) { $$("[data-job]", el).forEach((b) => (b.onclick = () => abrirJob(+b.dataset.job))); }
 
 /* ---- conectar máquina */
+const COMO_ABRIR = {
+  windows: "Aperte a tecla <b>Windows</b>, digite <b>PowerShell</b> e abra. Cole o comando (botão direito do mouse cola) e aperte Enter.",
+  mac: "Aperte <b>Cmd + Espaço</b>, digite <b>Terminal</b> e abra. Cole o comando (Cmd + V) e aperte Enter.",
+  linux: "Abra o <b>Terminal</b> (Ctrl + Alt + T na maioria dos sistemas), cole o comando (Ctrl + Shift + V) e aperte Enter.",
+};
+
 async function modalConectar() {
   let d;
   try { d = await post("/api/parque/parear"); } catch (e) { return; }
   const antes = (estado.parque?.maquinas || []).length;
-  const so = /Win/.test(navigator.platform) ? "windows" : "linux";
+  const so = /Win/.test(navigator.platform) ? "windows" : /Mac/.test(navigator.platform) ? "mac" : "linux";
   const { el, fechar } = abrirModal(`<h2>Conectar um computador</h2>
-    <p class="sub">No computador que você quer conectar, abra o terminal e cole o comando abaixo. Precisa ter Python 3 instalado.</p>
-    <div class="codigo-grande">${esc(d.codigo)}</div>
-    <p style="text-align:center;color:var(--tenue);font-size:12px;margin:0 0 6px">seu código · vale por 15 minutos</p>
-    <div class="abas"><button class="aba" data-so="windows">Windows (PowerShell)</button><button class="aba" data-so="linux">Mac / Linux (Terminal)</button></div>
-    <div class="cmd" id="cmd"><span id="cmd-txt"></span><button class="btn peq" id="copiar">${ico("copiar", 14)} Copiar</button></div>
-    <p style="color:var(--suave);font-size:13px">Esse computador vai executar as tarefas que <b>você aprovar</b> na sua conta. Você pode desconectá-lo quando quiser.</p>
-    <div class="esperando" id="esperando"><i></i>Esperando o computador se conectar…</div>`, true);
-  const mostrar = (s) => { $$("[data-so]", el).forEach((b) => b.classList.toggle("ativa", b.dataset.so === s)); $("#cmd-txt").textContent = d.comandos[s]; };
+    <p class="sub">É um comando só. Ele instala tudo o que precisa e deixa o Jarvis ligando sozinho com o computador. Faça isso <b>no computador que você quer conectar</b>.</p>
+    <div class="abas"><button class="aba" data-so="windows">Windows</button><button class="aba" data-so="mac">Mac</button><button class="aba" data-so="linux">Linux</button></div>
+    <ol class="passos-con"><li id="como-abrir"></li><li>Cole este comando:<div class="cmd" id="cmd"><span id="cmd-txt"></span><button class="btn peq" id="copiar">${ico("copiar", 14)} Copiar</button></div></li>
+    <li>Espere a mensagem <b>"Pronto!"</b>. Este aviso aqui vai mudar sozinho.</li></ol>
+    <details class="detalhe"><summary>O que esse comando faz?</summary><p>Baixa o agente do Jarvis (um arquivo pequeno, de código aberto) para uma pasta sua, instala o Python se faltar (no Windows), conecta este computador à sua conta com o código <b class="mono">${esc(d.codigo)}</b> (vale 15 minutos) e deixa o agente ligando junto com o computador. Não pede senha de administrador.</p>
+    <p>A máquina começa no <b>modo seguro</b>: só roda ações prontas e revisadas (ver espaço em disco, limpar temporários, organizar Downloads…), e só quando você aprovar. Você pode desconectá-la quando quiser.</p></details>
+    <div class="esperando" id="esperando"><i></i>Esperando o computador se conectar…</div>
+    <div class="ajuda-con oculto" id="ajuda-con"><b>Já passou um tempo e nada apareceu?</b>
+      <ol><li>Confira se o comando terminou com a mensagem <b>"Pronto!"</b>. Se mostrou um erro, ele diz o que falta.</li>
+      <li>Rode o diagnóstico, que explica em português o que está impedindo:<div class="cmd" id="cmd-diag"><span id="cmd-diag-txt"></span></div></li>
+      <li>Se o código expirou (vale 15 minutos), feche esta janela e clique em "Conectar máquina" de novo.</li></ol></div>`, true);
+  const DIAG = { windows: 'python "$env:LOCALAPPDATA\\MiniJarvis\\agente.py" --diagnostico', mac: "python3 ~/.minijarvis/agente.py --diagnostico", linux: "python3 ~/.minijarvis/agente.py --diagnostico" };
+  const ajudaTimer = setTimeout(() => $("#ajuda-con", el).classList.remove("oculto"), 90000);
+  const mostrar = (s) => { $$("[data-so]", el).forEach((b) => b.classList.toggle("ativa", b.dataset.so === s)); $("#cmd-txt").textContent = d.comandos[s]; $("#como-abrir", el).innerHTML = COMO_ABRIR[s]; $("#cmd-diag-txt", el).textContent = DIAG[s]; };
   $$("[data-so]", el).forEach((b) => (b.onclick = () => mostrar(b.dataset.so))); mostrar(so);
   $("#copiar").onclick = async () => { try { await navigator.clipboard.writeText($("#cmd-txt").textContent); toast("Comando copiado!"); } catch { toast("Selecione e copie o comando."); } };
   const t = setInterval(async () => {
     const p = await api("/api/parque");
-    if (p.maquinas.length > antes) {
-      clearInterval(t); const m = p.maquinas[p.maquinas.length - 1];
+    const m = p.maquinas.length > antes ? p.maquinas[p.maquinas.length - 1] : null;
+    if (m && m.info && m.info.so) {
+      clearInterval(t);
       $("#esperando").innerHTML = `<span style="color:var(--ok);font-size:16px">✔ <b>${esc(m.apelido)}</b> conectado ao seu parque!</span>`;
       setTimeout(() => { fechar(); irPara(estado.aba); }, 1800);
-    }
+    } else if (m) $("#esperando").innerHTML = "<i></i>Conectado! Recebendo as informações do computador…";
   }, 3000);
-  estado.aoFecharModal = () => clearInterval(t);
+  estado.aoFecharModal = () => { clearInterval(t); clearTimeout(ajudaTimer); };
 }
 
 /* ---- parque */
@@ -811,16 +872,30 @@ function cartaoMaquina(m) {
   const disco = (mt.discos || [])[0];
   const discoPct = disco && disco.total_gb ? 100 - (disco.livre_gb / disco.total_gb) * 100 : null;
   return `<div class="maq ${m.online ? "on" : ""}" id="maq-${m.id}">
-    <div class="cab"><div class="ico">${ico("pc", 22)}</div><div style="min-width:0"><div class="nm">${esc(m.apelido)}</div><div class="so">${esc(i.so || m.hostname)}${m.versao ? " · agente " + esc(m.versao.split("/")[0]) : ""}</div></div>
+    <div class="cab"><div class="ico">${ico("pc", 22)}</div><div style="min-width:0"><div class="nm">${esc(m.apelido)}</div><div class="so">${esc(i.so || m.hostname)}${m.versao && m.versao !== "?" ? " · agente " + esc(m.versao.split("/")[0]) : ""}</div></div>
       <span class="st ${m.online ? (m.job_atual ? "executando" : "online") : "offline"}">${m.online ? (m.job_atual ? "trabalhando" : "ligada") : "desligada"}</span></div>
     <div class="fichas">${i.cpu ? `<span class="ficha">${esc(i.cpu.replace(/\(R\)|\(TM\)|CPU|Processor/g, "").trim())}</span>` : ""}${i.ram_total_mb ? `<span class="ficha">${Math.round(i.ram_total_mb / 1024)} GB RAM</span>` : ""}${i.gpu ? `<span class="ficha">${esc(i.gpu)}</span>` : ""}${ias}</div>
     ${m.online ? med("CPU", mt.cpu_pct) + med("RAM", mt.ram_pct) + med("Disco", discoPct) : `<div style="color:var(--tenue);font-size:13px">Visto ${quando(m.visto_em)}. Tarefas para ela esperam na fila até ligar.</div>`}
+    <div class="modo ${m.modo}">${m.modo === "livre" ? "⚠ <b>Modo livre</b>: roda qualquer comando que você aprovar." : "🛡 <b>Modo seguro</b>: só ações prontas e revisadas."} <button class="link-btn" data-acao="modo" data-id="${m.id}">${m.modo === "livre" ? "Voltar ao seguro" : "Liberar comandos"}</button></div>
     <div class="acoes"><button class="btn peq" data-acao="tarefa" data-id="${m.id}">Nova tarefa</button><button class="btn peq fantasma" data-acao="renomear" data-id="${m.id}">Renomear</button><button class="btn peq fantasma perigo" data-acao="remover" data-id="${m.id}">Desconectar</button></div>
   </div>`;
 }
 
 async function acaoMaquina(acao, m) {
   if (acao === "tarefa") return modalNovaTarefa(m.hostname);
+  if (acao === "modo") {
+    if (m.modo === "livre") { await post(`/api/maquinas/${m.id}/modo`, { modo: "seguro" }); toast("Modo seguro ligado."); return irPara("parque"); }
+    const { el, fechar } = abrirModal(`<h2>Liberar comandos em ${esc(m.apelido)}?</h2>
+      <p class="sub">No <b>modo livre</b>, esta máquina passa a rodar <b>qualquer comando</b> que for aprovado na sua conta, inclusive pedidos ao Claude Code com acesso total. É o que pessoas técnicas usam. Se alguém descobrir sua senha, poderá mexer neste computador.</p>
+      <p style="color:var(--suave);font-size:14px">Se você só quer limpar, organizar e acompanhar o computador, o modo seguro já basta.</p>
+      <form id="f"><label class="campo"><span>Confirme com a sua senha</span><input name="senha" type="password" required autocomplete="current-password"></label>
+      <button class="btn perigo" style="width:100%">Entendi, liberar comandos</button><div class="erro-txt" id="erro"></div></form>`);
+    $("#f", el).onsubmit = async (e) => {
+      e.preventDefault();
+      try { await post(`/api/maquinas/${m.id}/modo`, { modo: "livre", senha: new FormData(e.target).get("senha") }); fechar(); toast("Modo livre ligado."); irPara("parque"); }
+      catch (x) { $("#erro", el).textContent = x.message; }
+    };
+  }
   if (acao === "renomear") {
     const { el, fechar } = abrirModal(`<h2>Renomear</h2><form id="f"><label class="campo"><span>Nome no painel</span><input name="apelido" value="${esc(m.apelido)}" maxlength="40" required></label><button class="btn prim" style="width:100%">Salvar</button></form>`);
     $("#f", el).onsubmit = async (e) => { e.preventDefault(); await api(`/api/maquinas/${m.id}`, { method: "PATCH", body: JSON.stringify({ apelido: new FormData(e.target).get("apelido") }) }); fechar(); irPara("parque"); };
@@ -836,20 +911,37 @@ function opcoesMaquinas(sel) {
   return (estado.parque?.maquinas || []).map((m) => `<option value="${esc(m.hostname)}" ${m.hostname === sel ? "selected" : ""}>${esc(m.apelido)}${m.online ? "" : " (desligada)"}</option>`).join("");
 }
 
+async function carregarAcoes() {
+  if (!estado.acoes) estado.acoes = await api("/api/acoes");
+  return estado.acoes;
+}
+
 async function modalNovaTarefa(maquina) {
-  if (!estado.parque) estado.parque = await api("/api/parque");
+  estado.parque = await api("/api/parque");
   if (!estado.parque.maquinas.length) return modalConectar();
-  const { el, fechar } = abrirModal(`<h2>Nova tarefa</h2><p class="sub">Roda direto na máquina. Dica: peça ao Jarvis no chat e ele monta o comando para você.</p>
-    <form id="f"><div class="form-linha"><label class="campo"><span>Máquina</span><select name="maquina">${opcoesMaquinas(maquina)}</select></label>
-    <label class="campo"><span>Tipo</span><select name="tipo"><option value="shell">Comando (terminal)</option><option value="claude">Pedido ao Claude Code</option><option value="gemini">Pedido ao Gemini</option></select></label></div>
-    <label class="campo"><span>Título</span><input name="titulo" placeholder="Ex.: Ver espaço em disco" maxlength="120"></label>
-    <label class="campo"><span>Comando ou pedido</span><textarea name="texto" rows="4" required placeholder="df -h"></textarea></label>
-    <button class="btn prim" style="width:100%">Enviar para a máquina</button><div class="erro-txt" id="erro"></div></form>`, true);
-  $("#f", el).onsubmit = async (e) => {
-    e.preventDefault();
-    try { const r = await post("/api/jobs", Object.fromEntries(new FormData(e.target))); fechar(); abrirJob(r.id); }
+  const acoes = await carregarAcoes();
+  const maqs = estado.parque.maquinas;
+  let alvo = maqs.find((m) => m.hostname === maquina) || maqs[0];
+  const { el, fechar } = abrirModal(`<h2>Nova tarefa</h2>
+    <label class="campo"><span>Em qual máquina</span><select id="maq">${opcoesMaquinas(alvo.hostname)}</select></label>
+    <div class="grade-acoes">${acoes.map((a) => `<button class="acao-pronta" data-a="${a.id}"><span>${a.icone}</span><b>${esc(a.titulo)}</b><small>${esc(a.descricao)}</small></button>`).join("")}</div>
+    <div id="livre"></div><div class="erro-txt" id="erro"></div>`, true);
+  const enviar = async (corpo) => {
+    try { const r = await post("/api/jobs", { maquina: alvo.hostname, ...corpo }); fechar(); abrirJob(r.id); }
     catch (x) { $("#erro", el).textContent = x.message; }
   };
+  const desenharLivre = () => {
+    $("#livre", el).innerHTML = alvo.modo === "livre" ? `<details class="detalhe"><summary>Comando livre (modo livre)</summary><form id="f">
+      <div class="form-linha"><label class="campo"><span>Tipo</span><select name="tipo"><option value="shell">Comando (terminal)</option><option value="claude">Pedido ao Claude Code</option><option value="gemini">Pedido ao Gemini</option></select></label>
+      <label class="campo"><span>Título</span><input name="titulo" maxlength="120"></label></div>
+      <label class="campo"><span>Comando ou pedido</span><textarea name="texto" rows="3" required></textarea></label>
+      <button class="btn" style="width:100%">Enviar para a máquina</button></form></details>`
+      : `<p style="font-size:13px;color:var(--tenue);margin:12px 0 0">🛡 Esta máquina está no modo seguro: só ações prontas. Para comandos livres, use "Liberar comandos" no cartão da máquina.</p>`;
+    const f = $("#f", el); if (f) f.onsubmit = (e) => { e.preventDefault(); enviar(Object.fromEntries(new FormData(e.target))); };
+  };
+  $("#maq", el).onchange = (e) => { alvo = maqs.find((m) => m.hostname === e.target.value); desenharLivre(); };
+  $$("[data-a]", el).forEach((b) => (b.onclick = () => enviar({ tipo: "acao", texto: b.dataset.a })));
+  desenharLivre();
 }
 
 /* ---- tarefas */
@@ -879,13 +971,15 @@ async function abrirJob(id) {
   fundo.onclick = fechar;
   const render = async () => {
     const j = await api(`/api/jobs/${id}`);
-    const comando = j.payload.comando || j.payload.prompt || "";
+    const acao = j.payload.acao && (await carregarAcoes()).find((x) => x.id === j.payload.acao);
+    const comando = acao ? `🛡 Ação pronta e revisada: ${acao.titulo}\n${acao.descricao}` : (j.payload.comando || j.payload.prompt || "");
     const saida = j.resultado?.stdout || j.resultado?.resposta || "";
     g.innerHTML = `<button class="btn peq fantasma" id="fx">← Voltar</button>
       <h2>${esc(j.titulo || j.tipo)}</h2>
       <div class="meta">${st(j.status)}<span>#${j.id}</span><span>${esc(j.agente || j.tags)}</span><span>${j.tipo === "shell" ? "comando" : esc(j.tipo)}</span><span>criada ${quando(j.criado_em)}</span>${j.origem === "jarvis" ? "<span>✦ pelo Jarvis</span>" : ""}</div>
       ${j.status === "executando" ? `<div class="barra-prog" style="margin-bottom:12px"><i style="width:${Math.max(8, j.progresso)}%"></i></div>` : ""}
       <div class="painel" style="margin-bottom:12px"><h2>${j.tipo === "shell" ? "Comando" : "Pedido"}</h2><pre class="log">${esc(comando)}</pre></div>
+      ${j.ajuda ? `<div class="ajuda-falha"><b>O que aconteceu</b><p>${esc(j.ajuda)}</p></div>` : ""}
       ${j.mensagem ? `<p style="color:var(--suave)">${esc(j.mensagem)}</p>` : ""}
       <div class="painel"><h2>Saída ${j.status === "executando" ? '<span class="digitando"></span>' : ""}</h2><pre class="log" id="log">${esc(j.log || saida || (j.status === "pendente" ? "Esperando a máquina pegar a tarefa…" : j.status === "aguardando" ? "Esta tarefa espera a sua aprovação." : "Sem saída."))}</pre></div>
       <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap">
@@ -959,7 +1053,9 @@ function rolar() { const m = $("#msgs"); if (m) m.scrollTop = m.scrollHeight; }
 function cartaoTarefa(t) {
   const d = document.createElement("div"); d.className = "cartao-tarefa";
   d.innerHTML = `<div class="cab">${st("aguardando")}<b>${esc(t.titulo)}</b><span style="color:var(--suave);font-size:13px">em ${esc(t.maquina)}</span></div>
-    <div style="font-size:13px;color:var(--suave)">${t.tipo === "shell" ? "Comando que vai rodar:" : "Pedido para o Claude Code:"}</div><pre>${esc(t.comando)}</pre>
+    ${t.explicacao ? `<div class="explica">${esc(t.explicacao)}</div>` : ""}
+    ${t.pronta ? `<div style="font-size:13px;color:var(--suave)">🛡 Ação pronta e revisada: ${esc(t.comando)}</div>`
+      : `<div style="font-size:13px;color:var(--pend)">⚠ Comando livre${t.tipo === "claude" ? " (pedido ao Claude Code)" : ""}. Só aprove se entender o que ele faz:</div><pre>${esc(t.comando)}</pre>`}
     <div class="acoes"><button class="btn prim peq" data-a="aprovar">Aprovar e executar</button><button class="btn peq perigo" data-a="cancelar">Não rodar</button></div>`;
   $$("[data-a]", d).forEach((b) => (b.onclick = async () => {
     await post(`/api/jobs/${t.id}/${b.dataset.a}`);
@@ -1119,22 +1215,26 @@ async function telaRotinas() {
 }
 
 async function modalRotina() {
-  if (!estado.parque) estado.parque = await api("/api/parque");
+  estado.parque = await api("/api/parque");
   if (!estado.parque.maquinas.length) return modalConectar();
-  const pro = estado.usuario.plano === "pro";
+  const acoes = await carregarAcoes(), pro = estado.usuario.plano === "pro";
   const { el, fechar } = abrirModal(`<h2>Nova rotina</h2><form id="f">
-    <label class="campo"><span>Nome</span><input name="nome" required maxlength="80" placeholder="Backup das fotos"></label>
-    <label class="campo"><span>Para que serve</span><input name="descricao" maxlength="300" placeholder="Copia as fotos para o HD externo"></label>
+    <label class="campo"><span>Nome</span><input name="nome" required maxlength="80" placeholder="Limpeza semanal"></label>
     <div class="form-linha"><label class="campo"><span>Máquina</span><select name="maquina">${opcoesMaquinas()}</select></label>
     <label class="campo"><span>Quando</span><select name="frequencia"><option value="manual">Quando eu mandar</option><option value="diaria" ${pro ? "" : "disabled"}>Todo dia de manhã ${pro ? "" : "(Pro)"}</option></select></label></div>
-    <label class="campo"><span>Tipo</span><select name="tipo"><option value="shell">Comando (terminal)</option><option value="claude">Pedido ao Claude Code</option></select></label>
-    <label class="campo"><span>Comando ou pedido</span><textarea name="texto" rows="3" required></textarea></label>
+    <label class="campo"><span>O que fazer</span><select name="texto" id="sel-acao">${acoes.map((a) => `<option value="${a.id}">${a.icone} ${esc(a.titulo)}</option>`).join("")}<option value="">✎ Comando livre (só máquinas no modo livre)</option></select></label>
+    <label class="campo oculto" id="campo-livre"><span>Comando</span><textarea name="livre" rows="3"></textarea></label>
     <button class="btn prim" style="width:100%">Criar rotina</button><div class="erro-txt" id="erro"></div></form>
     ${pro ? "" : '<p style="font-size:13px;color:var(--suave);margin:12px 0 0">✦ No <b>Pro</b> o Jarvis roda suas rotinas sozinho todo dia. <button class="link-btn" id="ver-pro">Conhecer</button></p>'}`, true);
   const vp = $("#ver-pro", el); if (vp) vp.onclick = () => { fechar(); irPara("planos"); };
+  $("#sel-acao", el).onchange = (e) => $("#campo-livre", el).classList.toggle("oculto", !!e.target.value);
   $("#f", el).onsubmit = async (e) => {
     e.preventDefault();
-    try { await post("/api/rotinas", Object.fromEntries(new FormData(e.target))); fechar(); telaRotinas(); } catch (x) { $("#erro", el).textContent = x.message; }
+    const f = Object.fromEntries(new FormData(e.target));
+    const corpo = { nome: f.nome, maquina: f.maquina, frequencia: f.frequencia,
+      descricao: f.texto ? (acoes.find((a) => a.id === f.texto) || {}).descricao || "" : "",
+      ...(f.texto ? { tipo: "acao", texto: f.texto } : { tipo: "shell", texto: f.livre }) };
+    try { await post("/api/rotinas", corpo); fechar(); telaRotinas(); } catch (x) { $("#erro", el).textContent = x.message; }
   };
 }
 
@@ -1147,13 +1247,71 @@ async function telaPlanos() {
       <h2 style="color:var(--texto);font-family:var(--titulo);font-size:24px;letter-spacing:-.02em;text-transform:none">Seu parque inteiro, trabalhando sozinho</h2>
       <p style="color:var(--suave);margin:0">No <b style="color:var(--texto)">Pro</b> você conecta todos os computadores, o Jarvis usa a IA mais inteligente, roda suas rotinas toda manhã e sugere o que fazer a cada dia.</p></div>
     <div class="precos" style="margin-bottom:26px">${cartoesPreco(planos, u.plano)}</div>
+    <div class="painel" style="margin-bottom:22px"><h2>Sua conta</h2>
+      <p style="margin:0 0 12px;color:var(--suave)">${esc(u.email)} · ${u.email_verificado ? "✔ e-mail confirmado" : "e-mail não confirmado"}</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn peq" id="sair-todos">Sair de todos os dispositivos</button></div>
+      <p style="font-size:13px;color:var(--tenue);margin:10px 0 0">Use se acha que alguém viu sua senha. Depois, entrar de um navegador novo pede um código enviado ao seu e-mail.</p></div>
     <div class="painel"><h2>Extrato de créditos</h2><table class="tabela">${extrato.map((e) => `<tr><td>${esc(e.motivo)}</td><td style="color:var(--tenue);font-family:Inter">${quando(e.criado_em)}</td><td style="color:${e.delta > 0 ? "var(--ok)" : "var(--suave)"}">${e.delta > 0 ? "+" : ""}${e.delta}</td></tr>`).join("")}</table></div>`;
+  $("#sair-todos").onclick = async () => { await post("/api/sair-de-todos"); location.reload(); };
+}
+
+/* ---- confirmação de e-mail e código de entrada */
+function telaVerificar(u) {
+  $("#landing").classList.add("oculto"); $("#app").classList.add("oculto");
+  const { el } = abrirModal(`<h2>Confirme seu e-mail</h2>
+    <p class="sub">Mandamos um código de 6 números para <b>${esc(u.email)}</b>. Digite aqui para ativar sua conta e ganhar seus créditos.</p>
+    <form id="f"><input class="codigo-input" name="codigo" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required placeholder="000000">
+    <button class="btn prim grande" style="width:100%;margin-top:12px">Confirmar</button><div class="erro-txt" id="erro"></div></form>
+    <p style="text-align:center;font-size:14px;color:var(--suave);margin:6px 0 0">Não chegou? Olhe o spam ou <button class="link-btn" id="reenviar">mande de novo</button> · <button class="link-btn" id="outra">usar outro e-mail</button></p>`);
+  $(".fechar", el).remove();
+  $("input", el).focus();
+  $("#f", el).onsubmit = async (e) => {
+    e.preventDefault();
+    try { const v = await post("/api/verificar", { codigo: new FormData(e.target).get("codigo") }); $("#modais").innerHTML = ""; iniciarApp(v, true); }
+    catch (x) { $("#erro", el).textContent = x.message; }
+  };
+  $("#reenviar", el).onclick = async () => { try { await post("/api/verificar/reenviar"); toast("Código reenviado."); } catch (x) { toast(x.message); } };
+  $("#outra", el).onclick = async () => { await post("/api/sair"); location.reload(); };
+}
+
+function modalCodigoEntrada(r) {
+  const { el } = abrirModal(`<h2>É você mesmo?</h2>
+    <p class="sub">Você está entrando por um navegador novo. Mandamos um código para <b>${esc(r.email)}</b>.</p>
+    <form id="f"><input class="codigo-input" name="codigo" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required placeholder="000000">
+    <button class="btn prim grande" style="width:100%;margin-top:12px">Entrar</button><div class="erro-txt" id="erro"></div></form>`);
+  $("input", el).focus();
+  $("#f", el).onsubmit = async (e) => {
+    e.preventDefault();
+    try { const u = await post("/api/entrar/codigo", { desafio: r.desafio, codigo: new FormData(e.target).get("codigo") }); $("#modais").innerHTML = ""; iniciarApp(u); }
+    catch (x) { $("#erro", el).textContent = x.message; }
+  };
+}
+
+/* ---- admin */
+async function telaAdmin() {
+  const c = $("#conteudo"), d = await api("/api/admin/resumo");
+  const planos = estado.planos.map((p) => p.id);
+  c.innerHTML = barra("Admin") + `
+    <div class="stats"><div class="stat"><div class="rot">Contas</div><div class="num">${d.usuarios.length}</div></div>
+      <div class="stat"><div class="rot">E-mail confirmado</div><div class="num">${d.usuarios.filter((u) => u.email_verificado).length}</div></div>
+      <div class="stat"><div class="rot">Com máquina</div><div class="num">${d.usuarios.filter((u) => +u.maquinas > 0).length}</div></div>
+      <div class="stat"><div class="rot">Querem assinar</div><div class="num">${d.interesses.length}</div></div></div>
+    <div class="painel" style="margin-bottom:18px;overflow-x:auto"><h2>Contas</h2><table class="tabela tabela-admin"><tr><th>E-mail</th><th>Plano</th><th>Créditos</th><th>Máquinas</th><th>Criada</th><th></th></tr>
+      ${d.usuarios.map((u) => `<tr><td>${esc(u.email)}${u.email_verificado ? "" : " <small style='color:var(--pend)'>(não confirmado)</small>"}</td>
+        <td><select data-u="${u.id}">${planos.map((p) => `<option ${p === u.plano ? "selected" : ""}>${p}</option>`).join("")}</select></td>
+        <td>${u.creditos}</td><td>${u.maquinas}</td><td>${quando(u.criado_em)}</td><td><button class="btn peq" data-dar="${u.id}">+500 créditos</button></td></tr>`).join("")}</table></div>
+    <div class="painel"><h2>Lista de espera</h2><table class="tabela">${d.interesses.map((i) => `<tr><td>${esc(i.email)}</td><td>${esc(i.plano)}</td><td>${quando(i.criado_em)}</td></tr>`).join("") || "<tr><td>Ninguém ainda.</td></tr>"}</table></div>`;
+  $$("[data-u]").forEach((s) => (s.onchange = async () => { await post(`/api/admin/usuarios/${s.dataset.u}/plano`, { plano: s.value }); toast("Plano trocado."); }));
+  $$("[data-dar]").forEach((b) => (b.onclick = async () => {
+    const plano = $(`[data-u="${b.dataset.dar}"]`).value;
+    await post(`/api/admin/usuarios/${b.dataset.dar}/plano`, { plano, creditos: 500 }); toast("Créditos adicionados."); telaAdmin();
+  }));
 }
 
 /* ---- partida */
 addEventListener("hashchange", () => {
   const a = location.hash.slice(1);
-  if (estado.usuario && a !== estado.aba && ABAS.some(([x]) => x === a)) irPara(a);
+  if (estado.usuario && a !== estado.aba && abasVisiveis().some(([x]) => x === a)) irPara(a);
 });
 api("/api/eu").then((u) => iniciarApp(u)).catch(() => mostrarLanding());
 </script>

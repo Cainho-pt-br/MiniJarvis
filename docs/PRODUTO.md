@@ -172,9 +172,65 @@ próxima etapa do código.
 
 | Etapa | Entrega | Situação |
 |---|---|---|
-| 1 | Nuvem: contas, chat em streaming, histórico, créditos, tarefas prontas, Docker | **Feito** (`nuvem/`) |
-| 2 | Deploy na Vercel + Neon + domínio + termos/privacidade | Próximo |
-| 3 | Pagamento (Mercado Pago) e tela de planos | |
-| 4 | Login com Google, link compartilhável, indicação | |
-| 5 | Instalador (.exe/.dmg) do agente com código de pareamento | |
-| 6 | Tarefas no computador conectado (o orquestrador atual) | |
+| 1 | Nuvem: contas, chat em streaming, histórico, créditos | Feito |
+| 2 | Deploy na Vercel + Neon | Feito |
+| 3 | Parque por conta: pareamento por código, mapa, tarefas, cérebro, rotinas, sugestões, Jarvis com ferramentas | Feito |
+| 4 | Segurança para leigos (e-mail confirmado, código em navegador novo, modo seguro, ações prontas) | Feito |
+| 5 | Instalador de um comando para Windows, Mac e Linux | Feito |
+| 6 | Pagamento (Mercado Pago) ligado aos botões de assinatura (hoje viram lista de espera) | Próximo |
+| 7 | Login com Google, link compartilhável, indicação | |
+| 8 | Termos de uso e política de privacidade (LGPD), domínio próprio | |
+
+---
+
+## 6. Como o parque funciona na nuvem
+
+- **Conectar:** "Conectar máquina" gera um código de 6 letras (15 min) e um
+  comando de instalação. O agente troca o código por um token próprio, gravado
+  em `~/.minijarvis/agente.json` (permissão só do dono); o banco guarda só o
+  hash. "Desconectar" invalida o token na hora.
+- **Isolamento:** cada agente só vê e altera tarefas da própria conta.
+- **Custo na Vercel:** o servidor dita o ritmo do agente (`PARQUE_HEARTBEAT_S`,
+  padrão 60 s; espera longa `PARQUE_ESPERA_S`, 50 s): cerca de 3 requisições
+  por minuto por máquina ligada.
+- **Rotinas diárias:** a Vercel chama `/api/cron/rotinas` às 9h UTC (6h em
+  Brasília), autenticada por `CRON_SECRET`.
+- **Planos:** Grátis conecta 1 máquina, Básico 2, Pro 4. Rotinas diárias
+  são do Pro.
+- **Admin:** quem está em `ADMIN_EMAILS` vê a aba Admin (contas, lista de
+  espera, troca de plano e créditos).
+
+## 7. Segurança para leigos
+
+- **Cadastro:** e-mail confirmado por código antes de ganhar créditos ou usar
+  a IA; o mesmo e-mail escrito de outro jeito (pontos e +apelido do Gmail) não
+  cria outra conta; e-mails descartáveis são recusados; no máximo 3 contas
+  por IP por hora e 8 por dia. Os limites ficam no banco (valem em todas as
+  instâncias da Vercel). Sem SMTP configurado, a confirmação fica desligada.
+- **Login:** navegador novo pede um código enviado por e-mail (verificação em
+  duas etapas sem aplicativo). 8 tentativas por conta a cada 15 min. "Sair de
+  todos os dispositivos" em Planos > Sua conta.
+- **Modo seguro (padrão de toda máquina):** só roda ações prontas e revisadas
+  (`nuvem/acoes.py`): ver disco, informações, programas pesados, maiores
+  arquivos, limpar temporários com mais de 7 dias, organizar Downloads (sem
+  apagar nada) e testar a internet. Comandos livres e Claude Code só no modo
+  livre, que exige a senha da conta para ligar.
+- **Aprovação:** tudo que o Jarvis prepara no chat espera o clique em
+  "Aprovar", com explicação em linguagem simples; comandos livres aparecem
+  com aviso.
+- **Painel:** não pode ser embutido em outro site (X-Frame-Options/CSP), o que
+  impede enganar alguém para clicar em "Aprovar".
+- **Agente:** só conversa com o Jarvis por HTTPS (exceto endereço local).
+
+## 8. Instalação para leigos
+
+Em "Conectar máquina" o painel mostra um comando só, para Windows
+(PowerShell), Mac ou Linux (Terminal), e explica como abrir o terminal. O
+script (`/instalar.ps1` e `/instalar.sh`, com o código embutido) instala o
+Python se faltar (Windows, via winget; no Mac pede as ferramentas da Apple),
+baixa o agente, conecta a máquina e deixa ligando sozinho com o computador
+(tarefa agendada, launchd, systemd ou cron). Sem senha de administrador.
+Para remover: `/desinstalar.ps1` ou `/desinstalar.sh`.
+
+O workflow `.github/workflows/testes.yml` roda os testes (SQLite e Postgres)
+e testa a instalação e todas as ações em Windows, macOS e Linux de verdade.
