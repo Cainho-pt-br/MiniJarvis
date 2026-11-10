@@ -55,10 +55,13 @@ def enviar(para: str, assunto: str, texto: str, html: str) -> None:
 
 
 def enviar_codigo(para: str, nome: str, codigo: str, motivo: str) -> None:
-    """motivo: 'confirmar' (conta nova) ou 'entrar' (dispositivo novo)."""
+    """motivo: 'confirmar' (conta nova), 'entrar' (dispositivo novo) ou 'senha' (redefinir)."""
     if motivo == "confirmar":
         assunto = f"{codigo} é o seu código do Jarvis"
         frase = "Para ativar sua conta e ganhar seus créditos, digite este código:"
+    elif motivo == "senha":
+        assunto = f"{codigo} · redefinir a senha do Jarvis"
+        frase = "Você pediu para redefinir sua senha. Digite este código na tela de nova senha:"
     else:
         assunto = f"{codigo} · confirme que é você entrando no Jarvis"
         frase = ("Alguém (provavelmente você) está entrando na sua conta por um navegador novo. "

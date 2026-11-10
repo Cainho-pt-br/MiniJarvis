@@ -142,8 +142,15 @@ cada resposta, com o desconto do cache de prompt.
   público leigo brasileiro. Recomendado para começar.
 - **Stripe**: melhor se for vender fora do Brasil (também aceita Pix).
 
-A integração (checkout + webhook que soma créditos em `extrato`) é a
-próxima etapa do código.
+Já está no código (`nuvem/pagamento.py`): **assinatura mensal no cartão**
+(preapproval do Mercado Pago, renovada pelo MP todo mês) e **Pix de um mês**
+(QR code no painel). O webhook busca o pagamento na API do MP antes de dar
+créditos e nunca credita duas vezes. Cada pagamento aprovado dá 31 dias do
+plano e os créditos dele (`nuvem/cobranca.py`); o cron diário rebaixa para o
+grátis quem venceu. Para ligar: `MP_ACCESS_TOKEN`, `MP_WEBHOOK_SECRET` e
+`SITE_URL` na Vercel, e cadastrar `https://SEU-SITE/api/pagamentos/webhook`
+nos Webhooks do Mercado Pago (eventos: Pagamentos e Planos e assinaturas).
+Sem token, os botões de assinar voltam a ser lista de espera.
 
 ### O que faz viralizar
 
@@ -159,8 +166,9 @@ próxima etapa do código.
 
 ## 4. Obrigações antes de abrir ao público
 
-- **Termos de uso e política de privacidade** (LGPD): o que é guardado, por
-  quanto tempo, e que as mensagens passam pela API da Anthropic.
+- **Termos de uso e política de privacidade** (LGPD): já existem em `/termos`
+  e `/privacidade`, com aceite obrigatório no cadastro. Preencha
+  `RESPONSAVEL_LEGAL` (nome/CNPJ) e `EMAIL_CONTATO` na Vercel.
 - **Exclusão de conta**: já existe (`DELETE /api/eu`, apaga tudo).
 - **CNPJ (MEI serve no início)** para emitir nota e receber pelo Mercado Pago.
 - **Limite de gastos** no console da Anthropic, para um bug não virar fatura
@@ -177,9 +185,10 @@ próxima etapa do código.
 | 3 | Parque por conta: pareamento por código, mapa, tarefas, cérebro, rotinas, sugestões, Jarvis com ferramentas | Feito |
 | 4 | Segurança para leigos (e-mail confirmado, código em navegador novo, modo seguro, ações prontas) | Feito |
 | 5 | Instalador de um comando para Windows, Mac e Linux | Feito |
-| 6 | Pagamento (Mercado Pago) ligado aos botões de assinatura (hoje viram lista de espera) | Próximo |
-| 7 | Login com Google, link compartilhável, indicação | |
-| 8 | Termos de uso e política de privacidade (LGPD), domínio próprio | |
+| 6 | Pagamento (Mercado Pago: cartão recorrente e Pix), renovação e vencimento automáticos, "esqueci minha senha", termos e privacidade | Feito (falta o token do MP na Vercel) |
+| 7 | Relatório diário ao dono, alertas, teto de gasto de IA, auto-atualização do agente, funil sem cookies | Feito |
+| 8 | Indicação com créditos, link compartilhável de conversa, guias para SEO, sitemap | Feito |
+| 9 | Login com Google, domínio próprio, afiliados | |
 
 ---
 
@@ -196,9 +205,45 @@ próxima etapa do código.
 - **Rotinas diárias:** a Vercel chama `/api/cron/rotinas` às 9h UTC (6h em
   Brasília), autenticada por `CRON_SECRET`.
 - **Planos:** Grátis conecta 1 máquina, Básico 2, Pro 4. Rotinas diárias
-  são do Pro.
+  e sugestões automáticas (sem gastar créditos) são do Pro.
+- **Quem desce de plano** mantém as máquinas conectadas, mas só as mais
+  antigas, até o limite do novo plano, continuam ativas; as outras ficam
+  **bloqueadas** (seguem ligadas, não recebem tarefas, o painel avisa e
+  convida a assinar). Desconectar uma libera a próxima; voltar ao plano maior
+  libera todas, inclusive as tarefas que ficaram na fila.
 - **Admin:** quem está em `ADMIN_EMAILS` vê a aba Admin (contas, lista de
   espera, troca de plano e créditos).
+
+## 6.1 Operação sem o dono (`nuvem/operacao.py`)
+
+- **Teto diário de IA** (`TETO_DIARIO_USD`, padrão US$ 10): somando todo
+  mundo, passou do teto, a IA para até o dia virar e o dono recebe um e-mail.
+- **Alertas:** 5 falhas da IA ou do e-mail em 10 minutos mandam um aviso
+  (no máximo um por hora).
+- **Relatório diário** (cron das 9h UTC) para `ADMIN_EMAILS`: contas, uso,
+  custo, pagamentos, falhas e o funil. A aba Admin mostra o mesmo e tem o
+  botão "mandar agora".
+- **Funil sem cookies:** cadastro → e-mail confirmado → primeira mensagem →
+  máquina conectada → pagamento, contado no banco (`eventos`).
+- **Agente que se atualiza:** o heartbeat devolve a versão do `agente.py`
+  que o site serve; o agente instalado, quando ocioso, baixa a versão nova,
+  confere que compila, troca o arquivo e reinicia. Para publicar uma versão,
+  basta aumentar `VERSAO` em `agente/agente.py` e fazer o deploy.
+- **Saldo entre rodadas:** uma resposta com ferramentas não passa do saldo;
+  o plano grátis usa `max_tokens` menor (`IA_MAX_TOKENS_GRATIS`).
+
+## 6.2 Crescimento (`nuvem/crescimento.py`)
+
+- **Indicação:** cada conta tem um link (`/?ref=código`). Quem entra por ele
+  ganha `BONUS_INDICADO` créditos ao confirmar o e-mail; quem indicou ganha
+  `BONUS_INDICADOR`, até `TETO_INDICADOR` no total.
+- **Link compartilhável:** "Compartilhar" no chat publica a conversa em
+  `/c/token` (sem índice no Google), com botão "criar meu Jarvis" que já leva
+  o código de indicação de quem publicou. Dá para despublicar.
+- **Guias** (`nuvem/web/guias/*.html`, servidos em `/guia/slug`): conteúdo
+  para quem procura "computador lento", "organizar downloads" etc., listados
+  na página inicial e no `sitemap.xml`. Para adicionar um guia, basta criar o
+  arquivo HTML com `<title>` e `<meta name="description">`.
 
 ## 7. Segurança para leigos
 

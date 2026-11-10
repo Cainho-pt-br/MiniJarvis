@@ -17,6 +17,7 @@ MODELO_GRATIS = os.environ.get("IA_MODELO_GRATIS", "claude-haiku-5-5")
 MODELO_PAGO = os.environ.get("IA_MODELO_PAGO", "claude-sonnet-5-5")
 ESFORCO = os.environ.get("IA_ESFORCO", "medium")  # low | medium | high
 MAX_TOKENS = int(os.environ.get("IA_MAX_TOKENS", "16000"))
+MAX_TOKENS_GRATIS = int(os.environ.get("IA_MAX_TOKENS_GRATIS", "4000"))  # limita o custo de uma resposta
 
 # Preço em US$ por 1 milhão de tokens (entrada, saída). Usado para cobrar
 # créditos proporcionais ao custo real de cada resposta.
@@ -31,6 +32,10 @@ COM_FALLBACK = {"claude-opus-5-5", "claude-sonnet-5-5"}
 
 def modelo_do_plano(plano: str) -> str:
     return MODELO_GRATIS if plano == "gratis" else MODELO_PAGO
+
+
+def max_tokens_do_plano(plano: str) -> int:
+    return MAX_TOKENS_GRATIS if plano == "gratis" else MAX_TOKENS
 
 
 SISTEMA = """Você é o Jarvis, o assistente pessoal do usuário, simpático e direto.
@@ -142,7 +147,7 @@ class ClaudeIA:
         return {}
 
     def responder(self, historico: list[dict[str, Any]], final: Resposta, modelo: str,
-                  ferramentas: list[dict[str, Any]] | None = None) -> Iterator[str]:
+                  ferramentas: list[dict[str, Any]] | None = None, max_tokens: int = MAX_TOKENS) -> Iterator[str]:
         """Gera pedaços de texto e preenche `final` ao terminar."""
         final.modelo = modelo
         extra = self._extra(modelo)
@@ -150,7 +155,7 @@ class ClaudeIA:
             extra["tools"] = ferramentas
         with self.cliente.beta.messages.stream(
             model=modelo,
-            max_tokens=MAX_TOKENS,
+            max_tokens=max_tokens,
             system=[{"type": "text", "text": SISTEMA, "cache_control": {"type": "ephemeral"}}],
             messages=historico,
             output_config={"effort": ESFORCO},
@@ -191,7 +196,7 @@ class FakeIA:
     """
 
     def responder(self, historico: list[dict[str, Any]], final: Resposta, modelo: str,
-                  ferramentas: list[dict[str, Any]] | None = None) -> Iterator[str]:
+                  ferramentas: list[dict[str, Any]] | None = None, max_tokens: int = MAX_TOKENS) -> Iterator[str]:
         final.modelo = modelo
         final.tokens_entrada, final.tokens_saida = 1000, 500
         ultima = historico[-1]["content"]

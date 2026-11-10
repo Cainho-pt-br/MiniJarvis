@@ -15,7 +15,7 @@ def parear(c, hostname="pc-sala", livre=True, so="Linux"):
     c.post("/api/agentes/heartbeat", json={"info": {"so": so}}, headers=ag)
     if livre:
         mid = next(m["id"] for m in c.get("/api/parque").json()["maquinas"] if m["hostname"] == hostname)
-        assert c.post(f"/api/maquinas/{mid}/modo", json={"modo": "livre", "senha": "senha-forte-1"}).status_code == 200
+        assert c.post(f"/api/maquinas/{mid}/modo", json={"modo": "livre", "senha": "senha-forte-1", "aceito": True}).status_code == 200
     return ag
 
 
@@ -218,7 +218,7 @@ def test_sem_linha_em_branco_quando_a_primeira_rodada_so_usa_ferramenta(cliente,
     from nuvem.ia import FakeIA
 
     class SoFerramenta(FakeIA):
-        def responder(self, historico, final, modelo, ferramentas=None):
+        def responder(self, historico, final, modelo, ferramentas=None, max_tokens=None):
             if isinstance(historico[-1]["content"], str):
                 final.modelo, final.stop_reason = modelo, "tool_use"
                 final.conteudo = [{"type": "tool_use", "id": "t1", "name": "ver_parque", "input": {}}]
@@ -269,7 +269,7 @@ def test_modo_livre_exige_senha(cliente):
     parear(cliente, livre=False)
     mid = cliente.get("/api/parque").json()["maquinas"][0]["id"]
     assert cliente.post(f"/api/maquinas/{mid}/modo", json={"modo": "livre", "senha": "errada"}).status_code == 403
-    assert cliente.post(f"/api/maquinas/{mid}/modo", json={"modo": "livre", "senha": "senha-forte-1"}).status_code == 200
+    assert cliente.post(f"/api/maquinas/{mid}/modo", json={"modo": "livre", "senha": "senha-forte-1", "aceito": True}).status_code == 200
     assert cliente.post(f"/api/maquinas/{mid}/modo", json={"modo": "seguro"}).status_code == 200  # voltar não pede senha
 
 
