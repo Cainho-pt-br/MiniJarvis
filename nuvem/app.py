@@ -663,23 +663,15 @@ def ver_sugestoes(u: Any = Depends(usuario_atual)) -> dict[str, Any]:
 
 @app.post("/api/sugestoes/gerar")
 def gerar_sugestoes(u: Any = Depends(usuario_verificado)) -> dict[str, Any]:
-    from .jarvis import SCHEMA_SUGESTOES, guardar_sugestoes, prompt_sugestoes, validar_sugestoes
+    from .jarvis import atualizar_sugestoes
 
-    if u["creditos"] <= 0:
+    pro = u["plano"] == "pro"  # no Pro as sugestões fazem parte do plano: não gastam créditos
+    if not pro and u["creditos"] <= 0:
         raise HTTPException(402, "Seus créditos acabaram.")
     atual = db().execute("SELECT gerado_em FROM sugestoes WHERE usuario_id = ?", (u["id"],)).fetchone()
     if atual and (datetime.now(timezone.utc) - datetime.fromisoformat(atual["gerado_em"])).total_seconds() < 600:
         raise HTTPException(429, "As sugestões foram atualizadas há pouco. Tente de novo em alguns minutos.")
-    operacao.conferir_teto()
-    try:
-        dados, final = ia().gerar_json(prompt_sugestoes(u["id"]), SCHEMA_SUGESTOES, modelo_do_plano(u["plano"]))
-    except Exception as exc:  # noqa: BLE001
-        log.exception("Falha ao gerar sugestões: %s", type(exc).__name__)
-        operacao.incidente("ia")
-        raise HTTPException(503, "Não consegui pensar em sugestões agora. Tente de novo em instantes.")
-    sugestoes = validar_sugestoes(dados)
-    guardar_sugestoes(u["id"], sugestoes)
-    saldo = _cobrar(u["id"], _custo(final), "sugestões do parque")
+    sugestoes, saldo = atualizar_sugestoes(u, cobrar=not pro)
     return {"sugestoes": sugestoes, "gerado_em": agora(), "creditos": saldo}
 
 

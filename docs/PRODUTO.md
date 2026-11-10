@@ -205,7 +205,12 @@ Sem token, os botões de assinar voltam a ser lista de espera.
 - **Rotinas diárias:** a Vercel chama `/api/cron/rotinas` às 9h UTC (6h em
   Brasília), autenticada por `CRON_SECRET`.
 - **Planos:** Grátis conecta 1 máquina, Básico 2, Pro 4. Rotinas diárias
-  são do Pro.
+  e sugestões automáticas (sem gastar créditos) são do Pro.
+- **Quem desce de plano** mantém as máquinas conectadas, mas só as mais
+  antigas, até o limite do novo plano, continuam ativas; as outras ficam
+  **bloqueadas** (seguem ligadas, não recebem tarefas, o painel avisa e
+  convida a assinar). Desconectar uma libera a próxima; voltar ao plano maior
+  libera todas, inclusive as tarefas que ficaram na fila.
 - **Admin:** quem está em `ADMIN_EMAILS` vê a aba Admin (contas, lista de
   espera, troca de plano e créditos).
 

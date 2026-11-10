@@ -168,3 +168,71 @@ def test_rotina_diaria_para_quando_o_plano_vence(cliente, mp, monkeypatch):
     modulo.db().execute("UPDATE rotinas SET ultima_execucao='2020-01-01T00:00:00+00:00'")
     modulo.db().execute("UPDATE usuarios SET plano='gratis' WHERE id=?", (u["id"],))
     assert cliente.get("/api/cron/rotinas", headers=cab).json()["disparadas"] == 0
+
+
+def _pro_com_maquinas(cliente, n=3):
+    from .test_parque import parear
+
+    u = novo(cliente)
+    modulo.db().execute("UPDATE usuarios SET plano='pro' WHERE id=?", (u["id"],))
+    ags = [parear(cliente, f"pc-{i}", livre=False) for i in range(1, n + 1)]
+    return u, ags
+
+
+def test_quem_desce_de_plano_fica_so_com_as_maquinas_do_plano(cliente, mp):
+    u, ags = _pro_com_maquinas(cliente, 3)
+    assert not any(m["bloqueada"] for m in cliente.get("/api/parque").json()["maquinas"])
+    # uma tarefa já na fila para a 3ª máquina, ainda no Pro
+    jid = cliente.post("/api/jobs", json={"maquina": "pc-3", "tipo": "acao", "texto": "espaco_disco"}).json()["id"]
+    modulo.db().execute("UPDATE usuarios SET plano='basico' WHERE id=?", (u["id"],))  # Básico: 2 máquinas
+    ms = cliente.get("/api/parque").json()["maquinas"]
+    assert [m["hostname"] for m in ms if m["bloqueada"]] == ["pc-3"]  # as mais antigas ficam
+    # tarefa nova na bloqueada: recusada com aviso e convite ao upgrade (402)
+    r = cliente.post("/api/jobs", json={"maquina": "pc-3", "tipo": "acao", "texto": "espaco_disco"})
+    assert r.status_code == 402 and "bloqueada" in r.json()["detail"]
+    assert cliente.post("/api/jobs", json={"maquina": "pc-2", "tipo": "acao", "texto": "espaco_disco"}).status_code == 200
+    # a máquina bloqueada segue ligada, mas não recebe trabalho (nem o que já estava na fila)
+    assert cliente.get("/api/trabalho?espera=0", headers=ags[2]).status_code == 204
+    assert cliente.get("/api/trabalho?espera=0", headers=ags[1]).json()["id"] != jid
+    # o Jarvis é avisado e não propõe tarefas nela
+    assert "BLOQUEADA" in parque_resumo(u["id"])
+    # desconectar uma libera a próxima da fila
+    mid = next(m["id"] for m in ms if m["hostname"] == "pc-1")
+    assert cliente.delete(f"/api/maquinas/{mid}").status_code == 200
+    assert not any(m["bloqueada"] for m in cliente.get("/api/parque").json()["maquinas"])
+    assert cliente.get("/api/trabalho?espera=0", headers=ags[2]).json()["id"] == jid
+    # voltar ao Pro libera tudo
+    modulo.db().execute("UPDATE usuarios SET plano='gratis' WHERE id=?", (u["id"],))
+    assert [m["hostname"] for m in cliente.get("/api/parque").json()["maquinas"] if m["bloqueada"]] == ["pc-3"]
+
+
+def parque_resumo(uid):
+    from nuvem import parque
+
+    return parque.resumo_do_parque(uid)
+
+
+def test_sugestoes_do_pro_nao_gastam_creditos(cliente, mp):
+    u = novo(cliente)
+    r = cliente.post("/api/sugestoes/gerar").json()  # grátis: cobra
+    assert r["creditos"] < modulo.CREDITOS_INICIAIS
+    modulo.db().execute("UPDATE usuarios SET plano='pro', creditos=0 WHERE id=?", (u["id"],))
+    modulo.db().execute("DELETE FROM sugestoes")
+    r = cliente.post("/api/sugestoes/gerar")  # Pro sem nenhum crédito: funciona e não cobra
+    assert r.status_code == 200 and r.json()["creditos"] == 0 and r.json()["sugestoes"]
+    assert cliente.get("/api/eu").json()["creditos"] == 0
+
+
+def test_cron_renova_as_sugestoes_do_pro_sem_cobrar(cliente, mp, monkeypatch):
+    u, _ = _pro_com_maquinas(cliente, 1)
+    modulo.db().execute("UPDATE usuarios SET creditos=50 WHERE id=?", (u["id"],))
+    monkeypatch.setenv("CRON_SECRET", "s3")
+    cab = {"Authorization": "Bearer s3"}
+    assert cliente.get("/api/cron/rotinas", headers=cab).json()["sugestoes"] == 1
+    assert cliente.get("/api/sugestoes").json()["sugestoes"]
+    assert cliente.get("/api/eu").json()["creditos"] == 50
+    assert cliente.get("/api/cron/rotinas", headers=cab).json()["sugestoes"] == 0  # já estão do dia
+    # quem não é Pro não ganha sugestões automáticas
+    modulo.db().execute("UPDATE usuarios SET plano='basico' WHERE id=?", (u["id"],))
+    modulo.db().execute("DELETE FROM sugestoes")
+    assert cliente.get("/api/cron/rotinas", headers=cab).json()["sugestoes"] == 0

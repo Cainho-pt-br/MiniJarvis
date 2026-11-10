@@ -196,6 +196,8 @@ main.conteudo { min-width: 0; padding: 22px clamp(16px, 3vw, 36px) 100px; }
 .st.aguardando { color: var(--pend); border-color: rgba(227, 179, 65, .4); } .st.aguardando::before { content: "✋"; }
 .st.falhou { color: var(--erro); border-color: rgba(255, 123, 114, .35); } .st.falhou::before { content: "✖"; }
 .st.cancelado { color: var(--morto); border-color: var(--borda2); } .st.cancelado::before { content: "⊘"; }
+.maq.bloqueada { opacity: .75; border-style: dashed; }
+.bloq { margin: 10px 0; padding: 10px 12px; border-radius: 10px; font-size: 13px; color: var(--suave); border: 1px solid rgba(227, 179, 65, .4); background: rgba(227, 179, 65, .07); }
 .st.online { color: var(--ok); border-color: rgba(63, 211, 131, .35); } .st.online::before { content: "●"; }
 .st.offline { color: var(--morto); border-color: var(--borda2); } .st.offline::before { content: "○"; }
 @keyframes pisca { 50% { opacity: .3; } }
@@ -583,7 +585,7 @@ function desenharMapa(svg, maquinas, { demo = false, aoClicar } = {}) {
     return [cx + Math.cos(a) * rx, cy + Math.sin(a) * ry];
   });
   maquinas.forEach((m, i) => {
-    const [x, y] = pos[i], on = m.online, ex = on && m.job_atual;
+    const [x, y] = pos[i], on = m.online && !m.bloqueada, ex = on && m.job_atual;
     const cor = ex ? "#5aa9ff" : on ? "#3fd0c9" : "#3a4558";
     s += `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="${cor}" stroke-opacity="${on ? .55 : .35}" stroke-width="${on ? 1.6 : 1}" ${on ? "" : 'stroke-dasharray="4 5"'}/>`;
     if (on) s += `<circle r="${ex ? 4 : 2.8}" fill="${ex ? "#5aa9ff" : "#7ae5df"}" filter="url(#brilho)"><animateMotion dur="${ex ? 1.4 : 3 + i * .4}s" repeatCount="indefinite" path="M${cx},${cy} L${x},${y}" ${ex ? "" : 'keyPoints="1;0" keyTimes="0;1" calcMode="linear"'}/></circle>`;
@@ -593,9 +595,9 @@ function desenharMapa(svg, maquinas, { demo = false, aoClicar } = {}) {
   s += `<ellipse cx="${cx}" cy="${cy}" rx="74" ry="20" fill="none" stroke="#8b7bff" stroke-width="2" transform="rotate(-22 ${cx} ${cy})" opacity=".9"/>`;
   s += `<text x="${cx}" y="${cy + 80}" text-anchor="middle" fill="#e8eef8" font-size="15" font-weight="700" font-family="Space Grotesk" letter-spacing="2">JARVIS</text>`;
   maquinas.forEach((m, i) => {
-    const [x, y] = pos[i], on = m.online, ex = on && m.job_atual;
+    const [x, y] = pos[i], on = m.online && !m.bloqueada, ex = on && m.job_atual;
     const cor = ex ? "#5aa9ff" : on ? "#3fd0c9" : "#4b566b";
-    const rotulo = ex ? "trabalhando" : on ? "ligada" : "desligada";
+    const rotulo = m.bloqueada ? "bloqueada" : ex ? "trabalhando" : on ? "ligada" : "desligada";
     const cpu = on && m.metricas && m.metricas.cpu_pct != null ? ` · CPU ${Math.round(m.metricas.cpu_pct)}%` : "";
     s += `<g class="no-maq" data-i="${i}" tabindex="0" role="button" aria-label="${esc(m.apelido)}: ${rotulo}">
       <g transform="translate(${x} ${y}) scale(${k})">
@@ -656,6 +658,7 @@ document.addEventListener("click", (e) => {
   if (s) assinar(s.dataset.assinar);
   const px = e.target.closest("[data-pix]");
   if (px) pagarPix(px.dataset.pix);
+  if (e.target.closest("[data-assinar-ir2]")) irPara("planos");
 });
 function lerRef() {
   try {
@@ -866,12 +869,15 @@ async function telaInicio() {
 
 async function carregarSugestoes() {
   const d = await api("/api/sugestoes"), el = $("#sugs"); if (!el) return;
+  // No Pro as sugestões se renovam sozinhas (e não gastam créditos).
+  const velha = !d.gerado_em || Date.now() - new Date(d.gerado_em).getTime() > 20 * 3600e3;
+  if (estado.usuario.plano === "pro" && velha && !estado.sugAuto) { estado.sugAuto = true; return gerarSugestoes(); }
   if (!d.sugestoes.length) {
     el.innerHTML = `<div class="vazio" style="padding:14px"><p>O Jarvis analisa seu parque e sugere o que fazer hoje.</p><button class="btn prim peq" id="b-sug2">Gerar sugestões</button></div>`;
     $("#b-sug2").onclick = gerarSugestoes; return;
   }
   el.innerHTML = d.sugestoes.map((s, i) => `<div class="sug"><span class="tg">${esc(s.tag)}${s.maquina ? " · " + esc(s.maquina) : ""}</span><b>${esc(s.titulo)}</b><p>${esc(s.descricao)}</p><span class="mot">Por quê: ${esc(s.motivo)}</span><button class="btn peq" data-sug="${i}">Pedir ao Jarvis →</button></div>`).join("")
-    + `<div style="font-size:12px;color:var(--tenue)">Atualizadas ${quando(d.gerado_em)}</div>`;
+    + `<div style="font-size:12px;color:var(--tenue)">Atualizadas ${quando(d.gerado_em)}${estado.usuario.plano === "pro" ? " · incluídas no seu plano, sem gastar créditos" : ""}</div>`;
   $$("[data-sug]", el).forEach((b) => (b.onclick = () => { estado.rascunho = d.sugestoes[+b.dataset.sug].pergunta; irPara("jarvis"); }));
 }
 async function gerarSugestoes() {
@@ -952,13 +958,15 @@ function cartaoMaquina(m) {
   const med = (rot, v) => v == null ? "" : `<div class="medidor"><span>${rot}</span><div class="trilho"><i style="width:${Math.min(100, v)}%;${v > 85 ? "background:var(--pend)" : ""}"></i></div><b>${Math.round(v)}%</b></div>`;
   const disco = (mt.discos || [])[0];
   const discoPct = disco && disco.total_gb ? 100 - (disco.livre_gb / disco.total_gb) * 100 : null;
-  return `<div class="maq ${m.online ? "on" : ""}" id="maq-${m.id}">
+  const lim = (estado.planos.find((p) => p.id === estado.usuario.plano) || {}).maquinas;
+  const aviso = m.bloqueada ? `<div class="bloq">🔒 <b>Bloqueada.</b> Seu plano conecta ${lim} máquina${lim === 1 ? "" : "s"}. Desconecte outra ou <button class="link-btn" data-assinar-ir2>assine um plano maior</button> para voltar a usá-la.</div>` : "";
+  return `<div class="maq ${m.online && !m.bloqueada ? "on" : ""} ${m.bloqueada ? "bloqueada" : ""}" id="maq-${m.id}">
     <div class="cab"><div class="ico">${ico("pc", 22)}</div><div style="min-width:0"><div class="nm">${esc(m.apelido)}</div><div class="so">${esc(i.so || m.hostname)}${m.versao && m.versao !== "?" ? " · agente " + esc(m.versao.split("/")[0]) : ""}</div></div>
-      <span class="st ${m.online ? (m.job_atual ? "executando" : "online") : "offline"}">${m.online ? (m.job_atual ? "trabalhando" : "ligada") : "desligada"}</span></div>
+      <span class="st ${m.bloqueada ? "offline" : m.online ? (m.job_atual ? "executando" : "online") : "offline"}">${m.bloqueada ? "bloqueada" : m.online ? (m.job_atual ? "trabalhando" : "ligada") : "desligada"}</span></div>${aviso}
     <div class="fichas">${i.cpu ? `<span class="ficha">${esc(i.cpu.replace(/\(R\)|\(TM\)|CPU|Processor/g, "").trim())}</span>` : ""}${i.ram_total_mb ? `<span class="ficha">${Math.round(i.ram_total_mb / 1024)} GB RAM</span>` : ""}${i.gpu ? `<span class="ficha">${esc(i.gpu)}</span>` : ""}${ias}</div>
-    ${m.online ? med("CPU", mt.cpu_pct) + med("RAM", mt.ram_pct) + med("Disco", discoPct) : `<div style="color:var(--tenue);font-size:13px">Visto ${quando(m.visto_em)}. Tarefas para ela esperam na fila até ligar.</div>`}
-    <div class="modo ${m.modo}">${m.modo === "livre" ? "⚠ <b>Modo livre</b>: roda qualquer comando que você aprovar." : "🛡 <b>Modo seguro</b>: só ações prontas e revisadas."} <button class="link-btn" data-acao="modo" data-id="${m.id}">${m.modo === "livre" ? "Voltar ao seguro" : "Liberar comandos"}</button></div>
-    <div class="acoes"><button class="btn peq" data-acao="tarefa" data-id="${m.id}">Nova tarefa</button><button class="btn peq fantasma" data-acao="renomear" data-id="${m.id}">Renomear</button><button class="btn peq fantasma perigo" data-acao="remover" data-id="${m.id}">Desconectar</button></div>
+    ${m.bloqueada ? "" : m.online ? med("CPU", mt.cpu_pct) + med("RAM", mt.ram_pct) + med("Disco", discoPct) : `<div style="color:var(--tenue);font-size:13px">Visto ${quando(m.visto_em)}. Tarefas para ela esperam na fila até ligar.</div>`}
+    <div class="modo ${m.modo}" ${m.bloqueada ? 'hidden' : ""}>${m.modo === "livre" ? "⚠ <b>Modo livre</b>: roda qualquer comando que você aprovar." : "🛡 <b>Modo seguro</b>: só ações prontas e revisadas."} <button class="link-btn" data-acao="modo" data-id="${m.id}">${m.modo === "livre" ? "Voltar ao seguro" : "Liberar comandos"}</button></div>
+    <div class="acoes">${m.bloqueada ? "" : `<button class="btn peq" data-acao="tarefa" data-id="${m.id}">Nova tarefa</button>`}<button class="btn peq fantasma" data-acao="renomear" data-id="${m.id}">Renomear</button><button class="btn peq fantasma perigo" data-acao="remover" data-id="${m.id}">Desconectar</button></div>
   </div>`;
 }
 
@@ -989,7 +997,7 @@ async function acaoMaquina(acao, m) {
 }
 
 function opcoesMaquinas(sel) {
-  return (estado.parque?.maquinas || []).map((m) => `<option value="${esc(m.hostname)}" ${m.hostname === sel ? "selected" : ""}>${esc(m.apelido)}${m.online ? "" : " (desligada)"}</option>`).join("");
+  return (estado.parque?.maquinas || []).filter((m) => !m.bloqueada).map((m) => `<option value="${esc(m.hostname)}" ${m.hostname === sel ? "selected" : ""}>${esc(m.apelido)}${m.online ? "" : " (desligada)"}</option>`).join("");
 }
 
 async function carregarAcoes() {

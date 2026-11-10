@@ -138,6 +138,24 @@ def limite_maquinas(plano: str) -> int | None:
     return next((p["maquinas"] for p in nucleo.PLANOS if p["id"] == plano), MAQUINAS_GRATIS)
 
 
+def liberadas(uid: int) -> set[int]:
+    """Ids das máquinas que o plano atual deixa usar: as mais antigas, até o limite.
+    Quem desce de plano mantém todas as máquinas conectadas, mas as que passam do
+    limite ficam bloqueadas (sem tarefas) até a pessoa desconectar outra ou
+    assinar de novo. Desconectar uma libera a próxima da fila."""
+    u = nucleo.db().execute("SELECT plano FROM usuarios WHERE id = ?", (uid,)).fetchone()
+    limite = limite_maquinas(u["plano"]) if u else MAQUINAS_GRATIS
+    rows = nucleo.db().execute("SELECT id FROM agentes WHERE usuario_id = ? ORDER BY criado_em, id",
+                               (uid,)).fetchall()
+    return {r["id"] for r in rows[:limite]}
+
+
+def msg_bloqueada(nome: str, plano: str) -> str:
+    n = limite_maquinas(plano)
+    return (f"A máquina '{nome}' está bloqueada: o seu plano atual conecta {n} máquina{'s' if n != 1 else ''}. "
+            "Desconecte outra máquina ou assine um plano maior para voltar a usá-la.")
+
+
 @router.post("/api/parque/parear")
 def gerar_codigo(request: Request, u: Any = Depends(nucleo.usuario_verificado)) -> dict[str, Any]:
     limite = limite_maquinas(u["plano"])
@@ -251,9 +269,10 @@ def pegar_trabalho(agente: str = "", tags: str = "", espera: float = 0,
         con.execute("UPDATE agentes SET visto_em=? WHERE id=?", (nucleo.agora(), a["id"]))
     oferecidas = _tags(tags) | _tags(a["tags"]) | {a["hostname"]}
     zelar(a["usuario_id"])
+    bloqueada = a["id"] not in liberadas(a["usuario_id"])  # além do limite do plano: segue ligada, sem trabalho
     fim = time.monotonic() + max(0.0, min(espera, ESPERA_MAX_S))
     while True:
-        job = _reivindicar(a, oferecidas)
+        job = None if bloqueada else _reivindicar(a, oferecidas)
         if job is not None:
             return job
         resta = fim - time.monotonic()
@@ -354,12 +373,14 @@ def receber_cerebro(n: NotasAgente, a: Any = Depends(agente_atual)) -> dict[str,
 # ------------------------------------------------------------ painel: parque ---
 
 def maquinas(uid: int) -> list[dict[str, Any]]:
-    rows = nucleo.db().execute("SELECT * FROM agentes WHERE usuario_id = ? ORDER BY criado_em", (uid,)).fetchall()
+    rows = nucleo.db().execute("SELECT * FROM agentes WHERE usuario_id = ? ORDER BY criado_em, id", (uid,)).fetchall()
+    ok = liberadas(uid)
     saida = []
     for r in rows:
         online = _idade(r["visto_em"]) < ONLINE_S
         saida.append({
             "id": r["id"], "hostname": r["hostname"], "apelido": r["apelido"] or r["hostname"], "modo": r["modo"],
+            "bloqueada": r["id"] not in ok,
             "online": online, "visto_em": r["visto_em"], "versao": r["versao"],
             "tags": sorted(_tags(r["tags"])), "info": _json(r["info"], {}),
             "metricas": _json(r["metricas"], {}) if online else {},
@@ -452,10 +473,13 @@ def criar_job(uid: int, maquina: str, tipo: str, texto: str, titulo: str = "",
     texto = (texto or "").strip()
     if not texto:
         raise HTTPException(400, "Diga o que a máquina deve fazer.")
-    m = nucleo.db().execute("SELECT hostname, apelido, info, modo FROM agentes WHERE usuario_id=? "
+    m = nucleo.db().execute("SELECT id, hostname, apelido, info, modo FROM agentes WHERE usuario_id=? "
                             "AND (hostname=? OR apelido=?)", (uid, maquina, maquina)).fetchone()
     if m is None:
         raise HTTPException(404, f"Máquina '{maquina}' não está no seu parque.")
+    if m["id"] not in liberadas(uid):
+        plano = nucleo.db().execute("SELECT plano FROM usuarios WHERE id=?", (uid,)).fetchone()["plano"]
+        raise HTTPException(402, msg_bloqueada(m["apelido"] or m["hostname"], plano))
     if tipo == "acao":
         if texto not in acoes.ACOES:
             raise HTTPException(400, "Ação desconhecida.")
@@ -707,7 +731,10 @@ def cron_rotinas(request: Request) -> dict[str, int]:
         raise HTTPException(401, "não autorizado")
     from . import cobranca
 
+    from .jarvis import sugestoes_automaticas
+
     rebaixados = cobranca.rebaixar_vencidos()
+    sugestoes = sugestoes_automaticas()
     operacao.mandar_relatorio()
     hoje = nucleo.agora()[:10]
     disparadas = 0
@@ -723,7 +750,7 @@ def cron_rotinas(request: Request) -> dict[str, int]:
             disparadas += 1
         except HTTPException:
             continue  # a máquina da rotina foi removida
-    return {"disparadas": disparadas, "rebaixados": rebaixados}
+    return {"disparadas": disparadas, "rebaixados": rebaixados, "sugestoes": sugestoes}
 
 
 # --------------------------------------------------------- resumo para a IA ---
@@ -733,6 +760,10 @@ def resumo_do_parque(uid: int) -> str:
     linhas = ["MÁQUINAS DO PARQUE:"] if ms else ["O usuário ainda não conectou nenhuma máquina."]
     for m in ms:
         i, mt = m["info"], m["metricas"]
+        if m["bloqueada"]:
+            linhas.append(f"- {m['apelido']} ({m['hostname']}): BLOQUEADA (fora do limite do plano do usuário; "
+                          "não crie tarefas nela, sugira desconectar outra máquina ou assinar um plano maior)")
+            continue
         if not m["online"]:
             linhas.append(f"- {m['apelido']} ({m['hostname']}) [modo {m['modo']}]: DESLIGADA (visto em {m['visto_em']})")
             continue
