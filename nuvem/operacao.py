@@ -65,6 +65,13 @@ def funil(horas: float | None = None) -> dict[str, int]:
     return {p: cont.get(p, 0) for p in PASSOS_FUNIL}
 
 
+def faxina() -> None:
+    """Apaga incidentes e alertas com mais de 30 dias (o funil fica)."""
+    with nucleo.transacao() as con:
+        con.execute("DELETE FROM eventos WHERE (nome LIKE ? OR nome LIKE ? OR nome = 'teto_atingido') "
+                    "AND criado_em < ?", ("falha:%", "alerta:%", _desde(24 * 30)))
+
+
 # --------------------------------------------------------------------- teto ---
 
 def gasto_hoje_usd() -> float:

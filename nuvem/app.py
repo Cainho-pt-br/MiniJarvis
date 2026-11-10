@@ -207,8 +207,11 @@ def _publico(u: Any) -> dict[str, Any]:
 
 
 def eh_admin(u: Any) -> bool:
-    admins = {e.strip().lower() for e in os.environ.get("ADMIN_EMAILS", "").split(",") if e.strip()}
-    return u["email"].lower() in admins
+    return bool(u["email_verificado"]) and u["email"].lower() in _admins()
+
+
+def _admins() -> set[str]:
+    return {e.strip().lower() for e in os.environ.get("ADMIN_EMAILS", "").split(",") if e.strip()}
 
 
 CODIGO_MIN = 15
@@ -305,6 +308,10 @@ def cadastrar(c: Cadastro, request: Request, resp: Response) -> dict[str, Any]:
     if db().execute("SELECT 1 FROM usuarios WHERE email_canonico = ? OR email = ?", (canon, email)).fetchone():
         raise HTTPException(409, "Já existe uma conta com este e-mail.")
     precisa_confirmar = correio.configurado()
+    if not precisa_confirmar and email in _admins():
+        # Sem confirmação por e-mail, qualquer um poderia se cadastrar com o
+        # e-mail do dono e virar administrador.
+        raise HTTPException(403, "Este e-mail só pode ser cadastrado com a confirmação por e-mail ligada.")
     indicador = crescimento.quem_indicou(c.indicacao)
     try:
         with transacao() as con:
@@ -465,12 +472,23 @@ def eu(u: Any = Depends(usuario_atual)) -> dict[str, Any]:
     return _publico(u)
 
 
-@app.delete("/api/eu")
-def apagar_conta(resp: Response, u: Any = Depends(usuario_atual)) -> dict[str, bool]:
-    """Direito de exclusão (LGPD): apaga a conta e tudo ligado a ela."""
+class ApagarConta(BaseModel):
+    senha: str = Field(max_length=200)
+
+
+@app.post("/api/eu/apagar")
+def apagar_conta(a: ApagarConta, resp: Response, u: Any = Depends(usuario_atual)) -> dict[str, bool]:
+    """Direito de exclusão (LGPD): apaga a conta e tudo ligado a ela. Pede a
+    senha (não dá para desfazer) e antes cancela a assinatura, para a pessoa
+    não continuar sendo cobrada por uma conta que não existe mais."""
+    limitar(f"apagar:{u['id']}", 5, 900)
+    if not conferir_senha(a.senha, u["senha_hash"]):
+        raise HTTPException(403, "Senha incorreta.")
+    pagamento.parar_cobranca(u)
     with transacao() as con:
         con.execute("DELETE FROM usuarios WHERE id = ?", (u["id"],))
     resp.delete_cookie(COOKIE)
+    resp.delete_cookie(COOKIE_DISP)
     return {"ok": True}
 
 

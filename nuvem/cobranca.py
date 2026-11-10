@@ -46,6 +46,18 @@ def ativar_plano(uid: int, plano: str, motivo: str, meses: int = 1) -> str:
     return ate
 
 
+def estornar_plano(uid: int, plano: str) -> None:
+    """Pagamento devolvido: volta para o grátis e retira os créditos daquele mês
+    (sem deixar o saldo negativo)."""
+    creditos = plano_info(plano)["creditos"]
+    with nucleo.transacao() as con:
+        con.execute("UPDATE usuarios SET plano='gratis', plano_ate=NULL, assinatura_id=NULL, "
+                    "creditos = CASE WHEN creditos > ? THEN creditos - ? ELSE 0 END WHERE id=?",
+                    (creditos, creditos, uid))
+        con.execute("INSERT INTO extrato (usuario_id, delta, motivo, criado_em) VALUES (?, 0, ?, ?)",
+                    (uid, f"pagamento {plano} estornado: plano e créditos retirados", nucleo.agora()))
+
+
 def rebaixar_vencidos() -> int:
     """Volta para o grátis quem está com o plano pago vencido. Chamado pelo cron."""
     agora = nucleo.agora()

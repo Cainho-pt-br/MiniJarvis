@@ -77,7 +77,8 @@ def test_usuario_nao_ve_conversa_de_outro(cliente):
 def test_apagar_conta(cliente):
     cadastrar(cliente)
     cliente.post("/api/mensagens", json={"texto": "Oi"})
-    assert cliente.delete("/api/eu").status_code == 200
+    assert cliente.post("/api/eu/apagar", json={"senha": "errada"}).status_code == 403
+    assert cliente.post("/api/eu/apagar", json={"senha": "senha-forte-1"}).status_code == 200
     assert modulo.db().execute("SELECT COUNT(*) AS n FROM conversas").fetchone()["n"] == 0
 
 

@@ -711,7 +711,11 @@ def cron_rotinas(request: Request) -> dict[str, int]:
     operacao.mandar_relatorio()
     hoje = nucleo.agora()[:10]
     disparadas = 0
-    for r in nucleo.db().execute("SELECT * FROM rotinas WHERE frequencia='diaria'").fetchall():
+    operacao.faxina()
+    # Rotina diária é do Pro: quem voltou para o grátis mantém a rotina, mas ela
+    # só volta a disparar sozinha quando o plano for renovado.
+    for r in nucleo.db().execute("SELECT r.* FROM rotinas r JOIN usuarios u ON u.id = r.usuario_id "
+                                 "WHERE r.frequencia='diaria' AND u.plano='pro'").fetchall():
         if (r["ultima_execucao"] or "")[:10] == hoje:
             continue
         try:

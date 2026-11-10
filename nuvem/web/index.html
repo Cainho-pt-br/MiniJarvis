@@ -1343,7 +1343,7 @@ async function telaPlanos() {
     <div class="painel" style="margin-bottom:22px"><h2>Sua conta</h2>
       <p style="margin:0 0 12px;color:var(--suave)">${esc(u.email)} · ${u.email_verificado ? "✔ e-mail confirmado" : "e-mail não confirmado"}</p>
       ${u.plano !== "gratis" ? `<p style="margin:0 0 12px;color:var(--suave)">Plano <b style="color:var(--texto)">${esc(u.plano)}</b> válido até ${u.plano_ate ? quandoDia(u.plano_ate) : "—"}${u.assinatura ? " · renova sozinho no cartão" : " · sem renovação automática"}</p>` : ""}
-      <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn peq" id="sair-todos">Sair de todos os dispositivos</button>${u.assinatura ? '<button class="btn peq fantasma perigo" id="cancelar-ass">Cancelar assinatura</button>' : ""}</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn peq" id="sair-todos">Sair de todos os dispositivos</button><button class="btn peq fantasma perigo" id="apagar-conta">Apagar minha conta</button>${u.assinatura ? '<button class="btn peq fantasma perigo" id="cancelar-ass">Cancelar assinatura</button>' : ""}</div>
       <p style="font-size:13px;color:var(--tenue);margin:10px 0 0">Use se acha que alguém viu sua senha. Depois, entrar de um navegador novo pede um código enviado ao seu e-mail.</p></div>
     ${ind ? `<div class="painel" style="margin-bottom:22px"><h2>Indique e ganhe</h2>
       <p style="margin:0 0 12px;color:var(--suave)">Quem criar conta pelo seu link ganha <b style="color:var(--texto)">${ind.bonus_indicado} créditos</b> a mais, e você ganha <b style="color:var(--texto)">${ind.bonus}</b> por pessoa (até ${ind.teto}). Até agora: ${ind.indicados} ${ind.indicados === 1 ? "pessoa" : "pessoas"}, ${ind.creditos_ganhos} créditos.</p>
@@ -1351,6 +1351,17 @@ async function telaPlanos() {
       <div style="margin-top:10px"><a class="btn peq" target="_blank" href="https://wa.me/?text=${encodeURIComponent("Estou usando o Jarvis, um assistente de IA que cuida dos meus computadores. Crie o seu grátis por este link e ganhe créditos: " + ind.link)}">Mandar no WhatsApp</a></div></div>` : ""}
     <div class="painel"><h2>Extrato de créditos</h2><table class="tabela">${extrato.map((e) => `<tr><td>${esc(e.motivo)}</td><td style="color:var(--tenue);font-family:Inter">${quando(e.criado_em)}</td><td style="color:${e.delta > 0 ? "var(--ok)" : "var(--suave)"}">${e.delta > 0 ? "+" : ""}${e.delta}</td></tr>`).join("")}</table></div>`;
   $("#sair-todos").onclick = async () => { await post("/api/sair-de-todos"); location.reload(); };
+  $("#apagar-conta").onclick = () => {
+    const { el } = abrirModal(`<h2>Apagar a conta</h2>
+      <p class="sub">Isso apaga <b>tudo</b>: conversas, cérebro, máquinas, tarefas e créditos${u.assinatura ? ", e cancela a sua assinatura" : ""}. Não dá para desfazer.</p>
+      <form id="f"><label class="campo"><span>Confirme com a sua senha</span><input name="senha" type="password" required autocomplete="current-password"></label>
+      <button class="btn grande perigo" style="width:100%">Apagar tudo para sempre</button><div class="erro-txt" id="erro"></div></form>`);
+    $("#f", el).onsubmit = async (e) => {
+      e.preventDefault();
+      try { await post("/api/eu/apagar", { senha: new FormData(e.target).get("senha") }); location.href = "/"; }
+      catch (x) { $("#erro", el).textContent = x.message; }
+    };
+  };
   const ci = $("#copiar-ind"); if (ci) ci.onclick = () => { navigator.clipboard.writeText(ind.link); toast("Link copiado."); };
   const ca = $("#cancelar-ass");
   if (ca) ca.onclick = async () => {

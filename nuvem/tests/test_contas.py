@@ -102,12 +102,14 @@ def test_senha_errada_bloqueia_conta_depois_de_8(cliente):
     assert r.status_code == 429
 
 
-def test_admin(cliente, monkeypatch):
+def test_admin(cliente, caixa, monkeypatch):
     monkeypatch.setenv("ADMIN_EMAILS", "chefe@exemplo.com")
     novo(cliente, "ana@exemplo.com")
+    cliente.post("/api/verificar", json={"codigo": codigo_de(caixa[-1])})
     assert cliente.get("/api/admin/resumo").status_code == 404  # não-admin nem vê que existe
     cliente.cookies.clear()
-    chefe = novo(cliente, "chefe@exemplo.com").json()
+    novo(cliente, "chefe@exemplo.com")
+    chefe = cliente.post("/api/verificar", json={"codigo": codigo_de(caixa[-1])}).json()
     assert chefe["admin"] is True
     r = cliente.get("/api/admin/resumo").json()
     ana = next(u for u in r["usuarios"] if u["email"] == "ana@exemplo.com")
@@ -157,3 +159,15 @@ def test_cadastro_exige_aceitar_termos(cliente):
     assert r.status_code == 400
     assert cliente.get("/termos").status_code == 200 and "Termos de uso" in cliente.get("/termos").text
     assert "LGPD" in cliente.get("/privacidade").text
+
+
+def test_email_de_admin_nao_pode_ser_cadastrado_sem_confirmacao(cliente, monkeypatch):
+    monkeypatch.setenv("ADMIN_EMAILS", "dono@exemplo.com")
+    assert novo(cliente, "dono@exemplo.com").status_code == 403  # sem SMTP, qualquer um se passaria pelo dono
+
+
+def test_admin_precisa_de_email_confirmado(cliente, caixa, monkeypatch):
+    monkeypatch.setenv("ADMIN_EMAILS", "dono@exemplo.com")
+    assert novo(cliente, "dono@exemplo.com").json()["admin"] is False
+    assert cliente.get("/api/admin/resumo").status_code == 404
+    assert cliente.post("/api/verificar", json={"codigo": codigo_de(caixa[0])}).json()["admin"] is True

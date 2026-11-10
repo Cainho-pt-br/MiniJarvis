@@ -102,3 +102,69 @@ def test_cron_rebaixa_plano_vencido(cliente, mp, monkeypatch):
     eu = cliente.get("/api/eu").json()
     assert eu["plano"] == "gratis" and eu["plano_ate"] is None
     assert eu["creditos"] == modulo.CREDITOS_INICIAIS + 4500  # o que sobrou continua valendo
+
+
+def test_webhook_e_painel_juntos_creditam_uma_vez_so(cliente, mp):
+    import threading
+
+    novo(cliente)
+    cliente.post("/api/pagamentos/pix/basico")
+    mp_id = next(iter(mp.pagamentos))
+    mp.aprovar(mp_id)
+    largada, erros = threading.Barrier(8), []
+
+    def corrida():
+        try:
+            largada.wait()
+            pagamento.processar_pagamento(mp_id)
+        except Exception as exc:  # noqa: BLE001
+            erros.append(exc)
+
+    fios = [threading.Thread(target=corrida) for _ in range(8)]
+    [f.start() for f in fios]
+    [f.join() for f in fios]
+    assert not erros
+    assert cliente.get("/api/eu").json()["creditos"] == modulo.CREDITOS_INICIAIS + 2000
+
+
+def test_estorno_tira_o_plano_e_os_creditos(cliente, mp):
+    novo(cliente)
+    r = cliente.post("/api/pagamentos/pix/pro").json()
+    mp_id = next(iter(mp.pagamentos))
+    mp.aprovar(mp_id)
+    cliente.get(f"/api/pagamentos/{r['id']}")
+    assert cliente.get("/api/eu").json()["plano"] == "pro"
+    mp.pagamentos[mp_id]["status"] = "refunded"
+    cliente.post("/api/pagamentos/webhook", json={"type": "payment", "data": {"id": mp_id}})
+    eu = cliente.get("/api/eu").json()
+    assert eu["plano"] == "gratis" and eu["creditos"] == modulo.CREDITOS_INICIAIS
+    cliente.post("/api/pagamentos/webhook", json={"type": "payment", "data": {"id": mp_id}})
+    assert cliente.get("/api/eu").json()["creditos"] == modulo.CREDITOS_INICIAIS  # só uma vez
+
+
+def test_apagar_conta_cancela_a_assinatura(cliente, mp):
+    novo(cliente)
+    cliente.post("/api/pagamentos/assinatura/pro")
+    pre_id = next(iter(mp.preapprovals))
+    cliente.post("/api/pagamentos/webhook", json={"type": "payment", "data": {"id": mp.cobrar_assinatura(pre_id)}})
+    assert cliente.get("/api/eu").json()["assinatura"] is True
+    assert cliente.post("/api/eu/apagar", json={"senha": "senha-forte-1"}).status_code == 200
+    assert mp.preapprovals[pre_id]["status"] == "cancelled"
+    assert cliente.get("/api/eu").status_code == 401
+
+
+def test_rotina_diaria_para_quando_o_plano_vence(cliente, mp, monkeypatch):
+    u = novo(cliente)
+    modulo.db().execute("UPDATE usuarios SET plano='pro' WHERE id=?", (u["id"],))
+    cod = cliente.post("/api/parque/parear").json()["codigo"]
+    tok = cliente.post("/api/agente/parear", json={"codigo": cod, "hostname": "pc"}).json()["token"]
+    cliente.post("/api/agentes/heartbeat", json={"hostname": "pc", "info": {"so": "Linux"}},
+                 headers={"Authorization": f"Bearer {tok}"})
+    assert cliente.post("/api/rotinas", json={"nome": "Disco", "maquina": "pc", "tipo": "acao",
+                                              "texto": "espaco_disco", "frequencia": "diaria"}).status_code == 200
+    monkeypatch.setenv("CRON_SECRET", "s3")
+    cab = {"Authorization": "Bearer s3"}
+    assert cliente.get("/api/cron/rotinas", headers=cab).json()["disparadas"] == 1
+    modulo.db().execute("UPDATE rotinas SET ultima_execucao='2020-01-01T00:00:00+00:00'")
+    modulo.db().execute("UPDATE usuarios SET plano='gratis' WHERE id=?", (u["id"],))
+    assert cliente.get("/api/cron/rotinas", headers=cab).json()["disparadas"] == 0

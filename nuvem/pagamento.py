@@ -216,14 +216,28 @@ def ver_pagamento(pid: int, u: Any = Depends(nucleo.usuario_atual)) -> dict[str,
     return {"id": r["id"], "status": r["status"], "plano": r["plano"], "valor": r["valor_brl"]}
 
 
+def parar_cobranca(u: Any) -> None:
+    """Cancela a assinatura no Mercado Pago. Estoura se o MP não confirmar, para
+    ninguém achar que cancelou e continuar sendo cobrado."""
+    if not u["assinatura_id"]:
+        return
+    try:
+        mp().put(f"/preapproval/{u['assinatura_id']}", {"status": "cancelled"})
+    except HTTPException:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        log.exception("não consegui cancelar a assinatura %s: %s", u["assinatura_id"], type(exc).__name__)
+        raise HTTPException(502, "Não consegui cancelar a assinatura no Mercado Pago agora. Tente de novo em instantes.")
+    with nucleo.transacao() as con:
+        con.execute("UPDATE usuarios SET assinatura_id=NULL WHERE id=?", (u["id"],))
+
+
 @router.post("/api/pagamentos/cancelar")
 def cancelar_assinatura(u: Any = Depends(nucleo.usuario_verificado)) -> dict[str, bool]:
     """Para de cobrar; o plano vale até a data já paga."""
     if not u["assinatura_id"]:
         raise HTTPException(400, "Você não tem assinatura ativa.")
-    mp().put(f"/preapproval/{u['assinatura_id']}", {"status": "cancelled"})
-    with nucleo.transacao() as con:
-        con.execute("UPDATE usuarios SET assinatura_id=NULL WHERE id=?", (u["id"],))
+    parar_cobranca(u)
     return {"ok": True}
 
 
@@ -254,11 +268,22 @@ def processar_pagamento(mp_id: str) -> str | None:
         _registrar(uid, referencia, "assinatura" if preapproval_id else "pix", plano, valor, "pendente")
         atual = nucleo.db().execute("SELECT * FROM pagamentos WHERE referencia=?", (referencia,)).fetchone()
     if atual["status"] == "aprovado":
+        if status == "estornado":  # devolvido ou contestado depois de creditado
+            with nucleo.transacao() as con:
+                mudou = con.execute("UPDATE pagamentos SET status='estornado', atualizado_em=? WHERE id=? "
+                                    "AND status='aprovado' RETURNING id", (nucleo.agora(), atual["id"])).fetchone()
+            if mudou:
+                cobranca.estornar_plano(uid, plano)
+                operacao.alertar("Pagamento estornado", f"O pagamento {mp_id} (conta {uid}, plano {plano}) foi "
+                                 "devolvido ou contestado. O plano voltou para o grátis e os créditos foram retirados.")
+            return "estornado"
         return "aprovado"  # já creditado
+    # A troca para "aprovado" é atômica: se o webhook e o painel chegarem juntos,
+    # só quem conseguir mudar a linha dá os créditos.
     with nucleo.transacao() as con:
-        con.execute("UPDATE pagamentos SET status=?, atualizado_em=? WHERE id=? AND status<>'aprovado'",
-                    (status, nucleo.agora(), atual["id"]))
-    if status == "aprovado":
+        mudou = con.execute("UPDATE pagamentos SET status=?, atualizado_em=? WHERE id=? AND status<>'aprovado' "
+                            "RETURNING id", (status, nucleo.agora(), atual["id"])).fetchone()
+    if status == "aprovado" and mudou:
         cobranca.ativar_plano(uid, plano, f"pagamento {plano} ({atual['tipo']})")
         operacao.primeira_vez("pagamento", uid)
         if preapproval_id:
@@ -310,6 +335,8 @@ async def webhook(request: Request) -> JSONResponse:
         return JSONResponse({"ok": True})
     if not _assinatura_valida(request, data_id):
         raise HTTPException(401, "assinatura inválida")
+    # Cada notificação vira uma consulta à API do MP: limita rajadas por origem.
+    nucleo.limitar(f"webhook:{nucleo.ip_cliente(request)}", 120, 60)
     try:
         if tipo == "payment":
             processar_pagamento(data_id)
