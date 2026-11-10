@@ -218,7 +218,7 @@ def test_sem_linha_em_branco_quando_a_primeira_rodada_so_usa_ferramenta(cliente,
     from nuvem.ia import FakeIA
 
     class SoFerramenta(FakeIA):
-        def responder(self, historico, final, modelo, ferramentas=None):
+        def responder(self, historico, final, modelo, ferramentas=None, max_tokens=None):
             if isinstance(historico[-1]["content"], str):
                 final.modelo, final.stop_reason = modelo, "tool_use"
                 final.conteudo = [{"type": "tool_use", "id": "t1", "name": "ver_parque", "input": {}}]

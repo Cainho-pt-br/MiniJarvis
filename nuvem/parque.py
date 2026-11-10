@@ -25,6 +25,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 
 from . import acoes
+from . import operacao
 from .falhas import explicar_falha
 from . import app as nucleo
 
@@ -68,6 +69,23 @@ def _json(texto: str | None, padrao: Any = None) -> Any:
         return json.loads(texto) if texto else padrao
     except ValueError:
         return padrao
+
+
+_VERSAO_AGENTE: str | None = None
+
+
+def versao_do_agente() -> str:
+    """A versão do agente que o site distribui (/agente.py). O agente instalado
+    compara com a dele e se atualiza sozinho quando a do site é mais nova."""
+    global _VERSAO_AGENTE
+    if _VERSAO_AGENTE is None:
+        try:
+            texto = (nucleo.BASE.parent / "agente" / "agente.py").read_text(encoding="utf-8")
+            m = re.search(r'^VERSAO = "([^"]+)"', texto, re.M)
+            _VERSAO_AGENTE = m.group(1) if m else ""
+        except OSError:
+            _VERSAO_AGENTE = ""
+    return _VERSAO_AGENTE
 
 
 # ------------------------------------------------------------ autenticação ---
@@ -164,6 +182,7 @@ def parear(p: Parear, request: Request) -> dict[str, Any]:
             con.execute("INSERT INTO agentes (usuario_id, hostname, tags, token_hash, visto_em, criado_em) "
                         "VALUES (?, ?, ?, ?, ?, ?)",
                         (par["usuario_id"], hostname, hostname, _hash(token), nucleo.agora(), nucleo.agora()))
+    operacao.primeira_vez("maquina_conectada", par["usuario_id"])
     return {"token": token, "hostname": hostname}
 
 
@@ -199,7 +218,8 @@ def heartbeat(h: Heartbeat, a: Any = Depends(agente_atual)) -> dict[str, Any]:
         j = nucleo.db().execute("SELECT cancelar FROM jobs WHERE id=? AND usuario_id=?",
                                 (h.job_atual, a["usuario_id"])).fetchone()
         cancelar = bool(j and j["cancelar"])
-    return {"ok": True, "cancelar": cancelar, "heartbeat_s": HEARTBEAT_S, "espera_s": ESPERA_MAX_S}
+    return {"ok": True, "cancelar": cancelar, "heartbeat_s": HEARTBEAT_S, "espera_s": ESPERA_MAX_S,
+            "versao_minima": versao_do_agente()}
 
 
 def _reivindicar(a: Any, oferecidas: set[str]) -> dict[str, Any] | None:
@@ -688,6 +708,7 @@ def cron_rotinas(request: Request) -> dict[str, int]:
     from . import cobranca
 
     rebaixados = cobranca.rebaixar_vencidos()
+    operacao.mandar_relatorio()
     hoje = nucleo.agora()[:10]
     disparadas = 0
     for r in nucleo.db().execute("SELECT * FROM rotinas WHERE frequencia='diaria'").fetchall():

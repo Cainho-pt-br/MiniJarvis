@@ -125,6 +125,10 @@ vez, por isso o teto diário de gasto (item 4) importa.
    cadastro). MEI para emitir nota.
 7. Vercel Pro e domínio próprio.
 
+> **Situação em 10/11/2026:** Fases A, B e C implementadas no código (exceto
+> login com Google e afiliados). Faltam só as configurações externas: token
+> do Mercado Pago, SMTP, Vercel Pro, domínio e MEI.
+
 ### Fase B: rodar sem você (1 semana)
 
 8. Relatório diário por e-mail ao dono + alerta imediato em falha repetida.

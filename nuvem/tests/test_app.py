@@ -89,7 +89,7 @@ def test_limite_de_tentativas(cliente):
 
 def test_falha_da_ia_vai_para_o_log_sem_cobrar(cliente, monkeypatch, caplog):
     class IAQuebrada:
-        def responder(self, historico, final, modelo, ferramentas=None):
+        def responder(self, historico, final, modelo, ferramentas=None, max_tokens=None):
             final.modelo = modelo
             raise RuntimeError("chave inválida")
             yield  # pragma: no cover

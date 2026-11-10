@@ -133,6 +133,12 @@ footer { position: relative; z-index: 1; text-align: center; color: var(--tenue)
 .aceite { display: block; font-size: 13px; line-height: 1.5; color: var(--suave); margin: 4px 0; }
 .aceite input { margin: 0 6px 0 0; vertical-align: middle; }
 .preco .btn + .btn { margin-top: -6px; }
+.guias { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+.guia { display: block; padding: 20px 22px; border-radius: var(--r); background: var(--cartao); border: 1px solid var(--borda); color: inherit; transition: border-color .2s; }
+.guia:hover { border-color: var(--ciano); }
+.guia h3 { margin: 0 0 6px; font-size: 17px; }
+.guia p { margin: 0; color: var(--suave); font-size: 14px; }
+@media (max-width: 760px) { .guias { grid-template-columns: 1fr; } }
 @keyframes aparece { from { opacity: 0; } }
 
 /* ======================================================= APP ======= */
@@ -449,6 +455,7 @@ pre.log { margin: 0; padding: 14px; border-radius: 12px; background: #02050a; bo
       <button class="btn prim grande" data-abrir="cadastro">Criar meu Jarvis grátis →</button>
     </div>
   </section>
+  <section class="secao" id="guias"><div class="titulo-secao"><div class="sobre">guias</div><h2>Dicas que resolvem <span class="grad">hoje</span></h2></div><div class="guias" id="lista-guias"></div></section>
   <footer>Jarvis · feito no Brasil · <a href="/termos">Termos de uso</a> · <a href="/privacidade">Privacidade</a> · <a href="#" data-abrir="entrar">Entrar</a></footer>
 </div>
 
@@ -639,6 +646,7 @@ async function mostrarLanding() {
   $("#app").classList.add("oculto"); $("#landing").classList.remove("oculto");
   animarHero();
   $("#precos-landing").innerHTML = cartoesPreco(await carregarPlanos());
+  api("/api/guias").then((gs) => { $("#lista-guias").innerHTML = gs.map((g) => `<a class="guia" href="/guia/${g.slug}"><h3>${esc(g.titulo)}</h3><p>${esc(g.descricao)}</p></a>`).join(""); }).catch(() => {});
 }
 
 document.addEventListener("click", (e) => {
@@ -649,6 +657,14 @@ document.addEventListener("click", (e) => {
   const px = e.target.closest("[data-pix]");
   if (px) pagarPix(px.dataset.pix);
 });
+function lerRef() {
+  try {
+    const r = new URLSearchParams(location.search).get("ref");
+    if (r) localStorage.setItem("mj_ref", r);
+    return localStorage.getItem("mj_ref") || "";
+  } catch { return ""; }
+}
+lerRef();
 function quandoDia(iso) { try { return new Date(iso).toLocaleDateString("pt-BR"); } catch { return iso; } }
 
 function abrirModal(html, largo = false) {
@@ -679,7 +695,7 @@ function modalConta(modo) {
   $("#f-conta").onsubmit = async (ev) => {
     ev.preventDefault();
     const f = new FormData(ev.target), corpo = Object.fromEntries(f);
-    if (cad) corpo.aceito = f.get("aceito") === "on";
+    if (cad) { corpo.aceito = f.get("aceito") === "on"; corpo.indicacao = lerRef(); }
     const b = $("button.prim", el); b.disabled = true;
     try {
       const u = await post(cad ? "/api/cadastro" : "/api/entrar", corpo);
@@ -1075,11 +1091,12 @@ const ATALHOS = [
 
 async function telaJarvis() {
   const c = $("#conteudo");
-  c.innerHTML = barra("Jarvis", `<button class="btn peq" id="nova">${ico("mais", 16)} Nova conversa</button>`) + `
+  c.innerHTML = barra("Jarvis", `<button class="btn peq" id="compartilhar" title="Publica esta conversa numa página que qualquer pessoa pode ver">Compartilhar</button><button class="btn peq" id="nova">${ico("mais", 16)} Nova conversa</button>`) + `
     <div class="chat"><div class="convs" id="convs"></div>
       <div class="area"><div class="msgs" id="msgs"></div>
         <form class="envio" id="envio"><textarea id="texto" rows="1" placeholder="Peça qualquer coisa ao Jarvis…"></textarea><button class="btn prim" id="enviar">Enviar</button></form></div></div>`;
   $("#nova").onclick = () => { estado.conversaId = null; boasVindas(); carregarConversas(); };
+  $("#compartilhar").onclick = compartilharConversa;
   const ta = $("#texto");
   ta.addEventListener("input", ajustar);
   ta.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey && innerWidth > 760) { e.preventDefault(); $("#envio").requestSubmit(); } });
@@ -1087,6 +1104,17 @@ async function telaJarvis() {
   if (estado.conversaId) await abrirConversa(estado.conversaId); else boasVindas();
   carregarConversas();
   if (estado.rascunho) { ta.value = estado.rascunho; estado.rascunho = null; ajustar(); ta.focus(); }
+}
+async function compartilharConversa() {
+  if (!estado.conversaId) return toast("Converse com o Jarvis primeiro; depois compartilhe a conversa.");
+  let r;
+  try { r = await post(`/api/conversas/${estado.conversaId}/compartilhar`); } catch (e) { return toast(e.message); }
+  const { el } = abrirModal(`<h2>Conversa publicada</h2>
+    <p class="sub">Quem abrir este link vê a conversa inteira (sem precisar de conta) e um convite para criar o próprio Jarvis. Se alguém criar conta por ele, você ganha créditos.</p>
+    <div class="cmd"><span>${esc(r.url)}</span><button class="btn peq" id="copiar-link">Copiar</button></div>
+    <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap"><a class="btn peq" target="_blank" href="https://wa.me/?text=${encodeURIComponent("Olha o que o Jarvis fez: " + r.url)}">Mandar no WhatsApp</a><button class="btn peq fantasma perigo" id="despublicar">Despublicar</button></div>`);
+  $("#copiar-link", el).onclick = () => { navigator.clipboard.writeText(r.url); toast("Link copiado."); };
+  $("#despublicar", el).onclick = async () => { await api(`/api/conversas/${estado.conversaId}/compartilhar`, { method: "DELETE" }); $("#modais").innerHTML = ""; toast("Conversa despublicada."); };
 }
 function ajustar() { const ta = $("#texto"); ta.style.height = "auto"; ta.style.height = Math.min(ta.scrollHeight, 200) + "px"; }
 
@@ -1306,7 +1334,7 @@ async function modalRotina() {
 /* ---- planos */
 async function telaPlanos() {
   const c = $("#conteudo"), u = estado.usuario;
-  const [planos, extrato] = await Promise.all([carregarPlanos(), api("/api/extrato")]);
+  const [planos, extrato, ind] = await Promise.all([carregarPlanos(), api("/api/extrato"), api("/api/indicacao").catch(() => null)]);
   c.innerHTML = barra("Planos") + `
     <div class="painel" style="margin-bottom:22px;background:linear-gradient(120deg,rgba(63,208,201,.12),rgba(139,123,255,.12));border-color:var(--borda2)">
       <h2 style="color:var(--texto);font-family:var(--titulo);font-size:24px;letter-spacing:-.02em;text-transform:none">Seu parque inteiro, trabalhando sozinho</h2>
@@ -1317,8 +1345,13 @@ async function telaPlanos() {
       ${u.plano !== "gratis" ? `<p style="margin:0 0 12px;color:var(--suave)">Plano <b style="color:var(--texto)">${esc(u.plano)}</b> válido até ${u.plano_ate ? quandoDia(u.plano_ate) : "—"}${u.assinatura ? " · renova sozinho no cartão" : " · sem renovação automática"}</p>` : ""}
       <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn peq" id="sair-todos">Sair de todos os dispositivos</button>${u.assinatura ? '<button class="btn peq fantasma perigo" id="cancelar-ass">Cancelar assinatura</button>' : ""}</div>
       <p style="font-size:13px;color:var(--tenue);margin:10px 0 0">Use se acha que alguém viu sua senha. Depois, entrar de um navegador novo pede um código enviado ao seu e-mail.</p></div>
+    ${ind ? `<div class="painel" style="margin-bottom:22px"><h2>Indique e ganhe</h2>
+      <p style="margin:0 0 12px;color:var(--suave)">Quem criar conta pelo seu link ganha <b style="color:var(--texto)">${ind.bonus_indicado} créditos</b> a mais, e você ganha <b style="color:var(--texto)">${ind.bonus}</b> por pessoa (até ${ind.teto}). Até agora: ${ind.indicados} ${ind.indicados === 1 ? "pessoa" : "pessoas"}, ${ind.creditos_ganhos} créditos.</p>
+      <div class="cmd"><span>${esc(ind.link)}</span><button class="btn peq" id="copiar-ind">Copiar</button></div>
+      <div style="margin-top:10px"><a class="btn peq" target="_blank" href="https://wa.me/?text=${encodeURIComponent("Estou usando o Jarvis, um assistente de IA que cuida dos meus computadores. Crie o seu grátis por este link e ganhe créditos: " + ind.link)}">Mandar no WhatsApp</a></div></div>` : ""}
     <div class="painel"><h2>Extrato de créditos</h2><table class="tabela">${extrato.map((e) => `<tr><td>${esc(e.motivo)}</td><td style="color:var(--tenue);font-family:Inter">${quando(e.criado_em)}</td><td style="color:${e.delta > 0 ? "var(--ok)" : "var(--suave)"}">${e.delta > 0 ? "+" : ""}${e.delta}</td></tr>`).join("")}</table></div>`;
   $("#sair-todos").onclick = async () => { await post("/api/sair-de-todos"); location.reload(); };
+  const ci = $("#copiar-ind"); if (ci) ci.onclick = () => { navigator.clipboard.writeText(ind.link); toast("Link copiado."); };
   const ca = $("#cancelar-ass");
   if (ca) ca.onclick = async () => {
     if (!confirm("Cancelar a renovação automática? Seu plano continua até " + quandoDia(u.plano_ate) + ".")) return;
@@ -1367,11 +1400,16 @@ async function telaAdmin() {
       <div class="stat"><div class="rot">E-mail confirmado</div><div class="num">${d.usuarios.filter((u) => u.email_verificado).length}</div></div>
       <div class="stat"><div class="rot">Com máquina</div><div class="num">${d.usuarios.filter((u) => +u.maquinas > 0).length}</div></div>
       <div class="stat"><div class="rot">Querem assinar</div><div class="num">${d.interesses.length}</div></div></div>
+    <div class="painel" style="margin-bottom:18px"><h2>Últimas 24 h</h2>
+      <p style="margin:0 0 10px;color:var(--suave)">${d.relatorio.contas_novas} contas novas · ${d.relatorio.usuarios_ativos} pessoas conversaram (${d.relatorio.mensagens} mensagens) · IA US$ ${d.relatorio.custo_ia_usd.toFixed(2)} (hoje US$ ${d.relatorio.custo_hoje_usd.toFixed(2)} de ${d.relatorio.teto_usd}) · ${d.relatorio.pagamentos} pagamentos = R$ ${d.relatorio.receita_brl.toFixed(2)} · tarefas ${d.relatorio.tarefas_concluidas} ok / ${d.relatorio.tarefas_falhas} falhas · falhas IA ${d.relatorio.falhas_ia}, e-mail ${d.relatorio.falhas_email}</p>
+      <table class="tabela"><tr><th>Funil</th><th>24 h</th><th>Total</th></tr>${Object.keys(d.relatorio.funil_total).map((k) => `<tr><td>${k.split("_").join(" ")}</td><td>${d.relatorio.funil_periodo[k]}</td><td>${d.relatorio.funil_total[k]}</td></tr>`).join("")}</table>
+      <button class="btn peq" id="mandar-rel" style="margin-top:12px">Mandar o relatório por e-mail agora</button></div>
     <div class="painel" style="margin-bottom:18px;overflow-x:auto"><h2>Contas</h2><table class="tabela tabela-admin"><tr><th>E-mail</th><th>Plano</th><th>Créditos</th><th>Máquinas</th><th>Criada</th><th></th></tr>
       ${d.usuarios.map((u) => `<tr><td>${esc(u.email)}${u.email_verificado ? "" : " <small style='color:var(--pend)'>(não confirmado)</small>"}</td>
         <td><select data-u="${u.id}">${planos.map((p) => `<option ${p === u.plano ? "selected" : ""}>${p}</option>`).join("")}</select></td>
         <td>${u.creditos}</td><td>${u.maquinas}</td><td>${quando(u.criado_em)}</td><td><button class="btn peq" data-dar="${u.id}">+500 créditos</button></td></tr>`).join("")}</table></div>
     <div class="painel"><h2>Lista de espera</h2><table class="tabela">${d.interesses.map((i) => `<tr><td>${esc(i.email)}</td><td>${esc(i.plano)}</td><td>${quando(i.criado_em)}</td></tr>`).join("") || "<tr><td>Ninguém ainda.</td></tr>"}</table></div>`;
+  $("#mandar-rel").onclick = async () => { const r = await post("/api/admin/relatorio"); toast(r.enviado ? "Relatório enviado." : "Sem e-mail configurado (SMTP/ADMIN_EMAILS)."); };
   $$("[data-u]").forEach((s) => (s.onchange = async () => { await post(`/api/admin/usuarios/${s.dataset.u}/plano`, { plano: s.value }); toast("Plano trocado."); }));
   $$("[data-dar]").forEach((b) => (b.onclick = async () => {
     const plano = $(`[data-u="${b.dataset.dar}"]`).value;

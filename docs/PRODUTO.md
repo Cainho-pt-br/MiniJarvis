@@ -186,8 +186,9 @@ Sem token, os botões de assinar voltam a ser lista de espera.
 | 4 | Segurança para leigos (e-mail confirmado, código em navegador novo, modo seguro, ações prontas) | Feito |
 | 5 | Instalador de um comando para Windows, Mac e Linux | Feito |
 | 6 | Pagamento (Mercado Pago: cartão recorrente e Pix), renovação e vencimento automáticos, "esqueci minha senha", termos e privacidade | Feito (falta o token do MP na Vercel) |
-| 7 | Relatório diário ao dono, teto de gasto de IA, auto-atualização do agente, analytics | Próximo |
-| 8 | Login com Google, link compartilhável, indicação, domínio próprio | |
+| 7 | Relatório diário ao dono, alertas, teto de gasto de IA, auto-atualização do agente, funil sem cookies | Feito |
+| 8 | Indicação com créditos, link compartilhável de conversa, guias para SEO, sitemap | Feito |
+| 9 | Login com Google, domínio próprio, afiliados | |
 
 ---
 
@@ -207,6 +208,37 @@ Sem token, os botões de assinar voltam a ser lista de espera.
   são do Pro.
 - **Admin:** quem está em `ADMIN_EMAILS` vê a aba Admin (contas, lista de
   espera, troca de plano e créditos).
+
+## 6.1 Operação sem o dono (`nuvem/operacao.py`)
+
+- **Teto diário de IA** (`TETO_DIARIO_USD`, padrão US$ 10): somando todo
+  mundo, passou do teto, a IA para até o dia virar e o dono recebe um e-mail.
+- **Alertas:** 5 falhas da IA ou do e-mail em 10 minutos mandam um aviso
+  (no máximo um por hora).
+- **Relatório diário** (cron das 9h UTC) para `ADMIN_EMAILS`: contas, uso,
+  custo, pagamentos, falhas e o funil. A aba Admin mostra o mesmo e tem o
+  botão "mandar agora".
+- **Funil sem cookies:** cadastro → e-mail confirmado → primeira mensagem →
+  máquina conectada → pagamento, contado no banco (`eventos`).
+- **Agente que se atualiza:** o heartbeat devolve a versão do `agente.py`
+  que o site serve; o agente instalado, quando ocioso, baixa a versão nova,
+  confere que compila, troca o arquivo e reinicia. Para publicar uma versão,
+  basta aumentar `VERSAO` em `agente/agente.py` e fazer o deploy.
+- **Saldo entre rodadas:** uma resposta com ferramentas não passa do saldo;
+  o plano grátis usa `max_tokens` menor (`IA_MAX_TOKENS_GRATIS`).
+
+## 6.2 Crescimento (`nuvem/crescimento.py`)
+
+- **Indicação:** cada conta tem um link (`/?ref=código`). Quem entra por ele
+  ganha `BONUS_INDICADO` créditos ao confirmar o e-mail; quem indicou ganha
+  `BONUS_INDICADOR`, até `TETO_INDICADOR` no total.
+- **Link compartilhável:** "Compartilhar" no chat publica a conversa em
+  `/c/token` (sem índice no Google), com botão "criar meu Jarvis" que já leva
+  o código de indicação de quem publicou. Dá para despublicar.
+- **Guias** (`nuvem/web/guias/*.html`, servidos em `/guia/slug`): conteúdo
+  para quem procura "computador lento", "organizar downloads" etc., listados
+  na página inicial e no `sitemap.xml`. Para adicionar um guia, basta criar o
+  arquivo HTML com `<title>` e `<meta name="description">`.
 
 ## 7. Segurança para leigos
 

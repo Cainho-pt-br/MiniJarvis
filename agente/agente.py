@@ -37,7 +37,7 @@ from pathlib import Path
 
 # Subir a cada mudança que o painel precise distinguir: é por ela que o quadro
 # de sugestões acusa máquina rodando agente velho (0.2.0 = Codex).
-VERSAO = "0.3.0"
+VERSAO = "0.4.0"
 
 # Configuração gravada pelo pareamento. Variável de ambiente vale mais.
 CONFIG_ARQUIVO = Path(os.environ.get("AGENTE_CONFIG", str(Path.home() / ".minijarvis" / "agente.json")))
@@ -730,6 +730,62 @@ def _ajustar_ritmo(resp: dict) -> None:
             ESPERA_S = max(5, min(int(resp["espera_s"]), 120))
     except (TypeError, ValueError):
         pass
+    minima = str(resp.get("versao_minima") or "")
+    if minima and _versao_tupla(minima) > _versao_tupla(VERSAO):
+        with _lock:
+            _estado["atualizar_para"] = minima
+
+
+# ------------------------------------------------------- auto-atualização
+def _versao_tupla(v: str) -> tuple:
+    partes = []
+    for p in v.split("."):
+        try:
+            partes.append(int(p))
+        except ValueError:
+            partes.append(0)
+    return tuple(partes)
+
+
+def atualizar_agente(versao: str) -> bool:
+    """Baixa o agente novo do Jarvis, confere que compila e troca este arquivo.
+    Só roda ocioso (sem job). Quem reinicia é `main`: no Windows abre uma cópia
+    nova e sai; nos outros, troca o processo no lugar (execv)."""
+    if os.environ.get("AGENTE_SEM_ATUALIZAR") == "1":
+        return False
+    destino = Path(__file__).resolve()
+    novo = destino.with_suffix(".py.novo")
+    try:
+        req = urllib.request.Request(BROKER + "/agente.py")
+        req.add_header("User-Agent", "MiniJarvis-Agente/" + VERSAO)
+        with urllib.request.urlopen(req, timeout=60) as r:
+            texto = r.read().decode("utf-8")
+        if ('VERSAO = "' + versao + '"') not in texto:
+            log("atualização: o site não serviu a versão", versao, "; tento de novo depois")
+            return False
+        novo.write_text(texto, encoding="utf-8")
+        import py_compile
+        py_compile.compile(str(novo), doraise=True)
+        os.replace(str(novo), str(destino))
+        log("agente atualizado para a versão", versao, "; reiniciando")
+        return True
+    except Exception as e:
+        log("não consegui atualizar o agente:", e)
+        try:
+            novo.unlink()
+        except OSError:
+            pass
+        return False
+
+
+def reiniciar(trava: socket.socket) -> None:
+    sys.stdout.flush(); sys.stderr.flush()
+    argv = [sys.executable, str(Path(__file__).resolve())] + sys.argv[1:]
+    trava.close()  # libera a porta da instância única para a cópia nova
+    if os.name == "nt":
+        subprocess.Popen(argv, cwd=os.getcwd(), **sem_janela())
+        sys.exit(0)
+    os.execv(sys.executable, argv)
 
 
 def enviar_cerebro_nuvem() -> None:
@@ -1855,6 +1911,13 @@ def main() -> None:
     threading.Thread(target=reavaliador_ias, daemon=True).start()
     espera = POLL_OCIOSO_S
     while True:
+        with _lock:
+            nova = _estado.get("atualizar_para")
+        if nova and atualizar_agente(nova):
+            reiniciar(trava)
+        elif nova:
+            with _lock:
+                _estado["atualizar_para"] = None  # falhou: espera o próximo heartbeat pedir de novo
         try:
             # Espera longa: o broker segura o pedido até aparecer job para
             # esta máquina (ou 20 s), e responde na hora em que ele chega.

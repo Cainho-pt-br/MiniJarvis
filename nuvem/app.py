@@ -27,7 +27,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from .banco import Banco, ErroDuplicado, url_postgres
-from .ia import Resposta, criar_ia, custo_usd, modelo_do_plano
+from .ia import Resposta, criar_ia, custo_usd, max_tokens_do_plano, modelo_do_plano
 from .tarefas import TAREFAS
 
 BASE = Path(__file__).resolve().parent
@@ -168,6 +168,7 @@ class Cadastro(BaseModel):
     email: str = Field(max_length=200)
     senha: str = Field(min_length=8, max_length=200)
     aceito: bool = False  # termos de uso e política de privacidade
+    indicacao: str = Field(default="", max_length=20)  # código de quem indicou (?ref=)
 
 
 class Entrada(BaseModel):
@@ -201,7 +202,8 @@ def email_canonico(email: str) -> str:
 def _publico(u: Any) -> dict[str, Any]:
     return {"id": u["id"], "nome": u["nome"], "email": u["email"], "creditos": u["creditos"],
             "plano": u["plano"], "plano_ate": u["plano_ate"], "assinatura": bool(u["assinatura_id"]),
-            "email_verificado": bool(u["email_verificado"]), "admin": eh_admin(u)}
+            "email_verificado": bool(u["email_verificado"]), "admin": eh_admin(u),
+            "codigo_indicacao": u["codigo_indicacao"]}
 
 
 def eh_admin(u: Any) -> bool:
@@ -251,6 +253,7 @@ def _mandar_codigo(u: Any, finalidade: str) -> int:
         correio.enviar_codigo(u["email"], u["nome"], codigo, motivo)
     except Exception as exc:  # noqa: BLE001
         log.exception("Falha ao enviar e-mail: %s", type(exc).__name__)
+        operacao.incidente("email")
         raise HTTPException(503, "Não consegui enviar o e-mail agora. Tente de novo em instantes.")
     return cid
 
@@ -280,6 +283,8 @@ def _dar_boas_vindas(uid: int) -> None:
                     (CREDITOS_INICIAIS, uid))
         con.execute("INSERT INTO extrato (usuario_id, delta, motivo, criado_em) VALUES (?, ?, ?, ?)",
                     (uid, CREDITOS_INICIAIS, "boas-vindas", agora()))
+    operacao.primeira_vez("email_confirmado", uid)
+    crescimento.premiar_indicacao(uid)
 
 
 @app.post("/api/cadastro")
@@ -300,15 +305,18 @@ def cadastrar(c: Cadastro, request: Request, resp: Response) -> dict[str, Any]:
     if db().execute("SELECT 1 FROM usuarios WHERE email_canonico = ? OR email = ?", (canon, email)).fetchone():
         raise HTTPException(409, "Já existe uma conta com este e-mail.")
     precisa_confirmar = correio.configurado()
+    indicador = crescimento.quem_indicou(c.indicacao)
     try:
         with transacao() as con:
             uid = con.inserir(
                 "INSERT INTO usuarios (email, email_canonico, nome, senha_hash, creditos, email_verificado, "
-                "aceitou_termos_em, criado_em) VALUES (?, ?, ?, ?, 0, 0, ?, ?)",
-                (email, canon, c.nome.strip(), gerar_hash(c.senha), agora(), agora()))
+                "aceitou_termos_em, codigo_indicacao, indicado_por, criado_em) VALUES (?, ?, ?, ?, 0, 0, ?, ?, ?, ?)",
+                (email, canon, c.nome.strip(), gerar_hash(c.senha), agora(), crescimento.gerar_codigo_indicacao(),
+                 indicador, agora()))
     except ErroDuplicado:
         raise HTTPException(409, "Já existe uma conta com este e-mail.")
     parque._semear_cerebro(uid)  # o cérebro já nasce com as notas de boas-vindas
+    operacao.registrar("cadastro", uid)
     u = db().execute("SELECT * FROM usuarios WHERE id = ?", (uid,)).fetchone()
     if precisa_confirmar:
         _mandar_codigo(u, "verificar")
@@ -547,6 +555,8 @@ def enviar_mensagem(m: NovaMensagem, u: Any = Depends(usuario_verificado)) -> St
 
     if u["creditos"] <= 0:
         raise HTTPException(402, "Seus créditos acabaram. Recarregue para continuar conversando.")
+    operacao.conferir_teto()
+    operacao.primeira_vez("primeira_mensagem", u["id"])
     texto = m.texto.strip()
     with transacao() as con:
         if m.conversa_id is None:
@@ -560,6 +570,7 @@ def enviar_mensagem(m: NovaMensagem, u: Any = Depends(usuario_verificado)) -> St
     historico = _historico_api(cid)
     motor = ia()
     modelo = modelo_do_plano(u["plano"])
+    max_tokens = max_tokens_do_plano(u["plano"])
 
     def guardar(papel: str, visivel: str, conteudo: Any, oculta: int) -> None:
         with transacao() as con:
@@ -575,7 +586,7 @@ def enviar_mensagem(m: NovaMensagem, u: Any = Depends(usuario_verificado)) -> St
             final = Resposta()
             try:
                 separar = ja_escreveu  # quebra de linha só entre trechos de texto
-                for pedaco in motor.responder(historico, final, modelo, FERRAMENTAS):
+                for pedaco in motor.responder(historico, final, modelo, FERRAMENTAS, max_tokens):
                     if separar:
                         yield _sse("texto", "\n\n")
                         separar = False
@@ -585,6 +596,7 @@ def enviar_mensagem(m: NovaMensagem, u: Any = Depends(usuario_verificado)) -> St
                 # Vai para os logs (Vercel → Logs); a pessoa vê só a mensagem amigável.
                 log.exception("Falha ao chamar a IA (conversa %s, modelo %s): %s",
                               cid, final.modelo, type(exc).__name__)
+                operacao.incidente("ia")
                 yield _sse("erro", "A IA não respondeu agora. Tente de novo em instantes.")
                 break
             custo_total += _custo(final)
@@ -596,6 +608,9 @@ def enviar_mensagem(m: NovaMensagem, u: Any = Depends(usuario_verificado)) -> St
             # Só executa ferramentas de uma resposta que terminou pedindo por elas:
             # cortada (max_tokens) ou recusada, a entrada pode estar incompleta.
             if final.stop_reason != "tool_use" or not final.chamadas:
+                break
+            if custo_total >= u["creditos"]:  # o saldo acabou no meio: não começa outra rodada
+                yield _sse("texto", "\n\n(Seus créditos acabaram; recarregue para eu continuar.)")
                 break
             resultados = []
             for ch in final.chamadas:
@@ -637,10 +652,12 @@ def gerar_sugestoes(u: Any = Depends(usuario_verificado)) -> dict[str, Any]:
     atual = db().execute("SELECT gerado_em FROM sugestoes WHERE usuario_id = ?", (u["id"],)).fetchone()
     if atual and (datetime.now(timezone.utc) - datetime.fromisoformat(atual["gerado_em"])).total_seconds() < 600:
         raise HTTPException(429, "As sugestões foram atualizadas há pouco. Tente de novo em alguns minutos.")
+    operacao.conferir_teto()
     try:
         dados, final = ia().gerar_json(prompt_sugestoes(u["id"]), SCHEMA_SUGESTOES, modelo_do_plano(u["plano"]))
     except Exception as exc:  # noqa: BLE001
         log.exception("Falha ao gerar sugestões: %s", type(exc).__name__)
+        operacao.incidente("ia")
         raise HTTPException(503, "Não consegui pensar em sugestões agora. Tente de novo em instantes.")
     sugestoes = validar_sugestoes(dados)
     guardar_sugestoes(u["id"], sugestoes)
@@ -706,7 +723,13 @@ def admin_resumo(_: Any = Depends(usuario_admin)) -> dict[str, Any]:
     interesses = db().execute(
         "SELECT u.email, i.plano, i.criado_em FROM interesses i JOIN usuarios u ON u.id = i.usuario_id "
         "ORDER BY i.id DESC LIMIT 200").fetchall()
-    return {"usuarios": [dict(r) for r in us], "interesses": [dict(r) for r in interesses]}
+    return {"usuarios": [dict(r) for r in us], "interesses": [dict(r) for r in interesses],
+            "relatorio": operacao.relatorio()}
+
+
+@app.post("/api/admin/relatorio")
+def admin_mandar_relatorio(_: Any = Depends(usuario_admin)) -> dict[str, bool]:
+    return {"enviado": operacao.mandar_relatorio()}
 
 
 class TrocaPlano(BaseModel):
@@ -785,8 +808,9 @@ def baixar_agente() -> FileResponse:
                         filename="agente.py")
 
 
-from . import instaladores, pagamento, parque  # noqa: E402  (precisam das funções acima já definidas)
+from . import crescimento, instaladores, operacao, pagamento, parque  # noqa: E402  (precisam das funções acima)
 
 app.include_router(parque.router)
+app.include_router(crescimento.router)
 app.include_router(instaladores.router)
 app.include_router(pagamento.router)

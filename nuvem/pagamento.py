@@ -30,7 +30,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
 
 from . import app as nucleo
-from . import cobranca
+from . import cobranca, operacao
 
 log = logging.getLogger("minijarvis")
 router = APIRouter()
@@ -260,6 +260,7 @@ def processar_pagamento(mp_id: str) -> str | None:
                     (status, nucleo.agora(), atual["id"]))
     if status == "aprovado":
         cobranca.ativar_plano(uid, plano, f"pagamento {plano} ({atual['tipo']})")
+        operacao.primeira_vez("pagamento", uid)
         if preapproval_id:
             with nucleo.transacao() as con:
                 con.execute("UPDATE usuarios SET assinatura_id=? WHERE id=?", (preapproval_id, uid))

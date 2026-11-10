@@ -170,6 +170,22 @@ CREATE TABLE IF NOT EXISTS pagamentos (
     atualizado_em TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_pagamentos_usuario ON pagamentos(usuario_id, id);
+-- Funil e incidentes: contadores sem cookie (ver nuvem/operacao.py).
+CREATE TABLE IF NOT EXISTS eventos (
+    id {pk},
+    nome TEXT NOT NULL,
+    usuario_id BIGINT,
+    criado_em TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_eventos ON eventos(nome, criado_em);
+CREATE INDEX IF NOT EXISTS idx_eventos_usuario ON eventos(nome, usuario_id);
+-- Conversas publicadas como página pública (/c/TOKEN).
+CREATE TABLE IF NOT EXISTS compartilhamentos (
+    token TEXT PRIMARY KEY,
+    conversa_id BIGINT NOT NULL UNIQUE REFERENCES conversas(id) ON DELETE CASCADE,
+    usuario_id BIGINT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    criado_em TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS interesses (
     id {pk},
     usuario_id BIGINT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
@@ -193,6 +209,10 @@ _MIGRACOES = [
     # Assinatura recorrente no Mercado Pago (id do preapproval), se houver.
     "ALTER TABLE usuarios ADD COLUMN assinatura_id TEXT",
     "ALTER TABLE usuarios ADD COLUMN aceitou_termos_em TEXT",
+    # Indicação: o código de cada conta e quem a indicou.
+    "ALTER TABLE usuarios ADD COLUMN codigo_indicacao TEXT",
+    "ALTER TABLE usuarios ADD COLUMN indicado_por BIGINT",
+    "CREATE UNIQUE INDEX IF NOT EXISTS idx_usuarios_indicacao ON usuarios(codigo_indicacao)",
 ]
 
 
