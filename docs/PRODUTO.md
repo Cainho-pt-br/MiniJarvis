@@ -142,8 +142,15 @@ cada resposta, com o desconto do cache de prompt.
   público leigo brasileiro. Recomendado para começar.
 - **Stripe**: melhor se for vender fora do Brasil (também aceita Pix).
 
-A integração (checkout + webhook que soma créditos em `extrato`) é a
-próxima etapa do código.
+Já está no código (`nuvem/pagamento.py`): **assinatura mensal no cartão**
+(preapproval do Mercado Pago, renovada pelo MP todo mês) e **Pix de um mês**
+(QR code no painel). O webhook busca o pagamento na API do MP antes de dar
+créditos e nunca credita duas vezes. Cada pagamento aprovado dá 31 dias do
+plano e os créditos dele (`nuvem/cobranca.py`); o cron diário rebaixa para o
+grátis quem venceu. Para ligar: `MP_ACCESS_TOKEN`, `MP_WEBHOOK_SECRET` e
+`SITE_URL` na Vercel, e cadastrar `https://SEU-SITE/api/pagamentos/webhook`
+nos Webhooks do Mercado Pago (eventos: Pagamentos e Planos e assinaturas).
+Sem token, os botões de assinar voltam a ser lista de espera.
 
 ### O que faz viralizar
 
@@ -159,8 +166,9 @@ próxima etapa do código.
 
 ## 4. Obrigações antes de abrir ao público
 
-- **Termos de uso e política de privacidade** (LGPD): o que é guardado, por
-  quanto tempo, e que as mensagens passam pela API da Anthropic.
+- **Termos de uso e política de privacidade** (LGPD): já existem em `/termos`
+  e `/privacidade`, com aceite obrigatório no cadastro. Preencha
+  `RESPONSAVEL_LEGAL` (nome/CNPJ) e `EMAIL_CONTATO` na Vercel.
 - **Exclusão de conta**: já existe (`DELETE /api/eu`, apaga tudo).
 - **CNPJ (MEI serve no início)** para emitir nota e receber pelo Mercado Pago.
 - **Limite de gastos** no console da Anthropic, para um bug não virar fatura
@@ -177,9 +185,9 @@ próxima etapa do código.
 | 3 | Parque por conta: pareamento por código, mapa, tarefas, cérebro, rotinas, sugestões, Jarvis com ferramentas | Feito |
 | 4 | Segurança para leigos (e-mail confirmado, código em navegador novo, modo seguro, ações prontas) | Feito |
 | 5 | Instalador de um comando para Windows, Mac e Linux | Feito |
-| 6 | Pagamento (Mercado Pago) ligado aos botões de assinatura (hoje viram lista de espera) | Próximo |
-| 7 | Login com Google, link compartilhável, indicação | |
-| 8 | Termos de uso e política de privacidade (LGPD), domínio próprio | |
+| 6 | Pagamento (Mercado Pago: cartão recorrente e Pix), renovação e vencimento automáticos, "esqueci minha senha", termos e privacidade | Feito (falta o token do MP na Vercel) |
+| 7 | Relatório diário ao dono, teto de gasto de IA, auto-atualização do agente, analytics | Próximo |
+| 8 | Login com Google, link compartilhável, indicação, domínio próprio | |
 
 ---
 

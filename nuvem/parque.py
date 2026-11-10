@@ -685,6 +685,9 @@ def cron_rotinas(request: Request) -> dict[str, int]:
     segredo = os.environ.get("CRON_SECRET")
     if not segredo or request.headers.get("authorization") != f"Bearer {segredo}":
         raise HTTPException(401, "não autorizado")
+    from . import cobranca
+
+    rebaixados = cobranca.rebaixar_vencidos()
     hoje = nucleo.agora()[:10]
     disparadas = 0
     for r in nucleo.db().execute("SELECT * FROM rotinas WHERE frequencia='diaria'").fetchall():
@@ -695,7 +698,7 @@ def cron_rotinas(request: Request) -> dict[str, int]:
             disparadas += 1
         except HTTPException:
             continue  # a máquina da rotina foi removida
-    return {"disparadas": disparadas}
+    return {"disparadas": disparadas, "rebaixados": rebaixados}
 
 
 # --------------------------------------------------------- resumo para a IA ---

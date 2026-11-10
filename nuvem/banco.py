@@ -155,6 +155,21 @@ CREATE TABLE IF NOT EXISTS limites (
     criado_em TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_limites ON limites(chave, criado_em);
+-- Pagamentos (Mercado Pago). `referencia` é o id no provedor, único: a mesma
+-- notificação chegando duas vezes não soma créditos duas vezes.
+CREATE TABLE IF NOT EXISTS pagamentos (
+    id {pk},
+    usuario_id BIGINT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    provedor TEXT NOT NULL DEFAULT 'mp',
+    referencia TEXT NOT NULL UNIQUE,
+    tipo TEXT NOT NULL,
+    plano TEXT NOT NULL,
+    valor_brl REAL NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pendente',
+    criado_em TEXT NOT NULL,
+    atualizado_em TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_pagamentos_usuario ON pagamentos(usuario_id, id);
 CREATE TABLE IF NOT EXISTS interesses (
     id {pk},
     usuario_id BIGINT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
@@ -173,6 +188,11 @@ _MIGRACOES = [
     "ALTER TABLE usuarios ADD COLUMN email_canonico TEXT",
     # Máquina nova nasce no modo seguro: só roda ações prontas.
     "ALTER TABLE agentes ADD COLUMN modo TEXT NOT NULL DEFAULT 'seguro'",
+    # Até quando o plano pago vale; vencido, o cron diário volta para o grátis.
+    "ALTER TABLE usuarios ADD COLUMN plano_ate TEXT",
+    # Assinatura recorrente no Mercado Pago (id do preapproval), se houver.
+    "ALTER TABLE usuarios ADD COLUMN assinatura_id TEXT",
+    "ALTER TABLE usuarios ADD COLUMN aceitou_termos_em TEXT",
 ]
 
 

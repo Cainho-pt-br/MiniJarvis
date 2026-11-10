@@ -9,7 +9,7 @@ from nuvem import app as modulo  # noqa: E402
 
 
 def cadastrar(c, email="ana@exemplo.com"):
-    r = c.post("/api/cadastro", json={"nome": "Ana", "email": email, "senha": "senha-forte-1"})
+    r = c.post("/api/cadastro", json={"nome": "Ana", "email": email, "senha": "senha-forte-1", "aceito": True})
     assert r.status_code == 200, r.text
     return r.json()
 
@@ -29,12 +29,12 @@ def test_cadastro_entrada_e_saida(cliente):
     cliente.post("/api/sair")
     assert cliente.get("/api/eu").status_code == 401
     assert cliente.post("/api/entrar", json={"email": "ana@exemplo.com", "senha": "errada"}).status_code == 401
-    assert cliente.post("/api/entrar", json={"email": "ANA@exemplo.com", "senha": "senha-forte-1"}).status_code == 200
+    assert cliente.post("/api/entrar", json={"email": "ANA@exemplo.com", "senha": "senha-forte-1", "aceito": True}).status_code == 200
 
 
 def test_email_duplicado_e_senha_curta(cliente):
     cadastrar(cliente)
-    r = cliente.post("/api/cadastro", json={"nome": "B", "email": "ana@exemplo.com", "senha": "senha-forte-1"})
+    r = cliente.post("/api/cadastro", json={"nome": "B", "email": "ana@exemplo.com", "senha": "senha-forte-1", "aceito": True})
     assert r.status_code == 409
     r = cliente.post("/api/cadastro", json={"nome": "B", "email": "b@exemplo.com", "senha": "curta"})
     assert r.status_code == 422

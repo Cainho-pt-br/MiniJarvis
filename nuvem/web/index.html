@@ -130,6 +130,9 @@ footer { position: relative; z-index: 1; text-align: center; color: var(--tenue)
 .campo input:focus, .campo textarea:focus, .campo select:focus { border-color: var(--ciano); box-shadow: 0 0 0 3px rgba(63, 208, 201, .15); }
 .erro-txt { color: var(--erro); font-size: 14px; min-height: 20px; margin-top: 8px; }
 .link-btn { background: none; border: 0; color: var(--ciano2); padding: 0; }
+.aceite { display: block; font-size: 13px; line-height: 1.5; color: var(--suave); margin: 4px 0; }
+.aceite input { margin: 0 6px 0 0; vertical-align: middle; }
+.preco .btn + .btn { margin-top: -6px; }
 @keyframes aparece { from { opacity: 0; } }
 
 /* ======================================================= APP ======= */
@@ -446,7 +449,7 @@ pre.log { margin: 0; padding: 14px; border-radius: 12px; background: #02050a; bo
       <button class="btn prim grande" data-abrir="cadastro">Criar meu Jarvis grátis →</button>
     </div>
   </section>
-  <footer>Jarvis · feito no Brasil · <a href="#" data-abrir="entrar">Entrar</a></footer>
+  <footer>Jarvis · feito no Brasil · <a href="/termos">Termos de uso</a> · <a href="/privacidade">Privacidade</a> · <a href="#" data-abrir="entrar">Entrar</a></footer>
 </div>
 
 <!-- ================================================================ APP -->
@@ -614,8 +617,8 @@ function cartoesPreco(planos, atual) {
     <div class="valor">${p.preco_brl ? brl(p.preco_brl) : "R$ 0"}<small>${p.preco_brl ? " /mês" : ""}</small></div>
     <ul>${p.itens.map((i) => `<li>${esc(i)}</li>`).join("")}</ul>
     ${atual === undefined ? `<button class="btn ${p.destaque ? "prim" : ""}" data-abrir="cadastro">${p.preco_brl ? "Começar grátis" : "Criar conta grátis"}</button>`
-      : atual === p.id ? `<button class="btn" disabled>Seu plano atual</button>`
-      : p.preco_brl ? `<button class="btn ${p.destaque ? "prim" : ""}" data-assinar="${p.id}">Quero o ${esc(p.nome)}</button>` : ""}
+      : atual === p.id ? `<button class="btn" disabled>Seu plano atual${estado.usuario?.plano_ate ? " · até " + quandoDia(estado.usuario.plano_ate) : ""}</button>${p.preco_brl && !estado.usuario?.assinatura ? `<button class="btn fantasma peq" data-pix="${p.id}">Renovar 1 mês com Pix</button>` : ""}`
+      : p.preco_brl ? `<button class="btn ${p.destaque ? "prim" : ""}" data-assinar="${p.id}">Assinar no cartão</button><button class="btn fantasma peq" data-pix="${p.id}">Pagar 1 mês com Pix</button>` : ""}
   </div>`).join("");
 }
 
@@ -643,7 +646,10 @@ document.addEventListener("click", (e) => {
   if (a) { e.preventDefault(); modalConta(a.dataset.abrir); }
   const s = e.target.closest("[data-assinar]");
   if (s) assinar(s.dataset.assinar);
+  const px = e.target.closest("[data-pix]");
+  if (px) pagarPix(px.dataset.pix);
 });
+function quandoDia(iso) { try { return new Date(iso).toLocaleDateString("pt-BR"); } catch { return iso; } }
 
 function abrirModal(html, largo = false) {
   const m = $("#modais");
@@ -662,14 +668,18 @@ function modalConta(modo) {
       ${cad ? '<label class="campo"><span>Seu nome</span><input name="nome" autocomplete="name" required></label>' : ""}
       <label class="campo"><span>E-mail</span><input name="email" type="email" autocomplete="email" required></label>
       <label class="campo"><span>Senha ${cad ? "(mínimo 8 caracteres)" : ""}</span><input name="senha" type="password" minlength="8" autocomplete="${cad ? "new-password" : "current-password"}" required></label>
+      ${cad ? '<label class="aceite"><input type="checkbox" name="aceito" required> Li e aceito os <a href="/termos" target="_blank">termos de uso</a> e a <a href="/privacidade" target="_blank">política de privacidade</a>.</label>' : ""}
       <button class="btn prim grande" style="width:100%;margin-top:8px">${cad ? "Criar conta grátis" : "Entrar"}</button>
       <div class="erro-txt" id="erro-conta"></div>
+      ${cad ? "" : '<p style="text-align:center;margin:10px 0 0;font-size:14px"><button type="button" class="link-btn" id="esqueci">Esqueci minha senha</button></p>'}
     </form>
     <p style="text-align:center;margin:8px 0 0;color:var(--suave);font-size:14px">${cad ? "Já tem conta?" : "Ainda não tem conta?"} <button class="link-btn" data-abrir="${cad ? "entrar" : "cadastro"}">${cad ? "Entrar" : "Criar grátis"}</button></p>`);
   $("input", el).focus();
+  const esq = $("#esqueci", el); if (esq) esq.onclick = () => modalEsqueciSenha($("[name=email]", el).value);
   $("#f-conta").onsubmit = async (ev) => {
     ev.preventDefault();
     const f = new FormData(ev.target), corpo = Object.fromEntries(f);
+    if (cad) corpo.aceito = f.get("aceito") === "on";
     const b = $("button.prim", el); b.disabled = true;
     try {
       const u = await post(cad ? "/api/cadastro" : "/api/entrar", corpo);
@@ -677,6 +687,31 @@ function modalConta(modo) {
       if (u.precisa_codigo) return modalCodigoEntrada(u);
       iniciarApp(u, cad);
     } catch (e) { $("#erro-conta").textContent = e.message; b.disabled = false; }
+  };
+}
+
+function modalEsqueciSenha(email = "") {
+  const { el } = abrirModal(`<h2>Recuperar a senha</h2>
+    <p class="sub">Diga seu e-mail: mandamos um código de 6 números para você criar uma senha nova.</p>
+    <form id="f1"><label class="campo"><span>E-mail</span><input name="email" type="email" required value="${esc(email)}"></label>
+    <button class="btn prim grande" style="width:100%">Mandar código</button><div class="erro-txt" id="erro"></div></form>`);
+  $("input", el).focus();
+  $("#f1", el).onsubmit = async (e) => {
+    e.preventDefault();
+    const em = new FormData(e.target).get("email").trim().toLowerCase();
+    try { await post("/api/senha/esquecer", { email: em }); } catch (x) { return ($("#erro", el).textContent = x.message); }
+    const { el: el2 } = abrirModal(`<h2>Crie a senha nova</h2>
+      <p class="sub">Se existir uma conta com <b>${esc(em)}</b>, o código já está chegando lá. Ele vale 15 minutos.</p>
+      <form id="f2"><input class="codigo-input" name="codigo" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required placeholder="000000">
+      <label class="campo" style="margin-top:12px"><span>Senha nova (mínimo 8 caracteres)</span><input name="senha" type="password" minlength="8" autocomplete="new-password" required></label>
+      <button class="btn prim grande" style="width:100%;margin-top:8px">Salvar e entrar</button><div class="erro-txt" id="erro"></div></form>`);
+    $("input", el2).focus();
+    $("#f2", el2).onsubmit = async (ev) => {
+      ev.preventDefault();
+      const f = new FormData(ev.target);
+      try { const u = await post("/api/senha/redefinir", { email: em, codigo: f.get("codigo"), senha: f.get("senha") }); $("#modais").innerHTML = ""; toast("Senha trocada!"); iniciarApp(u); }
+      catch (x) { $("#erro", el2).textContent = x.message; }
+    };
   };
 }
 
@@ -690,9 +725,39 @@ function modalUpgrade(motivo) {
 
 async function assinar(plano) {
   try {
+    const r = await post(`/api/pagamentos/assinatura/${plano}`);
+    toast("Abrindo o pagamento seguro do Mercado Pago…");
+    location.href = r.url;
+    return;
+  } catch (e) { if (e.status !== 503) return toast(e.message); }
+  try {
     await post(`/api/planos/${plano}/interesse`);
     abrirModal(`<h2>Você está na lista! 🎉</h2><p class="sub">O pagamento por Pix e cartão está chegando. Você será um dos primeiros a poder assinar, e quem entrou na lista ganha um desconto de lançamento.</p><button class="btn prim" style="width:100%" onclick="document.getElementById('modais').innerHTML=''">Combinado</button>`);
   } catch (e) { toast(e.message); }
+}
+
+async function pagarPix(plano) {
+  let r;
+  try { r = await post(`/api/pagamentos/pix/${plano}`); }
+  catch (e) { if (e.status === 503) return assinar(plano); return toast(e.message); }
+  const nome = (estado.planos.find((p) => p.id === plano) || {}).nome || plano;
+  const { el } = abrirModal(`<h2>Pague com Pix</h2>
+    <p class="sub">${brl(r.valor)} por 1 mês do plano <b>${esc(nome)}</b>. Abra o app do seu banco, escolha Pix e leia o código. O plano ativa sozinho em segundos.</p>
+    ${r.qr_base64 ? `<img src="data:image/png;base64,${r.qr_base64}" alt="QR code Pix" style="display:block;width:220px;height:220px;margin:0 auto 12px;background:#fff;border-radius:12px;padding:8px">` : ""}
+    <div class="cmd" style="word-break:break-all;font-size:12px"><span>${esc(r.copia_cola)}</span><button class="btn peq" id="copiar-pix">Copiar</button></div>
+    <div class="esperando" style="margin-top:14px"><i></i>Esperando o pagamento…</div>`);
+  $("#copiar-pix", el).onclick = () => { navigator.clipboard.writeText(r.copia_cola); toast("Código Pix copiado."); };
+  const t = setInterval(async () => {
+    try {
+      const s = await api(`/api/pagamentos/${r.id}`);
+      if (s.status === "aprovado") {
+        clearInterval(t); $("#modais").innerHTML = "";
+        estado.usuario = await api("/api/eu"); montarNav(); toast("Pagamento recebido! Plano ativado. 🎉", 5000);
+        if (estado.aba === "planos") telaPlanos();
+      } else if (s.status !== "pendente") { clearInterval(t); toast("O pagamento não foi concluído (" + s.status + ")."); }
+    } catch {}
+  }, 4000);
+  estado.aoFecharModal = () => clearInterval(t);
 }
 
 /* ----------------------------------------------------------------- app */
@@ -1249,10 +1314,16 @@ async function telaPlanos() {
     <div class="precos" style="margin-bottom:26px">${cartoesPreco(planos, u.plano)}</div>
     <div class="painel" style="margin-bottom:22px"><h2>Sua conta</h2>
       <p style="margin:0 0 12px;color:var(--suave)">${esc(u.email)} · ${u.email_verificado ? "✔ e-mail confirmado" : "e-mail não confirmado"}</p>
-      <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn peq" id="sair-todos">Sair de todos os dispositivos</button></div>
+      ${u.plano !== "gratis" ? `<p style="margin:0 0 12px;color:var(--suave)">Plano <b style="color:var(--texto)">${esc(u.plano)}</b> válido até ${u.plano_ate ? quandoDia(u.plano_ate) : "—"}${u.assinatura ? " · renova sozinho no cartão" : " · sem renovação automática"}</p>` : ""}
+      <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn peq" id="sair-todos">Sair de todos os dispositivos</button>${u.assinatura ? '<button class="btn peq fantasma perigo" id="cancelar-ass">Cancelar assinatura</button>' : ""}</div>
       <p style="font-size:13px;color:var(--tenue);margin:10px 0 0">Use se acha que alguém viu sua senha. Depois, entrar de um navegador novo pede um código enviado ao seu e-mail.</p></div>
     <div class="painel"><h2>Extrato de créditos</h2><table class="tabela">${extrato.map((e) => `<tr><td>${esc(e.motivo)}</td><td style="color:var(--tenue);font-family:Inter">${quando(e.criado_em)}</td><td style="color:${e.delta > 0 ? "var(--ok)" : "var(--suave)"}">${e.delta > 0 ? "+" : ""}${e.delta}</td></tr>`).join("")}</table></div>`;
   $("#sair-todos").onclick = async () => { await post("/api/sair-de-todos"); location.reload(); };
+  const ca = $("#cancelar-ass");
+  if (ca) ca.onclick = async () => {
+    if (!confirm("Cancelar a renovação automática? Seu plano continua até " + quandoDia(u.plano_ate) + ".")) return;
+    try { await post("/api/pagamentos/cancelar"); estado.usuario = await api("/api/eu"); toast("Assinatura cancelada."); telaPlanos(); } catch (e) { toast(e.message); }
+  };
 }
 
 /* ---- confirmação de e-mail e código de entrada */

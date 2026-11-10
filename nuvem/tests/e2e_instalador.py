@@ -56,7 +56,7 @@ def rodar_comando(cmd: str) -> None:
 
 
 def main() -> None:
-    st, u = api("POST", "/api/cadastro", {"nome": "CI", "email": "ci@exemplo.com", "senha": "senha-forte-1"})
+    st, u = api("POST", "/api/cadastro", {"nome": "CI", "email": "ci@exemplo.com", "senha": "senha-forte-1", "aceito": True})
     assert st == 200, u
     st, p = api("POST", "/api/parque/parear")
     assert st == 200, p

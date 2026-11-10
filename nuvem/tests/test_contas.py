@@ -19,7 +19,7 @@ def codigo_de(msg):
 
 
 def novo(c, email="ana@gmail.com"):
-    return c.post("/api/cadastro", json={"nome": "Ana", "email": email, "senha": "senha-forte-1"})
+    return c.post("/api/cadastro", json={"nome": "Ana", "email": email, "senha": "senha-forte-1", "aceito": True})
 
 
 def test_conta_nova_so_ganha_creditos_depois_de_confirmar(cliente, caixa):
@@ -74,12 +74,12 @@ def test_navegador_novo_pede_codigo_por_email(cliente, caixa):
     cliente.post("/api/verificar", json={"codigo": codigo_de(caixa[0])})
     cliente.post("/api/sair")
     # mesmo navegador (cookie de dispositivo confiável): entra direto
-    r = cliente.post("/api/entrar", json={"email": "ana@gmail.com", "senha": "senha-forte-1"}).json()
+    r = cliente.post("/api/entrar", json={"email": "ana@gmail.com", "senha": "senha-forte-1", "aceito": True}).json()
     assert r["email"] == "ana@gmail.com"
     # navegador novo: pede código
     cliente.post("/api/sair")
     cliente.cookies.clear()
-    r = cliente.post("/api/entrar", json={"email": "ana@gmail.com", "senha": "senha-forte-1"}).json()
+    r = cliente.post("/api/entrar", json={"email": "ana@gmail.com", "senha": "senha-forte-1", "aceito": True}).json()
     assert r["precisa_codigo"] is True and r["email"] == "an•@gmail.com"
     assert cliente.get("/api/eu").status_code == 401
     assert cliente.post("/api/entrar/codigo", json={"desafio": r["desafio"], "codigo": "111111"}).status_code == 400
@@ -98,7 +98,7 @@ def test_senha_errada_bloqueia_conta_depois_de_8(cliente):
     novo(cliente)
     for _ in range(8):
         cliente.post("/api/entrar", json={"email": "ana@gmail.com", "senha": "errada"})
-    r = cliente.post("/api/entrar", json={"email": "ana@gmail.com", "senha": "senha-forte-1"})
+    r = cliente.post("/api/entrar", json={"email": "ana@gmail.com", "senha": "senha-forte-1", "aceito": True})
     assert r.status_code == 429
 
 
@@ -111,12 +111,49 @@ def test_admin(cliente, monkeypatch):
     assert chefe["admin"] is True
     r = cliente.get("/api/admin/resumo").json()
     ana = next(u for u in r["usuarios"] if u["email"] == "ana@exemplo.com")
-    assert cliente.post(f"/api/admin/usuarios/{ana['id']}/plano", json={"plano": "pro", "creditos": 4500}).status_code == 200
+    # dar o Pro por 1 mês soma os créditos do plano e marca o vencimento
+    assert cliente.post(f"/api/admin/usuarios/{ana['id']}/plano", json={"plano": "pro"}).status_code == 200
     ana = next(u for u in cliente.get("/api/admin/resumo").json()["usuarios"] if u["email"] == "ana@exemplo.com")
     assert ana["plano"] == "pro" and ana["creditos"] == modulo.CREDITOS_INICIAIS + 4500
+    assert modulo.db().execute("SELECT plano_ate FROM usuarios WHERE id=?", (ana["id"],)).fetchone()["plano_ate"]
+    # créditos de cortesia sem mexer no plano
+    cliente.post(f"/api/admin/usuarios/{ana['id']}/plano", json={"plano": "pro", "meses": 0, "creditos": 100})
+    ana = next(u for u in cliente.get("/api/admin/resumo").json()["usuarios"] if u["email"] == "ana@exemplo.com")
+    assert ana["creditos"] == modulo.CREDITOS_INICIAIS + 4600
 
 
 def test_cabecalhos_de_seguranca(cliente):
     r = cliente.get("/")
     assert r.headers["X-Frame-Options"] == "DENY" and "frame-ancestors 'none'" in r.headers["Content-Security-Policy"]
     assert cliente.get("/docs").status_code == 404
+
+
+def test_esqueci_minha_senha(cliente, caixa):
+    novo(cliente).json()
+    cliente.post("/api/verificar", json={"codigo": codigo_de(caixa[0])})
+    cliente.post("/api/sair")
+    # e-mail desconhecido responde igual (não revela quem tem conta) e não manda nada
+    assert cliente.post("/api/senha/esquecer", json={"email": "ninguem@gmail.com"}).json() == {"ok": True}
+    assert len(caixa) == 1
+    assert cliente.post("/api/senha/esquecer", json={"email": "ANA@gmail.com"}).status_code == 200
+    assert "senha" in caixa[1]["Subject"]
+    cod = codigo_de(caixa[1])
+    assert cliente.post("/api/senha/redefinir", json={"email": "ana@gmail.com", "codigo": "000000",
+                                                      "senha": "outra-senha-9"}).status_code == 400
+    u = cliente.post("/api/senha/redefinir", json={"email": "ana@gmail.com", "codigo": cod,
+                                                   "senha": "outra-senha-9"}).json()
+    assert u["email"] == "ana@gmail.com" and cliente.get("/api/eu").status_code == 200
+    cliente.cookies.clear()
+    assert cliente.post("/api/entrar", json={"email": "ana@gmail.com", "senha": "senha-forte-1"}).status_code == 401
+    r = cliente.post("/api/entrar", json={"email": "ana@gmail.com", "senha": "outra-senha-9"})
+    assert r.status_code == 200 and r.json().get("precisa_codigo")  # navegador novo pede código
+    # o mesmo código não serve duas vezes
+    assert cliente.post("/api/senha/redefinir", json={"email": "ana@gmail.com", "codigo": cod,
+                                                      "senha": "mais-uma-senha"}).status_code == 400
+
+
+def test_cadastro_exige_aceitar_termos(cliente):
+    r = cliente.post("/api/cadastro", json={"nome": "Ana", "email": "a@gmail.com", "senha": "senha-forte-1"})
+    assert r.status_code == 400
+    assert cliente.get("/termos").status_code == 200 and "Termos de uso" in cliente.get("/termos").text
+    assert "LGPD" in cliente.get("/privacidade").text

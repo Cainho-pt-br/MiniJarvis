@@ -167,6 +167,7 @@ class Cadastro(BaseModel):
     nome: str = Field(min_length=1, max_length=80)
     email: str = Field(max_length=200)
     senha: str = Field(min_length=8, max_length=200)
+    aceito: bool = False  # termos de uso e política de privacidade
 
 
 class Entrada(BaseModel):
@@ -199,8 +200,8 @@ def email_canonico(email: str) -> str:
 
 def _publico(u: Any) -> dict[str, Any]:
     return {"id": u["id"], "nome": u["nome"], "email": u["email"], "creditos": u["creditos"],
-            "plano": u["plano"], "email_verificado": bool(u["email_verificado"]),
-            "admin": eh_admin(u)}
+            "plano": u["plano"], "plano_ate": u["plano_ate"], "assinatura": bool(u["assinatura_id"]),
+            "email_verificado": bool(u["email_verificado"]), "admin": eh_admin(u)}
 
 
 def eh_admin(u: Any) -> bool:
@@ -245,8 +246,9 @@ def _mandar_codigo(u: Any, finalidade: str) -> int:
     from . import correio
 
     cid, codigo = _criar_codigo(u["id"], finalidade)
+    motivo = {"verificar": "confirmar", "entrar": "entrar", "senha": "senha"}[finalidade]
     try:
-        correio.enviar_codigo(u["email"], u["nome"], codigo, "confirmar" if finalidade == "verificar" else "entrar")
+        correio.enviar_codigo(u["email"], u["nome"], codigo, motivo)
     except Exception as exc:  # noqa: BLE001
         log.exception("Falha ao enviar e-mail: %s", type(exc).__name__)
         raise HTTPException(503, "Não consegui enviar o e-mail agora. Tente de novo em instantes.")
@@ -290,6 +292,8 @@ def cadastrar(c: Cadastro, request: Request, resp: Response) -> dict[str, Any]:
     email = c.email.strip().lower()
     if not _RE_EMAIL.match(email):
         raise HTTPException(400, "E-mail inválido.")
+    if not c.aceito:
+        raise HTTPException(400, "Para criar a conta, aceite os termos de uso e a política de privacidade.")
     canon = email_canonico(email)
     if canon.split("@")[1] in DESCARTAVEIS:
         raise HTTPException(400, "Use um e-mail de verdade (endereços temporários não são aceitos).")
@@ -299,8 +303,9 @@ def cadastrar(c: Cadastro, request: Request, resp: Response) -> dict[str, Any]:
     try:
         with transacao() as con:
             uid = con.inserir(
-                "INSERT INTO usuarios (email, email_canonico, nome, senha_hash, creditos, email_verificado, criado_em) "
-                "VALUES (?, ?, ?, ?, 0, 0, ?)", (email, canon, c.nome.strip(), gerar_hash(c.senha), agora()))
+                "INSERT INTO usuarios (email, email_canonico, nome, senha_hash, creditos, email_verificado, "
+                "aceitou_termos_em, criado_em) VALUES (?, ?, ?, ?, 0, 0, ?, ?)",
+                (email, canon, c.nome.strip(), gerar_hash(c.senha), agora(), agora()))
     except ErroDuplicado:
         raise HTTPException(409, "Já existe uma conta com este e-mail.")
     parque._semear_cerebro(uid)  # o cérebro já nasce com as notas de boas-vindas
@@ -378,6 +383,52 @@ def entrar_com_codigo(c: CodigoEntrada, request: Request, resp: Response) -> dic
     confiar_dispositivo(resp, r["usuario_id"])
     abrir_sessao(resp, r["usuario_id"])
     return _publico(db().execute("SELECT * FROM usuarios WHERE id = ?", (r["usuario_id"],)).fetchone())
+
+
+class EsqueciSenha(BaseModel):
+    email: str = Field(max_length=200)
+
+
+@app.post("/api/senha/esquecer")
+def esquecer_senha(e: EsqueciSenha, request: Request) -> dict[str, bool]:
+    """Manda um código por e-mail para redefinir a senha. Responde igual
+    exista a conta ou não (não revela quem tem conta)."""
+    from . import correio
+
+    if not correio.configurado():
+        raise HTTPException(503, "A recuperação de senha ainda não está disponível. Fale com o suporte.")
+    limitar(f"esq-ip:{ip_cliente(request)}", 10, 3600)
+    email = e.email.strip().lower()
+    u = db().execute("SELECT * FROM usuarios WHERE email = ?", (email,)).fetchone()
+    if u is not None:
+        limitar(f"esq-conta:{u['id']}", 3, 3600, "Já mandamos códigos demais para este e-mail. Espere uma hora.")
+        _mandar_codigo(u, "senha")
+    return {"ok": True}
+
+
+class NovaSenha(BaseModel):
+    email: str = Field(max_length=200)
+    codigo: str = Field(min_length=4, max_length=12)
+    senha: str = Field(min_length=8, max_length=200)
+
+
+@app.post("/api/senha/redefinir")
+def redefinir_senha(n: NovaSenha, request: Request, resp: Response) -> dict[str, Any]:
+    limitar(f"redef-ip:{ip_cliente(request)}", 20, 900)
+    u = db().execute("SELECT * FROM usuarios WHERE email = ?", (n.email.strip().lower(),)).fetchone()
+    if u is None:
+        raise HTTPException(400, "Código incorreto.")
+    _conferir_codigo(u["id"], "senha", n.codigo)
+    with transacao() as con:
+        # Quem provou que tem o e-mail também confirmou a conta.
+        con.execute("UPDATE usuarios SET senha_hash = ?, email_verificado = 1 WHERE id = ?",
+                    (gerar_hash(n.senha), u["id"]))
+        con.execute("DELETE FROM sessoes WHERE usuario_id = ?", (u["id"],))  # derruba quem estiver usando
+    if not u["email_verificado"]:
+        _dar_boas_vindas(u["id"])
+    confiar_dispositivo(resp, u["id"])
+    abrir_sessao(resp, u["id"])
+    return _publico(db().execute("SELECT * FROM usuarios WHERE id = ?", (u["id"],)).fetchone())
 
 
 @app.post("/api/sair")
@@ -660,18 +711,26 @@ def admin_resumo(_: Any = Depends(usuario_admin)) -> dict[str, Any]:
 
 class TrocaPlano(BaseModel):
     plano: str
+    meses: int = Field(default=1, ge=0, le=24)  # 0: só troca o rótulo, sem créditos nem prazo
     creditos: int = Field(default=0, ge=0, le=100_000)
 
 
 @app.post("/api/admin/usuarios/{uid}/plano")
 def admin_trocar_plano(uid: int, t: TrocaPlano, _: Any = Depends(usuario_admin)) -> dict[str, bool]:
+    from . import cobranca
+
     if t.plano not in {p["id"] for p in PLANOS}:
         raise HTTPException(400, "Plano inválido.")
-    with transacao() as con:
-        con.execute("UPDATE usuarios SET plano = ?, creditos = creditos + ? WHERE id = ?", (t.plano, t.creditos, uid))
-        if t.creditos:
+    if t.plano == "gratis":
+        with transacao() as con:
+            con.execute("UPDATE usuarios SET plano = 'gratis', plano_ate = NULL WHERE id = ?", (uid,))
+    elif t.meses:
+        cobranca.ativar_plano(uid, t.plano, f"plano {t.plano} (cortesia)", t.meses)
+    if t.creditos:
+        with transacao() as con:
+            con.execute("UPDATE usuarios SET creditos = creditos + ? WHERE id = ?", (t.creditos, uid))
             con.execute("INSERT INTO extrato (usuario_id, delta, motivo, criado_em) VALUES (?, ?, ?, ?)",
-                        (uid, t.creditos, f"plano {t.plano}", agora()))
+                        (uid, t.creditos, "créditos de cortesia", agora()))
     return {"ok": True}
 
 
@@ -685,6 +744,25 @@ def saude() -> dict[str, str]:
 @app.get("/")
 def pagina() -> FileResponse:
     return FileResponse(BASE / "web" / "index.html")
+
+
+@app.get("/termos")
+def termos() -> Any:
+    return _pagina_legal("termos.html")
+
+
+@app.get("/privacidade")
+def privacidade() -> Any:
+    return _pagina_legal("privacidade.html")
+
+
+def _pagina_legal(nome: str) -> Any:
+    from fastapi.responses import HTMLResponse
+
+    texto = (BASE / "web" / nome).read_text(encoding="utf-8")
+    texto = texto.replace("{{CONTATO}}", os.environ.get("EMAIL_CONTATO") or os.environ.get("EMAIL_REMETENTE", "")
+                          .split("<")[-1].rstrip(">") or "o e-mail de contato informado no site")
+    return HTMLResponse(texto.replace("{{RESPONSAVEL}}", os.environ.get("RESPONSAVEL_LEGAL", "o responsável pelo Jarvis")))
 
 
 @app.get("/favicon.ico")
@@ -707,7 +785,8 @@ def baixar_agente() -> FileResponse:
                         filename="agente.py")
 
 
-from . import instaladores, parque  # noqa: E402  (precisam das funções acima já definidas)
+from . import instaladores, pagamento, parque  # noqa: E402  (precisam das funções acima já definidas)
 
 app.include_router(parque.router)
 app.include_router(instaladores.router)
+app.include_router(pagamento.router)
