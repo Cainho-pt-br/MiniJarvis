@@ -70,7 +70,7 @@ def premiar_indicacao(uid: int) -> None:
                            (uid,)).fetchone():
         return
     ganho = nucleo.db().execute("SELECT COALESCE(SUM(delta),0) AS g FROM extrato WHERE usuario_id=? "
-                                "AND motivo LIKE 'indicação: você indicou%'", (ind,)).fetchone()["g"]
+                                "AND motivo LIKE ?", (ind, "indicação: você indicou%")).fetchone()["g"]
     bonus_ind = max(0, min(BONUS_INDICADOR, TETO_INDICADOR - int(ganho)))
     with nucleo.transacao() as con:
         con.execute("UPDATE usuarios SET creditos=creditos+? WHERE id=?", (BONUS_INDICADO, uid))
@@ -91,7 +91,7 @@ def minha_indicacao(request: Request, u: Any = Depends(nucleo.usuario_verificado
     n = db.execute("SELECT COUNT(*) AS n FROM usuarios WHERE indicado_por=? AND email_verificado=1",
                    (u["id"],)).fetchone()["n"]
     ganho = db.execute("SELECT COALESCE(SUM(delta),0) AS g FROM extrato WHERE usuario_id=? "
-                       "AND motivo LIKE 'indicação: você indicou%'", (u["id"],)).fetchone()["g"]
+                       "AND motivo LIKE ?", (u["id"], "indicação: você indicou%")).fetchone()["g"]
     return {"codigo": codigo, "link": f"{site_url(request)}/?ref={codigo}", "indicados": n,
             "creditos_ganhos": int(ganho), "bonus": BONUS_INDICADOR, "bonus_indicado": BONUS_INDICADO,
             "teto": TETO_INDICADOR}
