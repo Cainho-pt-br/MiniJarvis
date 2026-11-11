@@ -44,7 +44,7 @@ from .tarefas import TAREFAS
 
 BASE = Path(__file__).resolve().parent
 DB_PATH = Path(os.environ.get("NUVEM_DB", BASE / "nuvem.db"))
-CREDITOS_INICIAIS = int(os.environ.get("CREDITOS_INICIAIS", "200"))
+CREDITOS_INICIAIS = int(os.environ.get("CREDITOS_INICIAIS", "120"))
 CREDITOS_POR_DOLAR = int(os.environ.get("CREDITOS_POR_DOLAR", "1000"))  # 1 crédito = US$ 0,001 de IA
 SESSAO_DIAS = 30
 COOKIE = "mj_sessao"
@@ -697,13 +697,13 @@ PLANOS = [
      "descricao": "Para conhecer o Jarvis.",
      "itens": ["Chat com o Jarvis", "Conecte 1 computador", "Cérebro com memória",
                f"{CREDITOS_INICIAIS} créditos para começar"]},
-    # Créditos calibrados para pelo menos 300 mensagens/mês e IA ≤ 45% do preço (ver docs/ECONOMIA.md).
-    {"id": "basico", "nome": "Básico", "preco_brl": 29.90, "creditos": 800, "maquinas": 2,
+    # Créditos calibrados para ~120 mensagens/mês e IA ≤ 45% do preço (ver docs/ECONOMIA.md).
+    {"id": "basico", "nome": "Básico", "preco_brl": 29.90, "creditos": 240, "maquinas": 2,
      "modelo": MODELO_HAIKU, "modelo_sugestoes": MODELO_HAIKU, "max_tokens": MAX_TOKENS,
      "rotinas_diarias": False, "sugestoes_auto": False,
-     "mensagens_estimadas": mensagens_estimadas(800, MODELO_HAIKU),
+     "mensagens_estimadas": mensagens_estimadas(240, MODELO_HAIKU),
      "descricao": "Seu assistente no dia a dia.",
-     "itens": ["Chat e tarefas no computador", "Conecte até 2 computadores", "800 créditos por mês",
+     "itens": ["Chat e tarefas no computador", "Conecte até 2 computadores", "240 créditos por mês",
                "Rotinas manuais"]},
     {"id": "pro", "nome": "Pro", "preco_brl": 59.90, "creditos": 4500, "maquinas": 4, "destaque": True,
      "modelo": MODELO_SONNET, "modelo_sugestoes": MODELO_HAIKU, "max_tokens": MAX_TOKENS,
