@@ -197,6 +197,23 @@ grátis quem venceu. Para ligar: `MP_ACCESS_TOKEN`, `MP_WEBHOOK_SECRET` e
 nos Webhooks do Mercado Pago (eventos: Pagamentos e Planos e assinaturas).
 Sem token, os botões de assinar voltam a ser lista de espera.
 
+### Idiomas (`pt-BR`, `en`, `es`)
+
+- O site, o painel, os e-mails, os instaladores, as ações prontas, as
+  explicações de falha e a própria IA funcionam em **português (`pt-BR`,
+  padrão e fallback)**, **inglês (`en`)** e **espanhol (`es`)**.
+- **Ordem de escolha:** preferência salva (`usuarios.idioma` no banco +
+  `localStorage`) > `navigator.languages` > cabeçalho HTTP `Accept-Language` >
+  `pt-BR`. Há seletor de idioma visível tanto na página inicial quanto no
+  painel, e `<html lang>` acompanha o idioma ativo.
+- **Cache de prompt preservado:** o bloco principal de `SISTEMA` (`nuvem/ia.py`)
+  com `cache_control: ephemeral` permanece idêntico em todos os idiomas; para
+  `en` e `es`, um segundo bloco curto instrui a IA a responder no idioma do
+  usuário sem invalidar o cache.
+- **Moeda:** os preços continuam em reais (`BRL`). Para quem navega em `en` ou
+  `es`, os cartões de planos mostram a nota explícita de cobrança em reais
+  (`BRL`). Cobrança em outra moeda fica para quando entrar o Stripe.
+
 ### O que faz viralizar
 
 1. **Link compartilhável de resposta**: "olha o que o Jarvis fez" com a

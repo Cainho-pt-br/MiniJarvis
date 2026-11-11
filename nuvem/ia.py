@@ -167,6 +167,32 @@ def _uso(final: Resposta, msg: Any, modelo: str) -> None:
     final.recusada = msg.stop_reason == "refusal"
 
 
+INSTRUCAO_IDIOMA: dict[str, str] = {
+    "en": (
+        "IMPORTANT: The user's interface is in English. Always respond in simple, layperson-friendly English "
+        "(overrides the Portuguese default above), including tool titles (`titulo`) and explanations (`explicacao`)."
+    ),
+    "es": (
+        "IMPORTANTE: La interfaz del usuario está en español. Responde siempre en español simple y claro para "
+        "personas no técnicas (reemplaza el portugués por defecto anterior), incluidos los títulos (`titulo`) "
+        "y las explicaciones (`explicacao`) de las herramientas."
+    ),
+}
+
+
+def sistema_para_idioma(idioma: str | None = None) -> list[dict[str, Any]]:
+    """Monta os blocos `system` preservando o bloco principal com `cache_control` intacto."""
+    from .i18n import idioma_atual, normalizar_idioma
+
+    lang = normalizar_idioma(idioma) or idioma_atual()
+    blocos: list[dict[str, Any]] = [
+        {"type": "text", "text": SISTEMA, "cache_control": {"type": "ephemeral"}},
+    ]
+    if lang in INSTRUCAO_IDIOMA:
+        blocos.append({"type": "text", "text": INSTRUCAO_IDIOMA[lang]})
+    return blocos
+
+
 class ClaudeIA:
     """Cliente real. Lê ANTHROPIC_API_KEY do ambiente."""
 
@@ -192,7 +218,7 @@ class ClaudeIA:
         with self.cliente.beta.messages.stream(
             model=modelo,
             max_tokens=max_tokens,
-            system=[{"type": "text", "text": SISTEMA, "cache_control": {"type": "ephemeral"}}],
+            system=sistema_para_idioma(),
             messages=historico,
             output_config={"effort": ESFORCO},
             **extra,
@@ -261,11 +287,17 @@ class FakeIA:
 
     def responder(self, historico: list[dict[str, Any]], final: Resposta, modelo: str,
                   ferramentas: list[dict[str, Any]] | None = None, max_tokens: int = MAX_TOKENS) -> Iterator[str]:
+        from .i18n import idioma_atual
+
+        lang = idioma_atual()
         final.modelo = modelo
         final.tokens_entrada, final.tokens_saida = 1000, 500
         ultima = historico[-1]["content"]
+        prefixo_pronto = {"en": "Done! ", "es": "¡Listo! "}.get(lang, "Pronto! ")
+        prefixo_entendi = {"en": "Understood: ", "es": "Entendido: "}.get(lang, "Entendi: ")
+        frase_preparar = {"en": "I will prepare that.", "es": "Voy a preparar eso."}.get(lang, "Vou preparar isso.")
         if isinstance(ultima, list) and ultima and ultima[0].get("type") == "tool_result":
-            texto = "Pronto! " + str(ultima[0].get("content"))[:300]
+            texto = prefixo_pronto + str(ultima[0].get("content"))[:300]
         else:
             if isinstance(ultima, list):
                 ultima = " ".join(b.get("text", "") for b in ultima if isinstance(b, dict))
@@ -274,16 +306,16 @@ class FakeIA:
                 cmd = pedido.group(1)
                 entrada = ({"tipo": "acao", "acao": cmd[1:]} if cmd.startswith(":") else
                            {"tipo": "shell", "comando": cmd})
-                final.conteudo = [{"type": "text", "text": "Vou preparar isso."},
+                final.conteudo = [{"type": "text", "text": frase_preparar},
                                   {"type": "tool_use", "id": "toolu_fake1", "name": "criar_tarefa",
                                    "input": {"maquina": pedido.group(2), "titulo": "Comando pedido no chat",
                                              "explicacao": "Roda o que você pediu.", **entrada}}]
                 final.chamadas = [final.conteudo[1]]
                 final.stop_reason = "tool_use"
-                final.texto = "Vou preparar isso."
+                final.texto = frase_preparar
                 yield final.texto
                 return
-            texto = "Entendi: " + str(ultima)[:200]
+            texto = prefixo_entendi + str(ultima)[:200]
         for pedaco in (texto[:9], texto[9:]):
             final.texto += pedaco
             yield pedaco
@@ -291,7 +323,24 @@ class FakeIA:
         final.stop_reason = "end_turn"
 
     def gerar_json(self, prompt: str, schema: dict[str, Any], modelo: str) -> tuple[Any, Resposta]:
+        from .i18n import idioma_atual
+
+        lang = idioma_atual()
         final = Resposta(modelo=modelo, tokens_entrada=800, tokens_saida=300)
+        if lang == "en" or "in simple English" in prompt:
+            return {"sugestoes": [
+                {"tag": "sistema", "titulo": "Connect your first machine",
+                 "descricao": "With a connected computer I can work for you.",
+                 "motivo": "Your park is empty.",
+                 "maquina": "", "pergunta": "How do I connect my computer?"},
+            ]}, final
+        if lang == "es" or "en español simple" in prompt:
+            return {"sugestoes": [
+                {"tag": "sistema", "titulo": "Conecta tu primer equipo",
+                 "descricao": "Con una computadora conectada puedo trabajar por ti.",
+                 "motivo": "Tu parque está vacío.",
+                 "maquina": "", "pergunta": "¿Cómo conecto mi computadora?"},
+            ]}, final
         return {"sugestoes": [
             {"tag": "sistema", "titulo": "Conecte sua primeira máquina", "descricao": "Com um computador "
              "conectado eu consigo trabalhar por você.", "motivo": "Seu parque está vazio.",
@@ -305,3 +354,4 @@ def criar_ia() -> Any:
     if os.environ.get("IA_FAKE") == "1":
         return FakeIA()
     return ClaudeIA()
+

@@ -109,7 +109,14 @@ SCHEMA_SUGESTOES = {
 }
 
 
-def prompt_sugestoes(uid: int) -> str:
+def prompt_sugestoes(uid: int, idioma: str | None = None) -> str:
+    from .i18n import idioma_atual, normalizar_idioma
+
+    lang = normalizar_idioma(idioma) or idioma_atual()
+    regra_idioma = {
+        "en": "Titles up to 5 words, and all fields ('titulo', 'descricao', 'motivo', 'pergunta') in simple English.",
+        "es": "Títulos de hasta 5 palabras, y todos los campos ('titulo', 'descricao', 'motivo', 'pergunta') en español simple.",
+    }.get(lang, "Títulos com até 5 palavras, em português simples.")
     return (
         "Você é o conselheiro do parque de computadores de uma pessoa comum (não técnica).\n"
         "Com base no estado abaixo, sugira de 2 a 4 ações úteis para HOJE. Cada uma precisa de um motivo "
@@ -117,7 +124,7 @@ def prompt_sugestoes(uid: int) -> str:
         "cheio). Nada genérico.\n"
         "Cada sugestão vira um botão: o campo 'pergunta' é o pedido que será enviado ao Jarvis (o assistente "
         "com acesso às máquinas) quando a pessoa clicar, escrito na voz da pessoa. 'maquina' é o nome da "
-        "máquina envolvida, ou vazio. Títulos com até 5 palavras, em português simples.\n"
+        f"máquina envolvida, ou vazio. {regra_idioma}\n"
         "Máquina desligada é normal, não é problema.\n\n"
         f"{parque.resumo_do_parque(uid)}"
     )
@@ -137,16 +144,22 @@ def atualizar_sugestoes(u: Any, cobrar: bool) -> tuple[list[dict[str, str]], int
     automáticas) não mexe nos créditos. Estoura HTTPException se o teto diário de
     gasto foi atingido ou a IA falhou. Devolve (sugestões, saldo)."""
     from . import operacao
+    from .i18n import idioma_atual, normalizar_idioma, t
     from .ia import modelo_sugestoes_do_plano
 
     operacao.conferir_teto()
     try:
-        dados, final = nucleo.ia().gerar_json(prompt_sugestoes(u["id"]), SCHEMA_SUGESTOES,
+        u_idioma = u["idioma"] if "idioma" in u.keys() else None
+    except Exception:
+        u_idioma = None
+    idioma = normalizar_idioma(u_idioma) or idioma_atual()
+    try:
+        dados, final = nucleo.ia().gerar_json(prompt_sugestoes(u["id"], idioma), SCHEMA_SUGESTOES,
                                               modelo_sugestoes_do_plano(u["plano"]))
     except Exception as exc:  # noqa: BLE001
         nucleo.log.exception("Falha ao gerar sugestões: %s", type(exc).__name__)
         operacao.incidente("ia")
-        raise HTTPException(503, "Não consegui pensar em sugestões agora. Tente de novo em instantes.")
+        raise HTTPException(503, t("erro_sugestoes", idioma))
     sugestoes = validar_sugestoes(dados)
     guardar_sugestoes(u["id"], sugestoes)
     saldo = nucleo._cobrar(u["id"], nucleo._custo(final), "sugestões do parque") if cobrar else u["creditos"]
@@ -175,7 +188,7 @@ def sugestoes_automaticas(limite: int = 20) -> int:
             atualizar_sugestoes(u, cobrar=False)
             feitas += 1
         except HTTPException as exc:
-            if exc.status_code == 503 and "limite de uso" in str(exc.detail):
+            if exc.status_code == 503 and ("limite" in str(exc.detail).lower() or "limit" in str(exc.detail).lower()):
                 break  # teto diário: para por hoje
     return feitas
 
@@ -185,3 +198,4 @@ def guardar_sugestoes(uid: int, sugestoes: list[dict[str, str]]) -> None:
         con.execute("DELETE FROM sugestoes WHERE usuario_id=?", (uid,))
         con.execute("INSERT INTO sugestoes VALUES (?, ?, ?)",
                     (uid, json.dumps(sugestoes, ensure_ascii=False), nucleo.agora()))
+

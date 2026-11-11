@@ -95,7 +95,9 @@ def conferir_teto() -> None:
                     "TETO_DIARIO_USD na Vercel.")
         from fastapi import HTTPException
 
-        raise HTTPException(503, "O Jarvis atingiu o limite de uso de hoje. Volte amanhã.")
+        from .i18n import t
+
+        raise HTTPException(503, t("teto_diario"))
 
 
 # ------------------------------------------------------------------ alertas ---

@@ -213,6 +213,8 @@ _MIGRACOES = [
     "ALTER TABLE usuarios ADD COLUMN codigo_indicacao TEXT",
     "ALTER TABLE usuarios ADD COLUMN indicado_por BIGINT",
     "CREATE UNIQUE INDEX IF NOT EXISTS idx_usuarios_indicacao ON usuarios(codigo_indicacao)",
+    # Idioma preferido do usuário (pt-BR, en ou es).
+    "ALTER TABLE usuarios ADD COLUMN idioma TEXT",
 ]
 
 

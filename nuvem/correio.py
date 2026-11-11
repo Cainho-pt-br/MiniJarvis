@@ -54,24 +54,46 @@ def enviar(para: str, assunto: str, texto: str, html: str) -> None:
         servidor.send_message(msg)
 
 
-def enviar_codigo(para: str, nome: str, codigo: str, motivo: str) -> None:
+def enviar_codigo(para: str, nome: str, codigo: str, motivo: str, idioma: str | None = None) -> None:
     """motivo: 'confirmar' (conta nova), 'entrar' (dispositivo novo) ou 'senha' (redefinir)."""
+    from .i18n import t
+
     if motivo == "confirmar":
-        assunto = f"{codigo} é o seu código do Jarvis"
-        frase = "Para ativar sua conta e ganhar seus créditos, digite este código:"
+        assunto = t("email_confirmar_assunto", idioma, codigo=codigo)
+        frase = t("email_confirmar_frase", idioma)
     elif motivo == "senha":
-        assunto = f"{codigo} · redefinir a senha do Jarvis"
-        frase = "Você pediu para redefinir sua senha. Digite este código na tela de nova senha:"
+        assunto = t("email_senha_assunto", idioma, codigo=codigo)
+        frase = t("email_senha_frase", idioma)
     else:
-        assunto = f"{codigo} · confirme que é você entrando no Jarvis"
-        frase = ("Alguém (provavelmente você) está entrando na sua conta por um navegador novo. "
-                 "Se foi você, digite este código:")
-    texto = (f"Olá, {nome}!\n\n{frase}\n\n    {codigo}\n\nEle vale por 15 minutos.\n"
-             "Se não foi você, ignore este e-mail e troque sua senha.\n\nJarvis")
+        assunto = t("email_entrar_assunto", idioma, codigo=codigo)
+        frase = t("email_entrar_frase", idioma)
+    ola = t("email_ola", idioma, nome=nome)
+    ola_html = t("email_ola", idioma, nome=_html.escape(nome))
+    validade = t("email_validade", idioma)
+    aviso = t("email_aviso_seguranca", idioma)
+    texto = f"{ola}\n\n{frase}\n\n    {codigo}\n\n{validade}\n{aviso}\n\nJarvis"
     html = f"""<div style="font-family:system-ui,sans-serif;max-width:480px;margin:auto;padding:24px;color:#1c1f2a">
-<h2 style="margin:0 0 12px">Olá, {_html.escape(nome)}!</h2><p>{frase}</p>
+<h2 style="margin:0 0 12px">{ola_html}</h2><p>{frase}</p>
 <p style="font-size:34px;letter-spacing:8px;font-weight:700;font-family:monospace;background:#eefbfa;
 padding:14px;text-align:center;border-radius:12px;color:#0b6b66">{codigo}</p>
-<p style="color:#667085">Ele vale por 15 minutos. Se não foi você, ignore este e-mail e troque sua senha.</p>
+<p style="color:#667085">{validade} {aviso}</p>
 <p style="color:#667085">— Jarvis</p></div>"""
     enviar(para, assunto, texto, html)
+
+
+def enviar_recibo(para: str, nome: str, plano: str, valor_brl: float, creditos: int,
+                  idioma: str | None = None) -> None:
+    """Envia recibo de pagamento aprovado no idioma do usuário."""
+    from .i18n import t
+
+    valor_fmt = f"{valor_brl:.2f}".replace(".", ",") if (idioma or "pt-BR").startswith("pt") else f"{valor_brl:.2f}"
+    assunto = t("email_recibo_assunto", idioma, plano=plano)
+    corpo = t("email_recibo_corpo", idioma, valor=valor_fmt, plano=plano, creditos=creditos)
+    ola = t("email_ola", idioma, nome=nome)
+    ola_html = t("email_ola", idioma, nome=_html.escape(nome))
+    texto = f"{ola}\n\n{corpo}\n\nJarvis"
+    html = f"""<div style="font-family:system-ui,sans-serif;max-width:480px;margin:auto;padding:24px;color:#1c1f2a">
+<h2 style="margin:0 0 12px">{ola_html}</h2><p>{_html.escape(corpo)}</p>
+<p style="color:#667085">— Jarvis</p></div>"""
+    enviar(para, assunto, texto, html)
+

@@ -55,6 +55,9 @@ h1, h2, h3 { font-family: var(--titulo); letter-spacing: -.02em; margin: 0; }
 .topo nav { margin-left: auto; display: flex; gap: 6px; align-items: center; }
 .topo nav a { color: var(--suave); padding: 8px 10px; font-size: 14px; }
 .topo nav a:hover { color: var(--texto); }
+.sel-idioma { background: var(--cartao2); color: var(--suave); border: 1px solid var(--borda2); border-radius: 9px; padding: 5px 8px; font-size: 12px; font-weight: 600; cursor: pointer; outline: none; }
+.sel-idioma:hover, .sel-idioma:focus { border-color: var(--ciano); color: var(--texto); }
+.nota-moeda { font-size: 13px; color: var(--suave); text-align: center; margin: -6px 0 16px; }
 .secao { position: relative; z-index: 1; max-width: 1120px; margin: 0 auto; padding: 72px 16px; }
 .hero { display: grid; grid-template-columns: 1.05fr 1fr; gap: 40px; align-items: center; min-height: calc(100vh - 70px); padding-top: 32px; }
 .selo { display: inline-flex; gap: 8px; align-items: center; padding: 6px 12px; border: 1px solid var(--borda2); border-radius: 999px; font-size: 13px; color: var(--ciano2); background: rgba(63, 208, 201, .06); }
@@ -385,66 +388,71 @@ pre.log { margin: 0; padding: 14px; border-radius: 12px; background: #02050a; bo
   <header class="topo">
     <div class="marca"><svg viewBox="0 0 40 40" data-logo></svg>Jarvis</div>
     <nav>
-      <a class="oc" href="#como">Como funciona</a>
-      <a class="oc" href="#sem-dor">Por que o Jarvis</a>
-      <a class="oc" href="#recursos">Recursos</a>
-      <a class="oc" href="#precos">Preços</a>
-      <button class="btn fantasma peq" data-abrir="entrar">Entrar</button>
-      <button class="btn prim peq" data-abrir="cadastro">Começar grátis</button>
+      <a class="oc" href="#como" data-i18n="nav_como">Como funciona</a>
+      <a class="oc" href="#sem-dor" data-i18n="nav_por_que">Por que o Jarvis</a>
+      <a class="oc" href="#recursos" data-i18n="nav_recursos">Recursos</a>
+      <a class="oc" href="#precos" data-i18n="nav_precos">Preços</a>
+      <select class="sel-idioma" id="sel-idioma-landing" aria-label="Idioma">
+        <option value="pt-BR">PT</option>
+        <option value="en">EN</option>
+        <option value="es">ES</option>
+      </select>
+      <button class="btn fantasma peq" data-abrir="entrar" data-i18n="btn_entrar">Entrar</button>
+      <button class="btn prim peq" data-abrir="cadastro" data-i18n="btn_comecar_gratis">Começar grátis</button>
     </nav>
   </header>
 
   <section class="secao hero">
     <div>
-      <span class="selo"><i></i> Seu assistente que trabalha nos seus computadores</span>
-      <h1>Converse.<br>O Jarvis <span class="grad">faz o resto.</span></h1>
-      <p class="lead">Um assistente de IA em português que lembra de tudo, cuida de cada computador da sua casa ou empresa e executa tarefas por você, do celular, até enquanto você dorme.</p>
+      <span class="selo"><i></i> <span data-i18n="hero_selo">Seu assistente que trabalha nos seus computadores</span></span>
+      <h1 data-i18n-html="hero_h1">Converse.<br>O Jarvis <span class="grad">faz o resto.</span></h1>
+      <p class="lead" data-i18n="hero_lead">Um assistente de IA em português que lembra de tudo, cuida de cada computador da sua casa ou empresa e executa tarefas por você, do celular, até enquanto você dorme.</p>
       <div class="acoes">
-        <button class="btn prim grande" data-abrir="cadastro">Criar meu Jarvis grátis →</button>
-        <a class="btn grande fantasma" href="#como">Ver como funciona</a>
+        <button class="btn prim grande" data-abrir="cadastro" data-i18n="hero_cta">Criar meu Jarvis grátis →</button>
+        <a class="btn grande fantasma" href="#como" data-i18n="hero_como">Ver como funciona</a>
       </div>
-      <div class="prova"><span><b>Sem cartão</b> para começar</span><span><b>2 minutos</b> para conectar um PC</span><span>Windows · Mac · Linux</span></div>
+      <div class="prova" data-i18n-html="hero_prova"><span><b>Sem cartão</b> para começar</span><span><b>2 minutos</b> para conectar um PC</span><span>Windows · Mac · Linux</span></div>
     </div>
     <div class="cena" id="cena">
       <svg class="orbita" id="orbita-hero" viewBox="0 0 500 500"></svg>
-      <div class="balao eu" id="b1"><small>Você · pelo celular</small>Meu notebook está lento. Dá um jeito?</div>
-      <div class="balao ele" id="b2"><small>Jarvis</small>O <b>Notebook</b> está com o disco 94% cheio. Preparei uma limpeza dos arquivos temporários (3,1 GB). Posso rodar?<div class="acao"><span>Aprovar</span><span class="n">Ver comando</span></div></div>
+      <div class="balao eu" id="b1" data-i18n-html="hero_b1"><small>Você · pelo celular</small>Meu notebook está lento. Dá um jeito?</div>
+      <div class="balao ele" id="b2" data-i18n-html="hero_b2"><small>Jarvis</small>O <b>Notebook</b> está com o disco 94% cheio. Preparei uma limpeza dos arquivos temporários (3,1 GB). Posso rodar?<div class="acao"><span>Aprovar</span><span class="n">Ver comando</span></div></div>
     </div>
   </section>
 
   <section class="secao" id="como">
-    <div class="titulo-secao"><div class="sobre">como funciona</div><h2>Três passos e seus computadores<br>passam a <span class="grad">trabalhar sozinhos</span></h2><p>Nada de configurar servidor, abrir porta ou instalar programa complicado.</p></div>
+    <div class="titulo-secao"><div class="sobre" data-i18n="como_sobre">como funciona</div><h2 data-i18n-html="como_h2">Três passos e seus computadores<br>passam a <span class="grad">trabalhar sozinhos</span></h2><p data-i18n="como_p">Nada de configurar servidor, abrir porta ou instalar programa complicado.</p></div>
     <div class="passos">
-      <div class="passo"><div class="n">01</div><h3>Converse</h3><p>Peça o que quiser, do seu jeito: “escreve um e-mail”, “lembra que minha reunião é quinta”, “o PC do escritório está lento”.</p></div>
-      <div class="passo"><div class="n">02</div><h3>Conecte</h3><p>Em cada computador, cole um comando com o código que o Jarvis te dá. Ele aparece no seu mapa na hora.</p></div>
-      <div class="passo"><div class="n">03</div><h3>Delegue</h3><p>O Jarvis prepara a tarefa, você aprova com um toque, e acompanha tudo ao vivo de qualquer lugar.</p></div>
+      <div class="passo"><div class="n">01</div><h3 data-i18n="passo1_t">Converse</h3><p data-i18n="passo1_d">Peça o que quiser, do seu jeito: “escreve um e-mail”, “lembra que minha reunião é quinta”, “o PC do escritório está lento”.</p></div>
+      <div class="passo"><div class="n">02</div><h3 data-i18n="passo2_t">Conecte</h3><p data-i18n="passo2_d">Em cada computador, cole um comando com o código que o Jarvis te dá. Ele aparece no seu mapa na hora.</p></div>
+      <div class="passo"><div class="n">03</div><h3 data-i18n="passo3_t">Delegue</h3><p data-i18n="passo3_d">O Jarvis prepara a tarefa, você aprova com um toque, e acompanha tudo ao vivo de qualquer lugar.</p></div>
     </div>
   </section>
 
   <section class="secao" id="sem-dor">
-    <div class="titulo-secao"><div class="sobre">sem dor de cabeça</div><h2>IA que funciona sem você<br>virar <span class="grad">técnico</span></h2>
-      <p>Quem já tentou rodar IA no próprio computador conhece a lista de problemas. A gente resolveu cada um.</p></div>
+    <div class="titulo-secao"><div class="sobre" data-i18n="semdor_sobre">sem dor de cabeça</div><h2 data-i18n-html="semdor_h2">IA que funciona sem você<br>virar <span class="grad">técnico</span></h2>
+      <p data-i18n="semdor_p">Quem já tentou rodar IA no próprio computador conhece a lista de problemas. A gente resolveu cada um.</p></div>
     <div class="comparar">
-      <div class="comp"><div class="ic" data-ico="mapa"></div><h3>Sem placa de vídeo, sem baixar modelos</h3><p>A inteligência roda na nuvem. Funciona até no computador mais simples da casa, sem arquivos de vários gigas e sem driver para atualizar.</p></div>
-      <div class="comp"><div class="ic" data-ico="jarvis"></div><h3>Um comando e pronto</h3><p>Sem Docker, sem arquivo de configuração, sem versão errada. Se algo falhar, o Jarvis explica em português o que houve e o que fazer.</p></div>
-      <div class="comp"><div class="ic" data-ico="escudo"></div><h3>Você sabe o que ele pode fazer</h3><p>Cada computador começa no modo seguro: só ações prontas e revisadas. Nada roda sem o seu "Aprovar", e você desconecta quando quiser.</p></div>
+      <div class="comp"><div class="ic" data-ico="mapa"></div><h3 data-i18n="comp1_t">Sem placa de vídeo, sem baixar modelos</h3><p data-i18n="comp1_d">A inteligência roda na nuvem. Funciona até no computador mais simples da casa, sem arquivos de vários gigas e sem driver para atualizar.</p></div>
+      <div class="comp"><div class="ic" data-ico="jarvis"></div><h3 data-i18n="comp2_t">Um comando e pronto</h3><p data-i18n="comp2_d">Sem Docker, sem arquivo de configuração, sem versão errada. Se algo falhar, o Jarvis explica em português o que houve e o que fazer.</p></div>
+      <div class="comp"><div class="ic" data-ico="escudo"></div><h3 data-i18n="comp3_t">Você sabe o que ele pode fazer</h3><p data-i18n="comp3_d">Cada computador começa no modo seguro: só ações prontas e revisadas. Nada roda sem o seu "Aprovar", e você desconecta quando quiser.</p></div>
     </div>
-    <div class="transparencia"><b>Transparência:</b> seus pedidos passam pela IA da Anthropic na nuvem, e as notas do seu cérebro ficam guardadas na sua conta. Você pode apagar tudo, inclusive a conta, a qualquer momento.</div>
+    <div class="transparencia" data-i18n-html="transparencia"><b>Transparência:</b> seus pedidos passam pela IA da Anthropic na nuvem, e as notas do seu cérebro ficam guardadas na sua conta. Você pode apagar tudo, inclusive a conta, a qualquer momento.</div>
   </section>
 
   <section class="secao" id="recursos">
-    <div class="titulo-secao"><div class="sobre">recursos</div><h2>Um centro de comando<br>para a sua vida digital</h2></div>
+    <div class="titulo-secao"><div class="sobre" data-i18n="rec_sobre">recursos</div><h2 data-i18n-html="rec_h2">Um centro de comando<br>para a sua vida digital</h2></div>
     <div class="recursos">
-      <div class="recurso"><div class="ic" data-ico="mapa"></div><div><h3>Mapa do parque</h3><p>Todas as suas máquinas num só lugar: quem está ligado, uso de CPU, memória e disco, e o que cada uma está fazendo agora.</p></div></div>
-      <div class="recurso"><div class="ic" data-ico="cerebro"></div><div><h3>Cérebro que lembra</h3><p>O Jarvis guarda o que importa em notas ligadas entre si. Ele aprende sobre você e nunca esquece um detalhe.</p></div></div>
-      <div class="recurso"><div class="ic" data-ico="tarefas"></div><div><h3>Tarefas com aprovação</h3><p>Nada roda sem você deixar. Veja o comando, aprove e acompanhe o resultado em tempo real.</p></div></div>
-      <div class="recurso"><div class="ic" data-ico="rotinas"></div><div><h3>Rotinas e sugestões</h3><p>Backup toda manhã, limpeza semanal, relatórios. E sugestões diárias do que fazer com as máquinas que você tem.</p></div></div>
+      <div class="recurso"><div class="ic" data-ico="mapa"></div><div><h3 data-i18n="rec1_t">Mapa do parque</h3><p data-i18n="rec1_d">Todas as suas máquinas num só lugar: quem está ligado, uso de CPU, memória e disco, e o que cada uma está fazendo agora.</p></div></div>
+      <div class="recurso"><div class="ic" data-ico="cerebro"></div><div><h3 data-i18n="rec2_t">Cérebro que lembra</h3><p data-i18n="rec2_d">O Jarvis guarda o que importa em notas ligadas entre si. Ele aprende sobre você e nunca esquece um detalhe.</p></div></div>
+      <div class="recurso"><div class="ic" data-ico="tarefas"></div><div><h3 data-i18n="rec3_t">Tarefas com aprovação</h3><p data-i18n="rec3_d">Nada roda sem você deixar. Veja o comando, aprove e acompanhe o resultado em tempo real.</p></div></div>
+      <div class="recurso"><div class="ic" data-ico="rotinas"></div><div><h3 data-i18n="rec4_t">Rotinas e sugestões</h3><p data-i18n="rec4_d">Backup toda manhã, limpeza semanal, relatórios. E sugestões diárias do que fazer com as máquinas que você tem.</p></div></div>
     </div>
   </section>
 
   <section class="secao">
-    <div class="titulo-secao"><div class="sobre">na prática</div><h2>Peça como pediria a uma pessoa</h2></div>
-    <div class="casos">
+    <div class="titulo-secao"><div class="sobre" data-i18n="prat_sobre">na prática</div><h2 data-i18n="prat_h2">Peça como pediria a uma pessoa</h2></div>
+    <div class="casos" id="casos-landing">
       <span class="caso"><b>“Libera espaço</b> no notebook”</span>
       <span class="caso"><b>“Faz backup</b> das fotos toda noite”</span>
       <span class="caso"><b>“Qual PC</b> está mais livre agora?”</span>
@@ -457,29 +465,37 @@ pre.log { margin: 0; padding: 14px; border-radius: 12px; background: #02050a; bo
   </section>
 
   <section class="secao" id="precos">
-    <div class="titulo-secao"><div class="sobre">preços</div><h2>Comece grátis. Cresça quando quiser.</h2><p>Sem fidelidade. Cancele quando quiser.</p></div>
+    <div class="titulo-secao"><div class="sobre" data-i18n="prec_sobre">preços</div><h2 data-i18n="prec_h2">Comece grátis. Cresça quando quiser.</h2><p data-i18n="prec_p">Sem fidelidade. Cancele quando quiser.</p></div>
+    <div id="nota-moeda-landing" class="nota-moeda oculto"></div>
     <div class="precos" id="precos-landing"></div>
   </section>
 
   <section class="secao">
     <div class="cta-final">
-      <h2>Seu Jarvis está a <span class="grad">um clique</span>.</h2>
-      <p>Crie sua conta em 10 segundos e converse com ele agora mesmo.</p>
-      <button class="btn prim grande" data-abrir="cadastro">Criar meu Jarvis grátis →</button>
+      <h2 data-i18n-html="cta_h2">Seu Jarvis está a <span class="grad">um clique</span>.</h2>
+      <p data-i18n="cta_p">Crie sua conta em 10 segundos e converse com ele agora mesmo.</p>
+      <button class="btn prim grande" data-abrir="cadastro" data-i18n="hero_cta">Criar meu Jarvis grátis →</button>
     </div>
   </section>
-  <section class="secao" id="guias"><div class="titulo-secao"><div class="sobre">guias</div><h2>Dicas que resolvem <span class="grad">hoje</span></h2></div><div class="guias" id="lista-guias"></div></section>
-  <footer>Jarvis · feito no Brasil · <a href="/termos">Termos de uso</a> · <a href="/privacidade">Privacidade</a> · <a href="#" data-abrir="entrar">Entrar</a></footer>
+  <section class="secao" id="guias"><div class="titulo-secao"><div class="sobre" data-i18n="guias_sobre">guias</div><h2 data-i18n-html="guias_h2">Dicas que resolvem <span class="grad">hoje</span></h2></div><div class="guias" id="lista-guias"></div></section>
+  <footer data-i18n-html="rodape">Jarvis · feito no Brasil · <a href="/termos">Termos de uso</a> · <a href="/privacidade">Privacidade</a> · <a href="#" data-abrir="entrar">Entrar</a></footer>
 </div>
 
 <!-- ================================================================ APP -->
 <div id="app" class="oculto">
   <aside class="lateral">
-    <div class="marca"><svg viewBox="0 0 40 40" data-logo></svg>Jarvis</div>
+    <div class="marca" style="justify-content:space-between">
+      <span style="display:flex;align-items:center;gap:10px"><svg viewBox="0 0 40 40" data-logo></svg>Jarvis</span>
+      <select class="sel-idioma" id="sel-idioma-app" aria-label="Idioma">
+        <option value="pt-BR">PT</option>
+        <option value="en">EN</option>
+        <option value="es">ES</option>
+      </select>
+    </div>
     <div id="nav-lateral"></div>
     <div class="rodape">
       <div class="cartao-plano" id="cartao-plano"></div>
-      <div class="usuario"><div class="avatar" id="avatar"></div><div style="min-width:0"><div class="nm" id="nome-usuario"></div><button class="link-btn" id="sair" style="font-size:12px;color:var(--tenue)">Sair</button></div></div>
+      <div class="usuario"><div class="avatar" id="avatar"></div><div style="min-width:0"><div class="nm" id="nome-usuario"></div><button class="link-btn" id="sair" style="font-size:12px;color:var(--tenue)" data-i18n="btn_sair">Sair</button></div></div>
     </div>
   </aside>
   <main class="conteudo" id="conteudo"></main>
@@ -521,11 +537,237 @@ function toast(msg, ms = 3200) {
   document.body.appendChild(t); setTimeout(() => t.remove(), ms);
 }
 
+/* ------------------------------------------------------------ i18n */
+const I18N = {
+  "pt-BR": {
+    titulo_pagina: "Jarvis · seu parque de computadores com IA",
+    nav_como: "Como funciona", nav_por_que: "Por que o Jarvis", nav_recursos: "Recursos", nav_precos: "Preços",
+    btn_entrar: "Entrar", btn_comecar_gratis: "Começar grátis", btn_sair: "Sair",
+    hero_selo: "Seu assistente que trabalha nos seus computadores",
+    hero_h1: 'Converse.<br>O Jarvis <span class="grad">faz o resto.</span>',
+    hero_lead: "Um assistente de IA que fala a sua língua, lembra de tudo, cuida de cada computador da sua casa ou empresa e executa tarefas por você, do celular, até enquanto você dorme.",
+    hero_cta: "Criar meu Jarvis grátis →", hero_como: "Ver como funciona",
+    hero_prova: "<span><b>Sem cartão</b> para começar</span><span><b>2 minutos</b> para conectar um PC</span><span>Windows · Mac · Linux</span>",
+    hero_b1: "<small>Você · pelo celular</small>Meu notebook está lento. Dá um jeito?",
+    hero_b2: '<small>Jarvis</small>O <b>Notebook</b> está com o disco 94% cheio. Preparei uma limpeza dos arquivos temporários (3,1 GB). Posso rodar?<div class="acao"><span>Aprovar</span><span class="n">Ver comando</span></div>',
+    como_sobre: "como funciona", como_h2: 'Três passos e seus computadores<br>passam a <span class="grad">trabalhar sozinhos</span>',
+    como_p: "Nada de configurar servidor, abrir porta ou instalar programa complicado.",
+    passo1_t: "Converse", passo1_d: "Peça o que quiser, do seu jeito: “escreve um e-mail”, “lembra que minha reunião é quinta”, “o PC do escritório está lento”.",
+    passo2_t: "Conecte", passo2_d: "Em cada computador, cole um comando com o código que o Jarvis te dá. Ele aparece no seu mapa na hora.",
+    passo3_t: "Delegue", passo3_d: "O Jarvis prepara a tarefa, você aprova com um toque, e acompanha tudo ao vivo de qualquer lugar.",
+    semdor_sobre: "sem dor de cabeça", semdor_h2: 'IA que funciona sem você<br>virar <span class="grad">técnico</span>',
+    semdor_p: "Quem já tentou rodar IA no próprio computador conhece a lista de problemas. A gente resolveu cada um.",
+    comp1_t: "Sem placa de vídeo, sem baixar modelos", comp1_d: "A inteligência roda na nuvem. Funciona até no computador mais simples da casa, sem arquivos de vários gigas e sem driver para atualizar.",
+    comp2_t: "Um comando e pronto", comp2_d: "Sem Docker, sem arquivo de configuração, sem versão errada. Se algo falhar, o Jarvis explica de forma simples o que houve e o que fazer.",
+    comp3_t: "Você sabe o que ele pode fazer", comp3_d: 'Cada computador começa no modo seguro: só ações prontas e revisadas. Nada roda sem o seu "Aprovar", e você desconecta quando quiser.',
+    transparencia: "<b>Transparência:</b> seus pedidos passam pela IA da Anthropic na nuvem, e as notas do seu cérebro ficam guardadas na sua conta. Você pode apagar tudo, inclusive a conta, a qualquer momento.",
+    rec_sobre: "recursos", rec_h2: "Um centro de comando<br>para a sua vida digital",
+    rec1_t: "Mapa do parque", rec1_d: "Todas as suas máquinas num só lugar: quem está ligado, uso de CPU, memória e disco, e o que cada uma está fazendo agora.",
+    rec2_t: "Cérebro que lembra", rec2_d: "O Jarvis guarda o que importa em notas ligadas entre si. Ele aprende sobre você e nunca esquece um detalhe.",
+    rec3_t: "Tarefas com aprovação", rec3_d: "Nada roda sem você deixar. Veja o comando, aprove e acompanhe o resultado em tempo real.",
+    rec4_t: "Rotinas e sugestões", rec4_d: "Backup toda manhã, limpeza semanal, relatórios. E sugestões diárias do que fazer com as máquinas que você tem.",
+    prat_sobre: "na prática", prat_h2: "Peça como pediria a uma pessoa",
+    casos: ['<b>“Libera espaço</b> no notebook”', '<b>“Faz backup</b> das fotos toda noite”', '<b>“Qual PC</b> está mais livre agora?”', '<b>“Organiza</b> minha pasta Downloads”', '<b>“Lembra que</b> meu filho faz aniversário dia 12”', '<b>“Responde</b> esse cliente no WhatsApp”', '<b>“Me avisa</b> se o servidor cair”', '<b>“Explica</b> esse boleto em palavras simples”'],
+    prec_sobre: "preços", prec_h2: "Comece grátis. Cresça quando quiser.", prec_p: "Sem fidelidade. Cancele quando quiser.",
+    nota_moeda: "",
+    cta_h2: 'Seu Jarvis está a <span class="grad">um clique</span>.', cta_p: "Crie sua conta em 10 segundos e converse com ele agora mesmo.",
+    guias_sobre: "guias", guias_h2: 'Dicas que resolvem <span class="grad">hoje</span>',
+    rodape: 'Jarvis · feito no Brasil · <a href="/termos">Termos de uso</a> · <a href="/privacidade">Privacidade</a> · <a href="#" data-abrir="entrar">Entrar</a>',
+    erro_generico: "Algo deu errado. Tente de novo.", erro_dados: "Confira os dados digitados.",
+    agora: "agora", ha_min: "há {n} min", ha_h: "há {n} h",
+    st_concluido: "concluída", st_executando: "executando", st_pendente: "na fila", st_aguardando: "aguarda você", st_falhou: "falhou", st_cancelado: "cancelada",
+    maq_bloqueada: "bloqueada", maq_trabalhando: "trabalhando", maq_ligada: "ligada", maq_desligada: "desligada",
+    mapa_vazio: "Nenhuma máquina conectada ainda",
+    demo_nb: "Notebook", demo_esc: "PC do escritório", demo_srv: "Servidor", demo_sala: "PC da sala",
+    mais_escolhido: "Mais escolhido", por_mes: " /mês",
+    cerca_msgs: "cerca de {n} mensagens", cerca_msgs_mes: "cerca de {n} mensagens por mês",
+    criar_conta_gratis: "Criar conta grátis", seu_plano_atual: "Seu plano atual", ate_data: " · até {d}",
+    renovar_pix: "Renovar 1 mês com Pix", assinar_cartao: "Assinar no cartão", pagar_pix: "Pagar 1 mês com Pix",
+    fechar: "Fechar",
+  },
+  "en": {
+    titulo_pagina: "Jarvis · your AI computer fleet",
+    nav_como: "How it works", nav_por_que: "Why Jarvis", nav_recursos: "Features", nav_precos: "Pricing",
+    btn_entrar: "Sign in", btn_comecar_gratis: "Start free", btn_sair: "Sign out",
+    hero_selo: "Your assistant that works on your computers",
+    hero_h1: 'Just ask.<br>Jarvis <span class="grad">does the rest.</span>',
+    hero_lead: "An AI assistant that speaks your language, remembers everything, takes care of every computer at home or work, and runs tasks for you from your phone — even while you sleep.",
+    hero_cta: "Create my free Jarvis →", hero_como: "See how it works",
+    hero_prova: "<span><b>No card</b> required</span><span><b>2 minutes</b> to connect a PC</span><span>Windows · Mac · Linux</span>",
+    hero_b1: "<small>You · from your phone</small>My laptop is slow. Can you fix it?",
+    hero_b2: '<small>Jarvis</small><b>Laptop</b> has its disk 94% full. I prepared a safe cleanup of temporary files (3.1 GB). Shall I run it?<div class="acao"><span>Approve</span><span class="n">View command</span></div>',
+    como_sobre: "how it works", como_h2: 'Three steps and your computers<br>start <span class="grad">working on their own</span>',
+    como_p: "No server setup, no port forwarding, no complicated software to install.",
+    passo1_t: "Chat", passo1_d: "Ask whatever you want, in your own words: “write an email”, “remember my meeting is Thursday”, “the office PC is slow”.",
+    passo2_t: "Connect", passo2_d: "On each computer, paste one command with the code Jarvis gives you. It shows up on your map right away.",
+    passo3_t: "Delegate", passo3_d: "Jarvis prepares the task, you approve with one tap, and watch everything live from anywhere.",
+    semdor_sobre: "no headaches", semdor_h2: 'AI that works without turning you<br>into a <span class="grad">technician</span>',
+    semdor_p: "Anyone who has tried running AI on their own computer knows the list of headaches. We solved every single one.",
+    comp1_t: "No graphics card, no huge downloads", comp1_d: "The intelligence runs in the cloud. It works even on the simplest home computer, without multi-gigabyte files or driver updates.",
+    comp2_t: "One command and you're done", comp2_d: "No Docker, no config files, no wrong versions. If anything fails, Jarvis explains in plain language what happened and what to do.",
+    comp3_t: "You control what it can do", comp3_d: 'Every computer starts in safe mode: only pre-built, reviewed actions. Nothing runs without your "Approve", and you can disconnect anytime.',
+    transparencia: "<b>Transparency:</b> your requests are processed by Anthropic's AI in the cloud, and your brain notes are stored in your account. You can delete everything, including your account, at any time.",
+    rec_sobre: "features", rec_h2: "A command center<br>for your digital life",
+    rec1_t: "Fleet map", rec1_d: "All your machines in one place: what is online, CPU, memory and disk usage, and what each computer is doing right now.",
+    rec2_t: "Brain that remembers", rec2_d: "Jarvis saves what matters in linked notes. It learns about you and never forgets a detail.",
+    rec3_t: "Tasks with approval", rec3_d: "Nothing runs without your permission. See the command, approve it, and follow the output in real time.",
+    rec4_t: "Routines & suggestions", rec4_d: "Morning backups, weekly cleanup, daily reports — plus daily suggestions on what to do with your machines.",
+    prat_sobre: "in practice", prat_h2: "Ask just like you would ask a person",
+    casos: ['<b>“Free up space</b> on my laptop”', '<b>“Back up</b> my photos every night”', '<b>“Which PC</b> is least busy right now?”', '<b>“Organize</b> my Downloads folder”', '<b>“Remember that</b> my son’s birthday is on the 12th”', '<b>“Reply to</b> this client on WhatsApp”', '<b>“Alert me</b> if the server goes down”', '<b>“Explain</b> this bill in simple words”'],
+    prec_sobre: "pricing", prec_h2: "Start free. Grow whenever you want.", prec_p: "No lock-in. Cancel anytime.",
+    nota_moeda: "Billed in Brazilian reais (BRL) · Cobrança em reais (BRL)",
+    cta_h2: 'Your Jarvis is <span class="grad">one click</span> away.', cta_p: "Create your account in 10 seconds and chat with it right now.",
+    guias_sobre: "guides", guias_h2: 'Tips that solve problems <span class="grad">today</span>',
+    rodape: 'Jarvis · made in Brazil · <a href="/termos">Terms of use</a> · <a href="/privacidade">Privacy</a> · <a href="#" data-abrir="entrar">Sign in</a>',
+    erro_generico: "Something went wrong. Please try again.", erro_dados: "Please check the information entered.",
+    agora: "just now", ha_min: "{n} min ago", ha_h: "{n} h ago",
+    st_concluido: "completed", st_executando: "running", st_pendente: "queued", st_aguardando: "awaiting you", st_falhou: "failed", st_cancelado: "canceled",
+    maq_bloqueada: "locked", maq_trabalhando: "working", maq_ligada: "online", maq_desligada: "offline",
+    mapa_vazio: "No machines connected yet",
+    demo_nb: "Laptop", demo_esc: "Office PC", demo_srv: "Server", demo_sala: "Living room PC",
+    mais_escolhido: "Most popular", por_mes: " /mo",
+    cerca_msgs: "about {n} messages", cerca_msgs_mes: "about {n} messages per month",
+    criar_conta_gratis: "Create free account", seu_plano_atual: "Your current plan", ate_data: " · until {d}",
+    renovar_pix: "Renew 1 month with Pix", assinar_cartao: "Subscribe by card", pagar_pix: "Pay 1 month with Pix",
+    fechar: "Close",
+  },
+  "es": {
+    titulo_pagina: "Jarvis · tu parque de computadoras con IA",
+    nav_como: "Cómo funciona", nav_por_que: "Por qué Jarvis", nav_recursos: "Recursos", nav_precos: "Precios",
+    btn_entrar: "Entrar", btn_comecar_gratis: "Empezar gratis", btn_sair: "Salir",
+    hero_selo: "Tu asistente que trabaja en tus computadoras",
+    hero_h1: 'Conversa.<br>Jarvis <span class="grad">hace el resto.</span>',
+    hero_lead: "Un asistente de IA que habla tu idioma, lo recuerda todo, cuida cada computadora de tu casa o empresa y ejecuta tareas por ti desde el celular, incluso mientras duermes.",
+    hero_cta: "Crear mi Jarvis gratis →", hero_como: "Ver cómo funciona",
+    hero_prova: "<span><b>Sin tarjeta</b> para empezar</span><span><b>2 minutos</b> para conectar una PC</span><span>Windows · Mac · Linux</span>",
+    hero_b1: "<small>Tú · desde el celular</small>Mi portátil está lenta. ¿Lo arreglas?",
+    hero_b2: '<small>Jarvis</small>La <b>Portátil</b> tiene el disco 94% lleno. Preparé una limpieza segura de archivos temporales (3,1 GB). ¿La ejecuto?<div class="acao"><span>Aprobar</span><span class="n">Ver comando</span></div>',
+    como_sobre: "cómo funciona", como_h2: 'Tres pasos y tus computadoras<br>empiezan a <span class="grad">trabajar solas</span>',
+    como_p: "Sin configurar servidores, abrir puertos ni instalar programas complicados.",
+    passo1_t: "Conversa", passo1_d: "Pide lo que quieras, a tu manera: “escribe un correo”, “recuerda que mi reunión es el jueves”, “la PC de la oficina está lenta”.",
+    passo2_t: "Conecta", passo2_d: "En cada computadora, pega un comando con el código que te da Jarvis. Aparece en tu mapa al instante.",
+    passo3_t: "Delega", passo3_d: "Jarvis prepara la tarea, tú apruebas con un toque y sigues todo en vivo desde cualquier lugar.",
+    semdor_sobre: "sin dolores de cabeza", semdor_h2: 'IA que funciona sin que tengas que<br>volverte <span class="grad">técnico</span>',
+    semdor_p: "Quien ya intentó correr IA en su propia computadora conoce la lista de problemas. Nosotros resolvimos cada uno.",
+    comp1_t: "Sin tarjeta gráfica, sin bajar modelos", comp1_d: "La inteligencia corre en la nube. Funciona hasta en la computadora más sencilla de casa, sin archivos de varios gigas ni drivers que actualizar.",
+    comp2_t: "Un comando y listo", comp2_d: "Sin Docker, sin archivos de configuración, sin versiones incorrectas. Si algo falla, Jarvis explica en palabras simples qué pasó y qué hacer.",
+    comp3_t: "Tú sabes lo que puede hacer", comp3_d: 'Cada computadora empieza en modo seguro: solo acciones listas y revisadas. Nada corre sin tu "Aprobar", y puedes desconectarla cuando quieras.',
+    transparencia: "<b>Transparencia:</b> tus pedidos pasan por la IA de Anthropic en la nube y las notas de tu cerebro quedan guardadas en tu cuenta. Puedes borrarlo todo, incluida la cuenta, en cualquier momento.",
+    rec_sobre: "recursos", rec_h2: "Un centro de comando<br>para tu vida digital",
+    rec1_t: "Mapa del parque", rec1_d: "Todas tus máquinas en un solo lugar: cuáles están encendidas, uso de CPU, memoria y disco, y qué está haciendo cada una ahora.",
+    rec2_t: "Cerebro que recuerda", rec2_d: "Jarvis guarda lo que importa en notas conectadas entre sí. Aprende sobre ti y nunca olvida un detalle.",
+    rec3_t: "Tareas con aprobación", rec3_d: "Nada corre sin tu permiso. Mira el comando, apruébalo y sigue el resultado en tiempo real.",
+    rec4_t: "Rutinas y sugerencias", rec4_d: "Respaldo cada mañana, limpieza semanal, informes. Y sugerencias diarias de qué hacer con tus máquinas.",
+    prat_sobre: "en la práctica", prat_h2: "Pide como le pedirías a una persona",
+    casos: ['<b>“Libera espacio</b> en la portátil”', '<b>“Haz respaldo</b> de las fotos cada noche”', '<b>“¿Qué PC</b> está más libre ahora?”', '<b>“Organiza</b> mi carpeta Descargas”', '<b>“Recuerda que</b> mi hijo cumple años el día 12”', '<b>“Responde</b> a este cliente en WhatsApp”', '<b>“Avísame</b> si se cae el servidor”', '<b>“Explica</b> esta factura en palabras simples”'],
+    prec_sobre: "precios", prec_h2: "Empieza gratis. Crece cuando quieras.", prec_p: "Sin permanencia. Cancela cuando quieras.",
+    nota_moeda: "Cobro en reales brasileños (BRL) · Cobrança em reais (BRL)",
+    cta_h2: 'Tu Jarvis está a <span class="grad">un clic</span>.', cta_p: "Crea tu cuenta en 10 segundos y conversa con él ahora mismo.",
+    guias_sobre: "guías", guias_h2: 'Consejos que resuelven <span class="grad">hoy</span>',
+    rodape: 'Jarvis · hecho en Brasil · <a href="/termos">Términos de uso</a> · <a href="/privacidade">Privacidad</a> · <a href="#" data-abrir="entrar">Entrar</a>',
+    erro_generico: "Algo salió mal. Inténtalo de nuevo.", erro_dados: "Revisa los datos ingresados.",
+    agora: "ahora", ha_min: "hace {n} min", ha_h: "hace {n} h",
+    st_concluido: "completada", st_executando: "ejecutando", st_pendente: "en cola", st_aguardando: "espera tu aprobación", st_falhou: "falló", st_cancelado: "cancelada",
+    maq_bloqueada: "bloqueada", maq_trabalhando: "trabajando", maq_ligada: "encendida", maq_desligada: "apagada",
+    mapa_vazio: "Ninguna máquina conectada todavía",
+    demo_nb: "Portátil", demo_esc: "PC de oficina", demo_srv: "Servidor", demo_sala: "PC de la sala",
+    mais_escolhido: "Más elegido", por_mes: " /mes",
+    cerca_msgs: "cerca de {n} mensajes", cerca_msgs_mes: "cerca de {n} mensajes al mes",
+    criar_conta_gratis: "Crear cuenta gratis", seu_plano_atual: "Tu plan actual", ate_data: " · hasta {d}",
+    renovar_pix: "Renovar 1 mes con Pix", assinar_cartao: "Suscribirse con tarjeta", pagar_pix: "Pagar 1 mes con Pix",
+    fechar: "Cerrar",
+  },
+};
+
+function normalizarIdioma(cod) {
+  if (!cod) return null;
+  const c = String(cod).trim().toLowerCase().replace("_", "-");
+  if (c.startsWith("pt")) return "pt-BR";
+  if (c.startsWith("en")) return "en";
+  if (c.startsWith("es")) return "es";
+  return null;
+}
+
+function detectarIdiomaInicial() {
+  try {
+    const q = normalizarIdioma(new URLSearchParams(location.search).get("lang"));
+    if (q) { localStorage.setItem("mj_idioma", q); return q; }
+    const salvo = normalizarIdioma(localStorage.getItem("mj_idioma"));
+    if (salvo) return salvo;
+  } catch {}
+  const navs = navigator.languages?.length ? navigator.languages : [navigator.language || ""];
+  for (const l of navs) {
+    const n = normalizarIdioma(l);
+    if (n) return n;
+  }
+  return "pt-BR";
+}
+
+const estado = { usuario: null, planos: [], aba: "inicio", parque: null, conversaId: null, tarefas: [], ocupado: false, timers: [], idioma: detectarIdiomaInicial() };
+
+function tr(chave, vars = {}) {
+  const dic = I18N[estado.idioma] || I18N["pt-BR"];
+  let s = dic[chave] !== undefined ? dic[chave] : (I18N["pt-BR"][chave] ?? chave);
+  for (const [k, v] of Object.entries(vars)) s = s.replaceAll(`{${k}}`, v);
+  return s;
+}
+
+function aplicarIdiomaDOM() {
+  document.documentElement.lang = estado.idioma;
+  document.title = tr("titulo_pagina");
+  $$("[data-i18n]").forEach((el) => { el.textContent = tr(el.dataset.i18n); });
+  $$("[data-i18n-html]").forEach((el) => { el.innerHTML = tr(el.dataset.i18nHtml); });
+  const casos = $("#casos-landing");
+  if (casos) {
+    const lista = (I18N[estado.idioma] || I18N["pt-BR"]).casos || I18N["pt-BR"].casos;
+    casos.innerHTML = lista.map((c) => `<span class="caso">${c}</span>`).join("");
+  }
+  const nota = $("#nota-moeda-landing");
+  if (nota) {
+    const txt = tr("nota_moeda");
+    nota.textContent = txt;
+    nota.classList.toggle("oculto", !txt);
+  }
+  $$(".sel-idioma").forEach((s) => { s.value = estado.idioma; });
+}
+
+async function mudarIdioma(novo, salvarServidor = true) {
+  const norm = normalizarIdioma(novo) || "pt-BR";
+  estado.idioma = norm;
+  try { localStorage.setItem("mj_idioma", norm); } catch {}
+  aplicarIdiomaDOM();
+  estado.planos = [];
+  estado.acoes = null;
+  if (estado.usuario && salvarServidor) {
+    try { await post("/api/eu/idioma", { idioma: norm }); estado.usuario.idioma = norm; } catch {}
+  }
+  if (estado.usuario && estado.usuario.email_verificado) {
+    await carregarPlanos();
+    irPara(estado.aba);
+  } else if (!$("#landing").classList.contains("oculto")) {
+    mostrarLanding();
+  }
+}
+
+$$(".sel-idioma").forEach((s) => { s.onchange = (e) => mudarIdioma(e.target.value, true); });
+aplicarIdiomaDOM();
+
+function cabecalhosIdioma() {
+  const h = { "Content-Type": "application/json" };
+  try {
+    const salvo = normalizarIdioma(localStorage.getItem("mj_idioma")) || normalizarIdioma(estado.usuario?.idioma);
+    if (salvo) h["X-Idioma"] = salvo;
+    const navs = (navigator.languages?.length ? navigator.languages : [navigator.language || ""]).filter(Boolean).join(",");
+    if (navs) h["X-Nav-Idiomas"] = navs;
+  } catch {}
+  return h;
+}
+
 async function api(caminho, opcoes = {}) {
-  const r = await fetch(caminho, { headers: { "Content-Type": "application/json" }, ...opcoes });
+  const r = await fetch(caminho, { ...opcoes, headers: { ...cabecalhosIdioma(), ...(opcoes.headers || {}) } });
   if (!r.ok) {
-    let msg = "Algo deu errado. Tente de novo.";
-    try { const d = (await r.json()).detail; msg = typeof d === "string" ? d : "Confira os dados digitados."; } catch {}
+    let msg = tr("erro_generico");
+    try { const d = (await r.json()).detail; msg = typeof d === "string" ? d : tr("erro_dados"); } catch {}
     const e = new Error(msg); e.status = r.status;
     if (r.status === 401 && estado.usuario) { estado.usuario = null; mostrarLanding(); }
     if (r.status === 402) modalUpgrade(msg);
@@ -538,11 +780,10 @@ const post = (c, corpo) => api(c, { method: "POST", body: corpo ? JSON.stringify
 function quando(iso) {
   if (!iso) return "—";
   const s = (Date.now() - new Date(iso).getTime()) / 1000;
-  if (s < 60) return "agora"; if (s < 3600) return `há ${Math.floor(s / 60)} min`;
-  if (s < 86400) return `há ${Math.floor(s / 3600)} h`; return new Date(iso).toLocaleDateString("pt-BR");
+  if (s < 60) return tr("agora"); if (s < 3600) return tr("ha_min", { n: Math.floor(s / 60) });
+  if (s < 86400) return tr("ha_h", { n: Math.floor(s / 3600) }); return new Date(iso).toLocaleDateString(estado.idioma);
 }
-const NOME_STATUS = { concluido: "concluída", executando: "executando", pendente: "na fila", aguardando: "aguarda você", falhou: "falhou", cancelado: "cancelada" };
-const st = (s) => `<span class="st ${esc(s)}">${esc(NOME_STATUS[s] || s)}</span>`;
+const st = (s) => `<span class="st ${esc(s)}">${esc(tr("st_" + s))}</span>`;
 
 /* ------------------------------------------------------------ céu animado */
 (function ceu() {
@@ -575,16 +816,13 @@ const st = (s) => `<span class="st ${esc(s)}">${esc(NOME_STATUS[s] || s)}</span>
 })();
 
 /* --------------------------------------------- mapa (hero e painel usam) */
-// Desenha o Jarvis no centro e as máquinas em órbita. Linhas pulsam quando a
-// máquina está trabalhando. Estado sempre com texto, não só cor.
 function desenharMapa(svg, maquinas, { demo = false, aoClicar } = {}) {
-  // Em tela estreita (celular) o mapa vira quadrado, com nós maiores.
   const estreito = !demo && svg.clientWidth && svg.clientWidth < 560;
   const W = demo || estreito ? 500 : 800, H = 500, cx = W / 2, cy = H / 2;
   svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
   if (estreito) svg.style.aspectRatio = "1 / 1";
   const n = maquinas.length, rx = demo ? 175 : estreito ? 170 : Math.min(330, 230 + n * 25), ry = demo ? 175 : estreito ? 165 : 185;
-  const k = demo ? 1 : estreito ? 1.25 : 1.3; // escala dos nós
+  const k = demo ? 1 : estreito ? 1.25 : 1.3;
   let s = `<defs>
     <radialGradient id="nucleo" cx="38%" cy="35%"><stop offset="0" stop-color="#d4fffb"/><stop offset=".4" stop-color="#3fd0c9"/><stop offset="1" stop-color="#103457"/></radialGradient>
     <radialGradient id="halo"><stop offset="0" stop-color="rgba(63,208,201,.35)"/><stop offset="1" stop-color="rgba(63,208,201,0)"/></radialGradient>
@@ -608,7 +846,7 @@ function desenharMapa(svg, maquinas, { demo = false, aoClicar } = {}) {
   maquinas.forEach((m, i) => {
     const [x, y] = pos[i], on = m.online && !m.bloqueada, ex = on && m.job_atual;
     const cor = ex ? "#5aa9ff" : on ? "#3fd0c9" : "#4b566b";
-    const rotulo = m.bloqueada ? "bloqueada" : ex ? "trabalhando" : on ? "ligada" : "desligada";
+    const rotulo = m.bloqueada ? tr("maq_bloqueada") : ex ? tr("maq_trabalhando") : on ? tr("maq_ligada") : tr("maq_desligada");
     const cpu = on && m.metricas && m.metricas.cpu_pct != null ? ` · CPU ${Math.round(m.metricas.cpu_pct)}%` : "";
     s += `<g class="no-maq" data-i="${i}" tabindex="0" role="button" aria-label="${esc(m.apelido)}: ${rotulo}">
       <g transform="translate(${x} ${y}) scale(${k})">
@@ -618,14 +856,12 @@ function desenharMapa(svg, maquinas, { demo = false, aoClicar } = {}) {
       <text y="40" text-anchor="middle" fill="#e8eef8" font-size="13" font-weight="600">${esc(m.apelido)}</text>
       <text y="56" text-anchor="middle" fill="${on ? cor : "#8a95a8"}" font-size="11">${on ? "● " : "○ "}${rotulo}${esc(cpu)}</text></g></g>`;
   });
-  if (!n && !demo) s += `<text x="${cx}" y="${cy + 120}" text-anchor="middle" fill="#9aa8bf" font-size="14">Nenhuma máquina conectada ainda</text>`;
+  if (!n && !demo) s += `<text x="${cx}" y="${cy + 120}" text-anchor="middle" fill="#9aa8bf" font-size="14">${esc(tr("mapa_vazio"))}</text>`;
   svg.innerHTML = s;
   if (aoClicar) $$(".no-maq", svg).forEach((g) => { const f = () => aoClicar(maquinas[+g.dataset.i]); g.onclick = f; g.onkeydown = (e) => e.key === "Enter" && f(); });
 }
 
 /* ------------------------------------------------------------- landing */
-const estado = { usuario: null, planos: [], aba: "inicio", parque: null, conversaId: null, tarefas: [], ocupado: false, timers: [] };
-
 async function carregarPlanos() {
   if (!estado.planos.length) estado.planos = await api("/api/planos");
   return estado.planos;
@@ -635,23 +871,23 @@ function planoAtual() {
 }
 function cartoesPreco(planos, atual) {
   return planos.map((p) => `<div class="preco ${p.destaque ? "destaque" : ""}">
-    ${p.destaque ? '<span class="rot">Mais escolhido</span>' : ""}
+    ${p.destaque ? `<span class="rot">${esc(tr("mais_escolhido"))}</span>` : ""}
     <h3>${esc(p.nome)}</h3><p class="desc">${esc(p.descricao)}</p>
-    <div class="valor">${p.preco_brl ? brl(p.preco_brl) : "R$ 0"}<small>${p.preco_brl ? " /mês" : ""}</small></div>
-    ${p.mensagens_estimadas ? `<div class="est-msgs" style="font-size:13px;color:var(--ciano);margin:-6px 0 12px">cerca de ${p.mensagens_estimadas} mensagens${p.preco_brl ? " por mês" : ""}</div>` : ""}
+    <div class="valor">${p.preco_brl ? brl(p.preco_brl) : "R$ 0"}<small>${p.preco_brl ? esc(tr("por_mes")) : ""}</small></div>
+    ${p.mensagens_estimadas ? `<div class="est-msgs" style="font-size:13px;color:var(--ciano);margin:-6px 0 12px">${esc(tr(p.preco_brl ? "cerca_msgs_mes" : "cerca_msgs", { n: p.mensagens_estimadas }))}</div>` : ""}
     <ul>${p.itens.map((i) => `<li>${esc(i)}</li>`).join("")}</ul>
-    ${atual === undefined ? `<button class="btn ${p.destaque ? "prim" : ""}" data-abrir="cadastro">${p.preco_brl ? "Começar grátis" : "Criar conta grátis"}</button>`
-      : atual === p.id ? `<button class="btn" disabled>Seu plano atual${estado.usuario?.plano_ate ? " · até " + quandoDia(estado.usuario.plano_ate) : ""}</button>${p.preco_brl && !estado.usuario?.assinatura ? `<button class="btn fantasma peq" data-pix="${p.id}">Renovar 1 mês com Pix</button>` : ""}`
-      : p.preco_brl ? `<button class="btn ${p.destaque ? "prim" : ""}" data-assinar="${p.id}">Assinar no cartão</button><button class="btn fantasma peq" data-pix="${p.id}">Pagar 1 mês com Pix</button>` : ""}
+    ${atual === undefined ? `<button class="btn ${p.destaque ? "prim" : ""}" data-abrir="cadastro">${esc(tr(p.preco_brl ? "btn_comecar_gratis" : "criar_conta_gratis"))}</button>`
+      : atual === p.id ? `<button class="btn" disabled>${esc(tr("seu_plano_atual"))}${estado.usuario?.plano_ate ? esc(tr("ate_data", { d: quandoDia(estado.usuario.plano_ate) })) : ""}</button>${p.preco_brl && !estado.usuario?.assinatura ? `<button class="btn fantasma peq" data-pix="${p.id}">${esc(tr("renovar_pix"))}</button>` : ""}`
+      : p.preco_brl ? `<button class="btn ${p.destaque ? "prim" : ""}" data-assinar="${p.id}">${esc(tr("assinar_cartao"))}</button><button class="btn fantasma peq" data-pix="${p.id}">${esc(tr("pagar_pix"))}</button>` : ""}
   </div>`).join("");
 }
 
 function animarHero() {
   const demo = [
-    { apelido: "Notebook", online: true, job_atual: 1, metricas: { cpu_pct: 71 } },
-    { apelido: "PC do escritório", online: true, metricas: { cpu_pct: 12 } },
-    { apelido: "Servidor", online: true, metricas: { cpu_pct: 4 } },
-    { apelido: "PC da sala", online: false },
+    { apelido: tr("demo_nb"), online: true, job_atual: 1, metricas: { cpu_pct: 71 } },
+    { apelido: tr("demo_esc"), online: true, metricas: { cpu_pct: 12 } },
+    { apelido: tr("demo_srv"), online: true, metricas: { cpu_pct: 4 } },
+    { apelido: tr("demo_sala"), online: false },
   ];
   desenharMapa($("#orbita-hero"), demo, { demo: true });
   setTimeout(() => $("#b1").classList.add("vis"), 600);
@@ -660,6 +896,7 @@ function animarHero() {
 
 async function mostrarLanding() {
   pararTimers();
+  aplicarIdiomaDOM();
   $("#app").classList.add("oculto"); $("#landing").classList.remove("oculto");
   animarHero();
   $("#precos-landing").innerHTML = cartoesPreco(await carregarPlanos());
@@ -683,11 +920,12 @@ function lerRef() {
   } catch { return ""; }
 }
 lerRef();
-function quandoDia(iso) { try { return new Date(iso).toLocaleDateString("pt-BR"); } catch { return iso; } }
+const tl = (pt, en, es) => estado.idioma === "en" ? en : estado.idioma === "es" ? es : pt;
+function quandoDia(iso) { try { return new Date(iso).toLocaleDateString(estado.idioma); } catch { return iso; } }
 
 function abrirModal(html, largo = false) {
   const m = $("#modais");
-  m.innerHTML = `<div class="modal-fundo"><div class="modal ${largo ? "largo" : ""}" role="dialog" aria-modal="true"><button class="fechar" aria-label="Fechar">×</button>${html}</div></div>`;
+  m.innerHTML = `<div class="modal-fundo"><div class="modal ${largo ? "largo" : ""}" role="dialog" aria-modal="true"><button class="fechar" aria-label="${esc(tr("fechar"))}">×</button>${html}</div></div>`;
   const fechar = () => { m.innerHTML = ""; estado.aoFecharModal && estado.aoFecharModal(); estado.aoFecharModal = null; };
   $(".fechar", m).onclick = fechar;
   $(".modal-fundo", m).onclick = (e) => { if (e.target.classList.contains("modal-fundo")) fechar(); };
@@ -696,18 +934,18 @@ function abrirModal(html, largo = false) {
 
 function modalConta(modo) {
   const cad = modo === "cadastro";
-  const { el } = abrirModal(`<h2>${cad ? "Crie seu Jarvis" : "Bem-vindo de volta"}</h2>
-    <p class="sub">${cad ? "Grátis, sem cartão. Leva 10 segundos." : "Entre para ver seu parque."}</p>
+  const { el } = abrirModal(`<h2>${cad ? tl("Crie seu Jarvis", "Create your Jarvis", "Crea tu Jarvis") : tl("Bem-vindo de volta", "Welcome back", "Bienvenido de vuelta")}</h2>
+    <p class="sub">${cad ? tl("Grátis, sem cartão. Leva 10 segundos.", "Free, no card required. Takes 10 seconds.", "Gratis, sin tarjeta. Toma 10 segundos.") : tl("Entre para ver seu parque.", "Sign in to view your fleet.", "Entra para ver tu parque.")}</p>
     <form id="f-conta">
-      ${cad ? '<label class="campo"><span>Seu nome</span><input name="nome" autocomplete="name" required></label>' : ""}
-      <label class="campo"><span>E-mail</span><input name="email" type="email" autocomplete="email" required></label>
-      <label class="campo"><span>Senha ${cad ? "(mínimo 8 caracteres)" : ""}</span><input name="senha" type="password" minlength="8" autocomplete="${cad ? "new-password" : "current-password"}" required></label>
-      ${cad ? '<label class="aceite"><input type="checkbox" name="aceito" required> Li e aceito os <a href="/termos" target="_blank">termos de uso</a> e a <a href="/privacidade" target="_blank">política de privacidade</a>.</label>' : ""}
-      <button class="btn prim grande" style="width:100%;margin-top:8px">${cad ? "Criar conta grátis" : "Entrar"}</button>
+      ${cad ? `<label class="campo"><span>${tl("Seu nome", "Your name", "Tu nombre")}</span><input name="nome" autocomplete="name" required></label>` : ""}
+      <label class="campo"><span>${tl("E-mail", "Email", "Correo electrónico")}</span><input name="email" type="email" autocomplete="email" required></label>
+      <label class="campo"><span>${tl("Senha", "Password", "Contraseña")} ${cad ? tl("(mínimo 8 caracteres)", "(at least 8 characters)", "(mínimo 8 caracteres)") : ""}</span><input name="senha" type="password" minlength="8" autocomplete="${cad ? "new-password" : "current-password"}" required></label>
+      ${cad ? `<label class="aceite"><input type="checkbox" name="aceito" required> ${tl('Li e aceito os <a href="/termos" target="_blank">termos de uso</a> e a <a href="/privacidade" target="_blank">política de privacidade</a>.', 'I have read and accept the <a href="/termos" target="_blank">terms of use</a> and <a href="/privacidade" target="_blank">privacy policy</a>.', 'He leído y acepto los <a href="/termos" target="_blank">términos de uso</a> y la <a href="/privacidade" target="_blank">política de privacidad</a>.')}</label>` : ""}
+      <button class="btn prim grande" style="width:100%;margin-top:8px">${cad ? tr("criar_conta_gratis") : tr("btn_entrar")}</button>
       <div class="erro-txt" id="erro-conta"></div>
-      ${cad ? "" : '<p style="text-align:center;margin:10px 0 0;font-size:14px"><button type="button" class="link-btn" id="esqueci">Esqueci minha senha</button></p>'}
+      ${cad ? "" : `<p style="text-align:center;margin:10px 0 0;font-size:14px"><button type="button" class="link-btn" id="esqueci">${tl("Esqueci minha senha", "Forgot my password", "Olvidé mi contraseña")}</button></p>`}
     </form>
-    <p style="text-align:center;margin:8px 0 0;color:var(--suave);font-size:14px">${cad ? "Já tem conta?" : "Ainda não tem conta?"} <button class="link-btn" data-abrir="${cad ? "entrar" : "cadastro"}">${cad ? "Entrar" : "Criar grátis"}</button></p>`);
+    <p style="text-align:center;margin:8px 0 0;color:var(--suave);font-size:14px">${cad ? tl("Já tem conta?", "Already have an account?", "¿Ya tienes cuenta?") : tl("Ainda não tem conta?", "Don't have an account yet?", "¿Aún no tienes cuenta?")} <button class="link-btn" data-abrir="${cad ? "entrar" : "cadastro"}">${cad ? tr("btn_entrar") : tl("Criar grátis", "Create free", "Crear gratis")}</button></p>`);
   $("input", el).focus();
   const esq = $("#esqueci", el); if (esq) esq.onclick = () => modalEsqueciSenha($("[name=email]", el).value);
   $("#f-conta").onsubmit = async (ev) => {
@@ -725,25 +963,25 @@ function modalConta(modo) {
 }
 
 function modalEsqueciSenha(email = "") {
-  const { el } = abrirModal(`<h2>Recuperar a senha</h2>
-    <p class="sub">Diga seu e-mail: mandamos um código de 6 números para você criar uma senha nova.</p>
-    <form id="f1"><label class="campo"><span>E-mail</span><input name="email" type="email" required value="${esc(email)}"></label>
-    <button class="btn prim grande" style="width:100%">Mandar código</button><div class="erro-txt" id="erro"></div></form>`);
+  const { el } = abrirModal(`<h2>${tl("Recuperar a senha", "Reset password", "Recuperar la contraseña")}</h2>
+    <p class="sub">${tl("Diga seu e-mail: mandamos um código de 6 números para você criar uma senha nova.", "Enter your email: we will send a 6-digit code so you can create a new password.", "Ingresa tu correo: te enviaremos un código de 6 dígitos para crear una contraseña nueva.")}</p>
+    <form id="f1"><label class="campo"><span>${tl("E-mail", "Email", "Correo electrónico")}</span><input name="email" type="email" required value="${esc(email)}"></label>
+    <button class="btn prim grande" style="width:100%">${tl("Mandar código", "Send code", "Enviar código")}</button><div class="erro-txt" id="erro"></div></form>`);
   $("input", el).focus();
   $("#f1", el).onsubmit = async (e) => {
     e.preventDefault();
     const em = new FormData(e.target).get("email").trim().toLowerCase();
     try { await post("/api/senha/esquecer", { email: em }); } catch (x) { return ($("#erro", el).textContent = x.message); }
-    const { el: el2 } = abrirModal(`<h2>Crie a senha nova</h2>
-      <p class="sub">Se existir uma conta com <b>${esc(em)}</b>, o código já está chegando lá. Ele vale 15 minutos.</p>
+    const { el: el2 } = abrirModal(`<h2>${tl("Crie a senha nova", "Create your new password", "Crea tu nueva contraseña")}</h2>
+      <p class="sub">${tl(`Se existir uma conta com <b>${esc(em)}</b>, o código já está chegando lá. Ele vale 15 minutos.`, `If an account exists for <b>${esc(em)}</b>, the code is on its way. It is valid for 15 minutes.`, `Si existe una cuenta con <b>${esc(em)}</b>, el código ya está llegando. Vale por 15 minutos.`)}</p>
       <form id="f2"><input class="codigo-input" name="codigo" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required placeholder="000000">
-      <label class="campo" style="margin-top:12px"><span>Senha nova (mínimo 8 caracteres)</span><input name="senha" type="password" minlength="8" autocomplete="new-password" required></label>
-      <button class="btn prim grande" style="width:100%;margin-top:8px">Salvar e entrar</button><div class="erro-txt" id="erro"></div></form>`);
+      <label class="campo" style="margin-top:12px"><span>${tl("Senha nova (mínimo 8 caracteres)", "New password (at least 8 characters)", "Contraseña nueva (mínimo 8 caracteres)")}</span><input name="senha" type="password" minlength="8" autocomplete="new-password" required></label>
+      <button class="btn prim grande" style="width:100%;margin-top:8px">${tl("Salvar e entrar", "Save and sign in", "Guardar y entrar")}</button><div class="erro-txt" id="erro"></div></form>`);
     $("input", el2).focus();
     $("#f2", el2).onsubmit = async (ev) => {
       ev.preventDefault();
       const f = new FormData(ev.target);
-      try { const u = await post("/api/senha/redefinir", { email: em, codigo: f.get("codigo"), senha: f.get("senha") }); $("#modais").innerHTML = ""; toast("Senha trocada!"); iniciarApp(u); }
+      try { const u = await post("/api/senha/redefinir", { email: em, codigo: f.get("codigo"), senha: f.get("senha") }); $("#modais").innerHTML = ""; toast(tl("Senha trocada!", "Password updated!", "¡Contraseña actualizada!")); iniciarApp(u); }
       catch (x) { $("#erro", el2).textContent = x.message; }
     };
   };
@@ -751,8 +989,10 @@ function modalEsqueciSenha(email = "") {
 
 function modalUpgrade(motivo) {
   carregarPlanos().then((planos) => {
-    abrirModal(`<h2>Desbloqueie o <span class="grad">parque inteiro</span></h2>
-      <p class="sub">${esc(motivo || "Recurso disponível nos planos superiores.")}</p>
+    const nota = tr("nota_moeda");
+    abrirModal(`<h2>${tl('Desbloqueie o <span class="grad">parque inteiro</span>', 'Unlock your <span class="grad">entire fleet</span>', 'Desbloquea <span class="grad">todo tu parque</span>')}</h2>
+      <p class="sub">${esc(motivo || tl("Recurso disponível nos planos superiores.", "Feature available on higher plans.", "Recurso disponible en los planes superiores."))}</p>
+      ${nota ? `<div class="nota-moeda">${esc(nota)}</div>` : ""}
       <div class="precos" style="grid-template-columns:1fr;gap:12px">${cartoesPreco(planos.filter((p) => p.id !== "gratis"), estado.usuario?.plano)}</div>`, true);
   });
 }
@@ -760,13 +1000,13 @@ function modalUpgrade(motivo) {
 async function assinar(plano) {
   try {
     const r = await post(`/api/pagamentos/assinatura/${plano}`);
-    toast("Abrindo o pagamento seguro do Mercado Pago…");
+    toast(tl("Abrindo o pagamento seguro do Mercado Pago…", "Opening Mercado Pago secure checkout…", "Abriendo el pago seguro de Mercado Pago…"));
     location.href = r.url;
     return;
   } catch (e) { if (e.status !== 503) return toast(e.message); }
   try {
     await post(`/api/planos/${plano}/interesse`);
-    abrirModal(`<h2>Você está na lista! 🎉</h2><p class="sub">O pagamento por Pix e cartão está chegando. Você será um dos primeiros a poder assinar, e quem entrou na lista ganha um desconto de lançamento.</p><button class="btn prim" style="width:100%" onclick="document.getElementById('modais').innerHTML=''">Combinado</button>`);
+    abrirModal(`<h2>${tl("Você está na lista! 🎉", "You're on the list! 🎉", "¡Estás en la lista! 🎉")}</h2><p class="sub">${tl("O pagamento por Pix e cartão está chegando. Você será um dos primeiros a poder assinar, e quem entrou na lista ganha um desconto de lançamento.", "Card and Pix payments are coming soon. You will be among the first to subscribe and get a launch discount.", "El pago con tarjeta y Pix llegará pronto. Serás de los primeros en poder suscribirte y tendrás un descuento de lanzamiento.")}</p><button class="btn prim" style="width:100%" onclick="document.getElementById('modais').innerHTML=''">${tl("Combinado", "Got it", "De acuerdo")}</button>`);
   } catch (e) { toast(e.message); }
 }
 
@@ -775,28 +1015,39 @@ async function pagarPix(plano) {
   try { r = await post(`/api/pagamentos/pix/${plano}`); }
   catch (e) { if (e.status === 503) return assinar(plano); return toast(e.message); }
   const nome = (estado.planos.find((p) => p.id === plano) || {}).nome || plano;
-  const { el } = abrirModal(`<h2>Pague com Pix</h2>
-    <p class="sub">${brl(r.valor)} por 1 mês do plano <b>${esc(nome)}</b>. Abra o app do seu banco, escolha Pix e leia o código. O plano ativa sozinho em segundos.</p>
+  const { el } = abrirModal(`<h2>${tl("Pague com Pix", "Pay with Pix", "Paga con Pix")}</h2>
+    <p class="sub">${tl(`${brl(r.valor)} por 1 mês do plano <b>${esc(nome)}</b>. Abra o app do seu banco, escolha Pix e leia o código. O plano ativa sozinho em segundos.`, `${brl(r.valor)} for 1 month of the <b>${esc(nome)}</b> plan. Open your bank app, choose Pix, and scan the code. Your plan activates automatically in seconds.`, `${brl(r.valor)} por 1 mes del plan <b>${esc(nome)}</b>. Abre la app de tu banco, elige Pix y escanea el código. El plan se activa solo en segundos.`)}</p>
     ${r.qr_base64 ? `<img src="data:image/png;base64,${r.qr_base64}" alt="QR code Pix" style="display:block;width:220px;height:220px;margin:0 auto 12px;background:#fff;border-radius:12px;padding:8px">` : ""}
-    <div class="cmd" style="word-break:break-all;font-size:12px"><span>${esc(r.copia_cola)}</span><button class="btn peq" id="copiar-pix">Copiar</button></div>
-    <div class="esperando" style="margin-top:14px"><i></i>Esperando o pagamento…</div>`);
-  $("#copiar-pix", el).onclick = () => { navigator.clipboard.writeText(r.copia_cola); toast("Código Pix copiado."); };
+    <div class="cmd" style="word-break:break-all;font-size:12px"><span>${esc(r.copia_cola)}</span><button class="btn peq" id="copiar-pix">${tl("Copiar", "Copy", "Copiar")}</button></div>
+    <div class="esperando" style="margin-top:14px"><i></i>${tl("Esperando o pagamento…", "Waiting for payment…", "Esperando el pago…")}</div>`);
+  $("#copiar-pix", el).onclick = () => { navigator.clipboard.writeText(r.copia_cola); toast(tl("Código Pix copiado.", "Pix code copied.", "Código Pix copiado.")); };
   const t = setInterval(async () => {
     try {
       const s = await api(`/api/pagamentos/${r.id}`);
       if (s.status === "aprovado") {
         clearInterval(t); $("#modais").innerHTML = "";
-        estado.usuario = await api("/api/eu"); montarNav(); toast("Pagamento recebido! Plano ativado. 🎉", 5000);
+        estado.usuario = await api("/api/eu"); montarNav(); toast(tl("Pagamento recebido! Plano ativado. 🎉", "Payment received! Plan activated. 🎉", "¡Pago recibido! Plan activado. 🎉"), 5000);
         if (estado.aba === "planos") telaPlanos();
-      } else if (s.status !== "pendente") { clearInterval(t); toast("O pagamento não foi concluído (" + s.status + ")."); }
+      } else if (s.status !== "pendente") { clearInterval(t); toast(tl("O pagamento não foi concluído (", "Payment was not completed (", "El pago no se completó (") + s.status + ")."); }
     } catch {}
   }, 4000);
   estado.aoFecharModal = () => clearInterval(t);
 }
 
 /* ----------------------------------------------------------------- app */
-const ABAS = [["inicio", "Início"], ["jarvis", "Jarvis"], ["parque", "Parque"], ["tarefas", "Tarefas"], ["cerebro", "Cérebro"], ["rotinas", "Rotinas"], ["planos", "Planos"], ["admin", "Admin"]];
-const abasVisiveis = () => ABAS.filter(([id]) => id !== "admin" || estado.usuario?.admin);
+function abasVisiveis() {
+  const todas = [
+    ["inicio", tl("Início", "Home", "Inicio")],
+    ["jarvis", "Jarvis"],
+    ["parque", tl("Parque", "Fleet", "Parque")],
+    ["tarefas", tl("Tarefas", "Tasks", "Tareas")],
+    ["cerebro", tl("Cérebro", "Brain", "Cerebro")],
+    ["rotinas", tl("Rotinas", "Routines", "Rutinas")],
+    ["planos", tl("Planos", "Plans", "Planes")],
+    ["admin", "Admin"],
+  ];
+  return todas.filter(([id]) => id !== "admin" || estado.usuario?.admin);
+}
 
 function pararTimers() { estado.timers.forEach(clearInterval); estado.timers = []; }
 function repetir(fn, ms) { estado.timers.push(setInterval(fn, ms)); }
@@ -808,22 +1059,32 @@ function montarNav() {
   $$("[data-aba]").forEach((b) => (b.onclick = () => irPara(b.dataset.aba)));
   const u = estado.usuario, plano = planoAtual();
   const temMaior = estado.planos.some((p) => p.preco_brl > (plano.preco_brl || 0));
+  const nomePlano = esc(plano.nome || u.plano);
   $("#cartao-plano").innerHTML = !temMaior
-    ? `<b>Plano ${esc(plano.nome || u.plano)}</b><p>${u.creditos} créditos disponíveis.</p>`
-    : `<b>Plano ${esc(plano.nome || u.plano)}</b><p>${u.creditos} créditos · conecte mais computadores.</p><button class="btn prim peq" style="width:100%" data-assinar-ir>Ver planos</button>`;
+    ? `<b>${tl("Plano", "Plan", "Plan")} ${nomePlano}</b><p>${u.creditos} ${tl("créditos disponíveis.", "credits available.", "créditos disponibles.")}</p>`
+    : `<b>${tl("Plano", "Plan", "Plan")} ${nomePlano}</b><p>${u.creditos} ${tl("créditos · conecte mais computadores.", "credits · connect more computers.", "créditos · conecta más computadoras.")}</p><button class="btn prim peq" style="width:100%" data-assinar-ir>${tl("Ver planos", "View plans", "Ver planes")}</button>`;
   const bt = $("[data-assinar-ir]"); if (bt) bt.onclick = () => irPara("planos");
   $("#avatar").textContent = (u.nome || "?")[0].toUpperCase(); $("#nome-usuario").textContent = u.nome;
+  $$(".sel-idioma").forEach((s) => { s.value = estado.idioma; });
 }
 
 async function iniciarApp(u, novo = false) {
   estado.usuario = u;
+  const salvoLocal = (() => { try { return normalizarIdioma(localStorage.getItem("mj_idioma")); } catch { return null; } })();
+  if (u.idioma && normalizarIdioma(u.idioma) && !salvoLocal) {
+    estado.idioma = normalizarIdioma(u.idioma);
+  } else if (salvoLocal && u.idioma !== salvoLocal) {
+    try { await post("/api/eu/idioma", { idioma: salvoLocal }); u.idioma = salvoLocal; } catch {}
+  }
+  aplicarIdiomaDOM();
+  estado.planos = [];
   await carregarPlanos();
   if (!u.email_verificado) return telaVerificar(u);
   $("#landing").classList.add("oculto"); $("#app").classList.remove("oculto");
   $("#sair").onclick = async () => { await post("/api/sair"); location.reload(); };
   const destino = location.hash.slice(1);
   irPara(abasVisiveis().some(([a]) => a === destino) ? destino : "inicio");
-  if (novo) setTimeout(() => toast(`Bem-vindo, ${u.nome.split(" ")[0]}! Você ganhou ${u.creditos} créditos para começar.`, 5000), 400);
+  if (novo) setTimeout(() => toast(tl(`Bem-vindo, ${u.nome.split(" ")[0]}! Você ganhou ${u.creditos} créditos para começar.`, `Welcome, ${u.nome.split(" ")[0]}! You got ${u.creditos} credits to start.`, `¡Bienvenido, ${u.nome.split(" ")[0]}! Ganaste ${u.creditos} créditos para empezar.`), 5000), 400);
 }
 
 async function atualizarUsuario() {
@@ -838,24 +1099,25 @@ function irPara(aba) {
 
 function barra(titulo, dir = "") {
   const u = estado.usuario;
-  return `<div class="barra"><h1>${titulo}</h1><div class="dir">${dir}<span class="pilula ${u.creditos < 50 ? "alerta" : ""}" title="Créditos pagam o uso da IA">⚡ <b>${u.creditos}</b> créditos</span></div></div>`;
+  return `<div class="barra"><h1>${titulo}</h1><div class="dir">${dir}<select class="sel-idioma" aria-label="Idioma" onchange="mudarIdioma(this.value, true)"><option value="pt-BR" ${estado.idioma === "pt-BR" ? "selected" : ""}>PT</option><option value="en" ${estado.idioma === "en" ? "selected" : ""}>EN</option><option value="es" ${estado.idioma === "es" ? "selected" : ""}>ES</option></select><span class="pilula ${u.creditos < 50 ? "alerta" : ""}" title="${tl("Créditos pagam o uso da IA", "Credits pay for AI usage", "Los créditos pagan el uso de la IA")}">⚡ <b>${u.creditos}</b> ${tl("créditos", "credits", "créditos")}</span></div></div>`;
 }
 
 /* ---- início */
 async function telaInicio() {
   const c = $("#conteudo"), u = estado.usuario;
-  const hora = new Date().getHours(), saud = hora < 12 ? "Bom dia" : hora < 18 ? "Boa tarde" : "Boa noite";
+  const hora = new Date().getHours();
+  const saud = hora < 12 ? tl("Bom dia", "Good morning", "Buenos días") : hora < 18 ? tl("Boa tarde", "Good afternoon", "Buenas tardes") : tl("Boa noite", "Good evening", "Buenas noches");
   c.innerHTML = barra(`${saud}, ${esc(u.nome.split(" ")[0])}`) + `
     <div class="stats" id="stats"></div>
     <div id="primeiros"></div>
     <div class="grade-inicio">
-      <div class="painel"><h2>Mapa do parque <span class="acao-dir"><button class="btn peq" id="b-conectar">${ico("mais", 16)} Conectar máquina</button></span></h2>
+      <div class="painel"><h2>${tl("Mapa do parque", "Fleet map", "Mapa del parque")} <span class="acao-dir"><button class="btn peq" id="b-conectar">${ico("mais", 16)} ${tl("Conectar máquina", "Connect machine", "Conectar máquina")}</button></span></h2>
         <svg class="mapa" id="mapa"></svg>
-        <div class="legenda"><span style="color:var(--ciano)">● ligada</span><span style="color:var(--exec)">● trabalhando</span><span style="color:var(--morto)">○ desligada</span></div>
+        <div class="legenda"><span style="color:var(--ciano)">● ${tr("maq_ligada")}</span><span style="color:var(--exec)">● ${tr("maq_trabalhando")}</span><span style="color:var(--morto)">○ ${tr("maq_desligada")}</span></div>
       </div>
       <div style="display:grid;gap:18px;align-content:start">
-        <div class="painel"><h2>Sugestões do Jarvis <span class="acao-dir"><button class="btn peq" id="b-sug">Atualizar</button></span></h2><div class="sugestoes" id="sugs"></div></div>
-        <div class="painel"><h2>Atividade recente <span class="acao-dir"><button class="btn peq fantasma" data-ir="tarefas">Ver tudo</button></span></h2><div class="lista-jobs" id="recentes"></div></div>
+        <div class="painel"><h2>${tl("Sugestões do Jarvis", "Jarvis suggestions", "Sugerencias de Jarvis")} <span class="acao-dir"><button class="btn peq" id="b-sug">${tl("Atualizar", "Refresh", "Actualizar")}</button></span></h2><div class="sugestoes" id="sugs"></div></div>
+        <div class="painel"><h2>${tl("Atividade recente", "Recent activity", "Actividad reciente")} <span class="acao-dir"><button class="btn peq fantasma" data-ir="tarefas">${tl("Ver tudo", "View all", "Ver todo")}</button></span></h2><div class="lista-jobs" id="recentes"></div></div>
       </div>
     </div>`;
   $("#b-conectar").onclick = modalConectar;
@@ -866,18 +1128,18 @@ async function telaInicio() {
     estado.parque = p; estado.aguardando = jobs.filter((j) => j.status === "aguardando").length;
     const r = p.resumo;
     $("#stats").innerHTML = `
-      <div class="stat"><div class="rot">Máquinas ligadas</div><div class="num">${r.online}<small> / ${r.maquinas}</small></div><div class="det">${r.maquinas ? "no seu parque" : "conecte a primeira"}</div></div>
-      <div class="stat"><div class="rot">Tarefas concluídas</div><div class="num">${r.concluidos_24h}</div><div class="det">nas últimas 24 h</div></div>
-      <div class="stat"><div class="rot">Trabalhando agora</div><div class="num">${r.executando}</div><div class="det">${r.na_fila} na fila</div></div>
-      <div class="stat"><div class="rot">Créditos</div><div class="num">${estado.usuario.creditos}</div><div class="det">plano ${esc(planoAtual().nome || estado.usuario.plano)}</div></div>`;
+      <div class="stat"><div class="rot">${tl("Máquinas ligadas", "Machines online", "Máquinas encendidas")}</div><div class="num">${r.online}<small> / ${r.maquinas}</small></div><div class="det">${r.maquinas ? tl("no seu parque", "in your fleet", "en tu parque") : tl("conecte a primeira", "connect your first", "conecta la primera")}</div></div>
+      <div class="stat"><div class="rot">${tl("Tarefas concluídas", "Completed tasks", "Tareas completadas")}</div><div class="num">${r.concluidos_24h}</div><div class="det">${tl("nas últimas 24 h", "in the last 24 h", "en las últimas 24 h")}</div></div>
+      <div class="stat"><div class="rot">${tl("Trabalhando agora", "Working now", "Trabajando ahora")}</div><div class="num">${r.executando}</div><div class="det">${r.na_fila} ${tl("na fila", "in queue", "en cola")}</div></div>
+      <div class="stat"><div class="rot">${tl("Créditos", "Credits", "Créditos")}</div><div class="num">${estado.usuario.creditos}</div><div class="det">${tl("plano", "plan", "plan")} ${esc(planoAtual().nome || estado.usuario.plano)}</div></div>`;
     desenharMapa($("#mapa"), p.maquinas, { aoClicar: (m) => irPara("parque") });
     const cta = $("#cta-mapa");
     if (!p.maquinas.length && !cta) {
-      $("#mapa").insertAdjacentHTML("afterend", `<div id="cta-mapa" style="text-align:center;margin:-70px 0 18px;position:relative"><button class="btn prim">${ico("mais", 16)} Conectar meu primeiro computador</button><div style="color:var(--tenue);font-size:13px;margin-top:8px">Leva 2 minutos · Windows, Mac ou Linux</div></div>`);
+      $("#mapa").insertAdjacentHTML("afterend", `<div id="cta-mapa" style="text-align:center;margin:-70px 0 18px;position:relative"><button class="btn prim">${ico("mais", 16)} ${tl("Conectar meu primeiro computador", "Connect my first computer", "Conectar mi primera computadora")}</button><div style="color:var(--tenue);font-size:13px;margin-top:8px">${tl("Leva 2 minutos · Windows, Mac ou Linux", "Takes 2 minutes · Windows, Mac or Linux", "Toma 2 minutos · Windows, Mac o Linux")}</div></div>`);
       $("#cta-mapa button").onclick = modalConectar;
     } else if (p.maquinas.length && cta) cta.remove();
     $("#recentes").innerHTML = jobs.length ? jobs.map(linhaJob).join("") :
-      `<div class="vazio" style="padding:16px"><p>Nenhuma tarefa ainda. Peça algo ao Jarvis!</p><button class="btn prim peq" data-ir2>Falar com o Jarvis</button></div>`;
+      `<div class="vazio" style="padding:16px"><p>${tl("Nenhuma tarefa ainda. Peça algo ao Jarvis!", "No tasks yet. Ask Jarvis for something!", "Ninguna tarea todavía. ¡Pídele algo a Jarvis!")}</p><button class="btn prim peq" data-ir2>${tl("Falar com o Jarvis", "Talk to Jarvis", "Hablar con Jarvis")}</button></div>`;
     ligarJobs($("#recentes")); const b2 = $("[data-ir2]"); if (b2) b2.onclick = () => irPara("jarvis");
     if (!estado.jaConversou) { try { estado.jaConversou = (await api("/api/conversas")).length > 0; } catch {} }
     primeirosPassos(p, jobs);
@@ -890,15 +1152,15 @@ function primeirosPassos(p, jobs) {
   const el = $("#primeiros"); if (!el) return;
   let fechado = false; try { fechado = localStorage.getItem("mj_pp") === "1"; } catch {}
   const passos = [
-    { ok: estado.jaConversou, t: "Converse com o Jarvis", d: "Peça um e-mail, um resumo, uma ideia. Leva 10 segundos.", b: "Abrir o chat", f: () => irPara("jarvis") },
-    { ok: p.maquinas.length > 0, t: "Conecte seu primeiro computador", d: "Um comando colado no terminal. Leva 2 minutos.", b: "Conectar", f: modalConectar },
-    { ok: jobs.length > 0, t: "Peça uma tarefa a ele", d: "Por exemplo: ver quanto espaço livre tem o disco. Você aprova antes de rodar.", b: "Pedir ao Jarvis", f: () => { estado.rascunho = "Veja quanto espaço livre tem meu disco"; irPara("jarvis"); } },
+    { ok: estado.jaConversou, t: tl("Converse com o Jarvis", "Chat with Jarvis", "Conversa con Jarvis"), d: tl("Peça um e-mail, um resumo, uma ideia. Leva 10 segundos.", "Ask for an email, a summary, an idea. Takes 10 seconds.", "Pide un correo, un resumen, una idea. Toma 10 segundos."), b: tl("Abrir o chat", "Open chat", "Abrir el chat"), f: () => irPara("jarvis") },
+    { ok: p.maquinas.length > 0, t: tl("Conecte seu primeiro computador", "Connect your first computer", "Conecta tu primera computadora"), d: tl("Um comando colado no terminal. Leva 2 minutos.", "One command pasted in the terminal. Takes 2 minutes.", "Un comando pegado en la terminal. Toma 2 minutos."), b: tl("Conectar", "Connect", "Conectar"), f: modalConectar },
+    { ok: jobs.length > 0, t: tl("Peça uma tarefa a ele", "Ask it to run a task", "Pídele una tarea"), d: tl("Por exemplo: ver quanto espaço livre tem o disco. Você aprova antes de rodar.", "For example: check how much free disk space you have. You approve before it runs.", "Por ejemplo: ver cuánto espacio libre tiene el disco. Tú apruebas antes de ejecutar."), b: tl("Pedir ao Jarvis", "Ask Jarvis", "Pedir a Jarvis"), f: () => { estado.rascunho = tl("Veja quanto espaço livre tem meu disco", "Check how much free space my disk has", "Mira cuánto espacio libre tiene mi disco"); irPara("jarvis"); } },
   ];
   const feitos = passos.filter((x) => x.ok).length;
   if (fechado || feitos === passos.length) { if (el.innerHTML) el.innerHTML = ""; return; }
-  const html = `<div class="painel pp"><h2>Primeiros passos <span class="acao-dir"><span class="pp-cont">${feitos} de ${passos.length}</span><button class="btn peq fantasma" id="pp-fechar">Agora não</button></span></h2>
+  const html = `<div class="painel pp"><h2>${tl("Primeiros passos", "First steps", "Primeros pasos")} <span class="acao-dir"><span class="pp-cont">${feitos} ${tl("de", "of", "de")} ${passos.length}</span><button class="btn peq fantasma" id="pp-fechar">${tl("Agora não", "Not now", "Ahora no")}</button></span></h2>
     <div class="pp-lista">${passos.map((x, i) => `<div class="pp-it ${x.ok ? "ok" : ""}"><b>${esc(x.t)}</b><p>${esc(x.d)}</p>${x.ok ? "" : `<button class="btn peq prim" data-pp="${i}">${esc(x.b)}</button>`}</div>`).join("")}</div></div>`;
-  if (el.dataset.h === html) return;  // nada mudou: não refaz a tela a cada atualização
+  if (el.dataset.h === html) return;
   el.dataset.h = html; el.innerHTML = html;
   $$("[data-pp]", el).forEach((b) => (b.onclick = () => passos[+b.dataset.pp].f()));
   $("#pp-fechar", el).onclick = () => { try { localStorage.setItem("mj_pp", "1"); } catch {} el.innerHTML = ""; el.dataset.h = ""; };
@@ -906,20 +1168,19 @@ function primeirosPassos(p, jobs) {
 
 async function carregarSugestoes() {
   const d = await api("/api/sugestoes"), el = $("#sugs"); if (!el) return;
-  // Nos planos com sugestoes_auto as sugestões se renovam sozinhas (e não gastam créditos).
   const sugAuto = !!planoAtual().sugestoes_auto;
   const velha = !d.gerado_em || Date.now() - new Date(d.gerado_em).getTime() > 20 * 3600e3;
   if (sugAuto && velha && !estado.sugAuto) { estado.sugAuto = true; return gerarSugestoes(); }
   if (!d.sugestoes.length) {
-    el.innerHTML = `<div class="vazio" style="padding:14px"><p>O Jarvis analisa seu parque e sugere o que fazer hoje.</p><button class="btn prim peq" id="b-sug2">Gerar sugestões</button></div>`;
+    el.innerHTML = `<div class="vazio" style="padding:14px"><p>${tl("O Jarvis analisa seu parque e sugere o que fazer hoje.", "Jarvis analyzes your fleet and suggests what to do today.", "Jarvis analiza tu parque y sugiere qué hacer hoy.")}</p><button class="btn prim peq" id="b-sug2">${tl("Gerar sugestões", "Generate suggestions", "Generar sugerencias")}</button></div>`;
     $("#b-sug2").onclick = gerarSugestoes; return;
   }
-  el.innerHTML = d.sugestoes.map((s, i) => `<div class="sug"><span class="tg">${esc(s.tag)}${s.maquina ? " · " + esc(s.maquina) : ""}</span><b>${esc(s.titulo)}</b><p>${esc(s.descricao)}</p><span class="mot">Por quê: ${esc(s.motivo)}</span><button class="btn peq" data-sug="${i}">Pedir ao Jarvis →</button></div>`).join("")
-    + `<div style="font-size:12px;color:var(--tenue)">Atualizadas ${quando(d.gerado_em)}${sugAuto ? " · incluídas no seu plano, sem gastar créditos" : ""}</div>`;
+  el.innerHTML = d.sugestoes.map((s, i) => `<div class="sug"><span class="tg">${esc(s.tag)}${s.maquina ? " · " + esc(s.maquina) : ""}</span><b>${esc(s.titulo)}</b><p>${esc(s.descricao)}</p><span class="mot">${tl("Por quê:", "Why:", "Por qué:")} ${esc(s.motivo)}</span><button class="btn peq" data-sug="${i}">${tl("Pedir ao Jarvis →", "Ask Jarvis →", "Pedir a Jarvis →")}</button></div>`).join("")
+    + `<div style="font-size:12px;color:var(--tenue)">${tl("Atualizadas", "Updated", "Actualizadas")} ${quando(d.gerado_em)}${sugAuto ? tl(" · incluídas no seu plano, sem gastar créditos", " · included in your plan, uses no credits", " · incluidas en tu plan, sin gastar créditos") : ""}</div>`;
   $$("[data-sug]", el).forEach((b) => (b.onclick = () => { estado.rascunho = d.sugestoes[+b.dataset.sug].pergunta; irPara("jarvis"); }));
 }
 async function gerarSugestoes() {
-  const el = $("#sugs"); el.innerHTML = `<div class="esperando"><i></i>O Jarvis está analisando seu parque…</div>`;
+  const el = $("#sugs"); el.innerHTML = `<div class="esperando"><i></i>${tl("O Jarvis está analisando seu parque…", "Jarvis is analyzing your fleet…", "Jarvis está analizando tu parque…")}</div>`;
   try { const d = await post("/api/sugestoes/gerar"); estado.usuario.creditos = d.creditos; montarNav(); } catch (e) { toast(e.message); }
   carregarSugestoes();
 }
@@ -932,42 +1193,43 @@ function linhaJob(j) {
 function ligarJobs(el) { $$("[data-job]", el).forEach((b) => (b.onclick = () => abrirJob(+b.dataset.job))); }
 
 /* ---- conectar máquina */
-const COMO_ABRIR = {
-  windows: "Aperte a tecla <b>Windows</b>, digite <b>PowerShell</b> e abra. Cole o comando (botão direito do mouse cola) e aperte Enter.",
-  mac: "Aperte <b>Cmd + Espaço</b>, digite <b>Terminal</b> e abra. Cole o comando (Cmd + V) e aperte Enter.",
-  linux: "Abra o <b>Terminal</b> (Ctrl + Alt + T na maioria dos sistemas), cole o comando (Ctrl + Shift + V) e aperte Enter.",
-};
+function comoAbrirSO(so) {
+  if (so === "windows") return tl("Aperte a tecla <b>Windows</b>, digite <b>PowerShell</b> e abra. Cole o comando (botão direito do mouse cola) e aperte Enter.", "Press the <b>Windows</b> key, type <b>PowerShell</b> and open it. Paste the command (right-click pastes) and press Enter.", "Presiona la tecla <b>Windows</b>, escribe <b>PowerShell</b> y ábrelo. Pega el comando (clic derecho pega) y presiona Enter.");
+  if (so === "mac") return tl("Aperte <b>Cmd + Espaço</b>, digite <b>Terminal</b> e abra. Cole o comando (Cmd + V) e aperte Enter.", "Press <b>Cmd + Space</b>, type <b>Terminal</b> and open it. Paste the command (Cmd + V) and press Enter.", "Presiona <b>Cmd + Espacio</b>, escribe <b>Terminal</b> y ábrela. Pega el comando (Cmd + V) y presiona Enter.");
+  return tl("Abra o <b>Terminal</b> (Ctrl + Alt + T na maioria dos sistemas), cole o comando (Ctrl + Shift + V) e aperte Enter.", "Open <b>Terminal</b> (Ctrl + Alt + T on most systems), paste the command (Ctrl + Shift + V) and press Enter.", "Abre la <b>Terminal</b> (Ctrl + Alt + T en la mayoría de los sistemas), pega el comando (Ctrl + Shift + V) y presiona Enter.");
+}
 
 async function modalConectar() {
   let d;
   try { d = await post("/api/parque/parear"); } catch (e) { return; }
   const antes = (estado.parque?.maquinas || []).length;
   const so = /Win/.test(navigator.platform) ? "windows" : /Mac/.test(navigator.platform) ? "mac" : "linux";
-  const { el, fechar } = abrirModal(`<h2>Conectar um computador</h2>
-    <p class="sub">É um comando só. Ele instala tudo o que precisa e deixa o Jarvis ligando sozinho com o computador. Faça isso <b>no computador que você quer conectar</b>.</p>
+  const prontoTxt = tl('"Pronto!"', '"Done!"', '"¡Listo!"');
+  const { el, fechar } = abrirModal(`<h2>${tl("Conectar um computador", "Connect a computer", "Conectar una computadora")}</h2>
+    <p class="sub">${tl("É um comando só. Ele instala tudo o que precisa e deixa o Jarvis ligando sozinho com o computador. Faça isso <b>no computador que você quer conectar</b>.", "It's just one command. It installs everything needed and sets Jarvis to start automatically with the computer. Run this <b>on the computer you want to connect</b>.", "Es un solo comando. Instala todo lo necesario y deja a Jarvis iniciando solo con la computadora. Haz esto <b>en la computadora que quieres conectar</b>.")}</p>
     <div class="abas"><button class="aba" data-so="windows">Windows</button><button class="aba" data-so="mac">Mac</button><button class="aba" data-so="linux">Linux</button></div>
-    <ol class="passos-con"><li id="como-abrir"></li><li>Cole este comando:<div class="cmd" id="cmd"><span id="cmd-txt"></span><button class="btn peq" id="copiar">${ico("copiar", 14)} Copiar</button></div></li>
-    <li>Espere a mensagem <b>"Pronto!"</b>. Este aviso aqui vai mudar sozinho.</li></ol>
-    <details class="detalhe"><summary>O que esse comando faz?</summary><p>Baixa o agente do Jarvis (um arquivo pequeno, de código aberto) para uma pasta sua, instala o Python se faltar (no Windows), conecta este computador à sua conta com o código <b class="mono">${esc(d.codigo)}</b> (vale 15 minutos) e deixa o agente ligando junto com o computador. Não pede senha de administrador.</p>
-    <p>A máquina começa no <b>modo seguro</b>: só roda ações prontas e revisadas (ver espaço em disco, limpar temporários, organizar Downloads…), e só quando você aprovar. Você pode desconectá-la quando quiser.</p></details>
-    <div class="esperando" id="esperando"><i></i>Esperando o computador se conectar…</div>
-    <div class="ajuda-con oculto" id="ajuda-con"><b>Já passou um tempo e nada apareceu?</b>
-      <ol><li>Confira se o comando terminou com a mensagem <b>"Pronto!"</b>. Se mostrou um erro, ele diz o que falta.</li>
-      <li>Rode o diagnóstico, que explica em português o que está impedindo:<div class="cmd" id="cmd-diag"><span id="cmd-diag-txt"></span></div></li>
-      <li>Se o código expirou (vale 15 minutos), feche esta janela e clique em "Conectar máquina" de novo.</li></ol></div>`, true);
+    <ol class="passos-con"><li id="como-abrir"></li><li>${tl("Cole este comando:", "Paste this command:", "Pega este comando:")}<div class="cmd" id="cmd"><span id="cmd-txt"></span><button class="btn peq" id="copiar">${ico("copiar", 14)} ${tl("Copiar", "Copy", "Copiar")}</button></div></li>
+    <li>${tl(`Espere a mensagem <b>${prontoTxt}</b>. Este aviso aqui vai mudar sozinho.`, `Wait for the <b>${prontoTxt}</b> message. This screen will update automatically.`, `Espera el mensaje <b>${prontoTxt}</b>. Este aviso cambiará solo.`)}</li></ol>
+    <details class="detalhe"><summary>${tl("O que esse comando faz?", "What does this command do?", "¿Qué hace este comando?")}</summary><p>${tl(`Baixa o agente do Jarvis (um arquivo pequeno, de código aberto) para uma pasta sua, instala o Python se faltar (no Windows), conecta este computador à sua conta com o código <b class="mono">${esc(d.codigo)}</b> (vale 15 minutos) e deixa o agente ligando junto com o computador. Não pede senha de administrador.`, `Downloads the Jarvis agent (a small open-source file) to your user folder, installs Python if missing (on Windows), connects this computer to your account with code <b class="mono">${esc(d.codigo)}</b> (valid for 15 minutes), and sets the agent to start with your computer. Does not require administrator password.`, `Descarga el agente de Jarvis (un archivo pequeño de código abierto) en tu carpeta, instala Python si falta (en Windows), conecta esta computadora a tu cuenta con el código <b class="mono">${esc(d.codigo)}</b> (válido por 15 minutos) y deja el agente iniciando con la computadora. No pide contraseña de administrador.`)}</p>
+    <p>${tl("A máquina começa no <b>modo seguro</b>: só roda ações prontas e revisadas (ver espaço em disco, limpar temporários, organizar Downloads…), e só quando você aprovar. Você pode desconectá-la quando quiser.", "The machine starts in <b>safe mode</b>: it only runs pre-built, reviewed actions (check disk space, clean temporary files, organize Downloads…), and only when you approve. You can disconnect it anytime.", "La máquina empieza en <b>modo seguro</b>: solo ejecuta acciones listas y revisadas (ver espacio en disco, limpiar temporales, organizar Descargas…), y solo cuando tú apruebes. Puedes desconectarla cuando quieras.")}</p></details>
+    <div class="esperando" id="esperando"><i></i>${tl("Esperando o computador se conectar…", "Waiting for the computer to connect…", "Esperando a que la computadora se conecte…")}</div>
+    <div class="ajuda-con oculto" id="ajuda-con"><b>${tl("Já passou um tempo e nada apareceu?", "Has it been a while and nothing showed up?", "¿Ya pasó un tiempo y no apareció nada?")}</b>
+      <ol><li>${tl(`Confira se o comando terminou com a mensagem <b>${prontoTxt}</b>. Se mostrou um erro, ele diz o que falta.`, `Check if the command finished with the <b>${prontoTxt}</b> message. If it showed an error, it explains what is missing.`, `Verifica si el comando terminó con el mensaje <b>${prontoTxt}</b>. Si mostró un error, dice qué falta.`)}</li>
+      <li>${tl("Rode o diagnóstico, que explica o que está impedindo:", "Run the diagnostics command, which explains what is blocking it:", "Ejecuta el diagnóstico, que explica qué lo está impidiendo:")}<div class="cmd" id="cmd-diag"><span id="cmd-diag-txt"></span></div></li>
+      <li>${tl('Se o código expirou (vale 15 minutos), feche esta janela e clique em "Conectar máquina" de novo.', 'If the code expired (valid for 15 minutes), close this window and click "Connect machine" again.', 'Si el código expiró (vale 15 minutos), cierra esta ventana y haz clic en "Conectar máquina" de nuevo.')}</li></ol></div>`, true);
   const DIAG = { windows: 'python "$env:LOCALAPPDATA\\MiniJarvis\\agente.py" --diagnostico', mac: "python3 ~/.minijarvis/agente.py --diagnostico", linux: "python3 ~/.minijarvis/agente.py --diagnostico" };
   const ajudaTimer = setTimeout(() => $("#ajuda-con", el).classList.remove("oculto"), 90000);
-  const mostrar = (s) => { $$("[data-so]", el).forEach((b) => b.classList.toggle("ativa", b.dataset.so === s)); $("#cmd-txt").textContent = d.comandos[s]; $("#como-abrir", el).innerHTML = COMO_ABRIR[s]; $("#cmd-diag-txt", el).textContent = DIAG[s]; };
+  const mostrar = (s) => { $$("[data-so]", el).forEach((b) => b.classList.toggle("ativa", b.dataset.so === s)); $("#cmd-txt").textContent = d.comandos[s]; $("#como-abrir", el).innerHTML = comoAbrirSO(s); $("#cmd-diag-txt", el).textContent = DIAG[s]; };
   $$("[data-so]", el).forEach((b) => (b.onclick = () => mostrar(b.dataset.so))); mostrar(so);
-  $("#copiar").onclick = async () => { try { await navigator.clipboard.writeText($("#cmd-txt").textContent); toast("Comando copiado!"); } catch { toast("Selecione e copie o comando."); } };
+  $("#copiar").onclick = async () => { try { await navigator.clipboard.writeText($("#cmd-txt").textContent); toast(tl("Comando copiado!", "Command copied!", "¡Comando copiado!")); } catch { toast(tl("Selecione e copie o comando.", "Select and copy the command.", "Selecciona y copia el comando.")); } };
   const t = setInterval(async () => {
     const p = await api("/api/parque");
     const m = p.maquinas.length > antes ? p.maquinas[p.maquinas.length - 1] : null;
     if (m && m.info && m.info.so) {
       clearInterval(t);
-      $("#esperando").innerHTML = `<span style="color:var(--ok);font-size:16px">✔ <b>${esc(m.apelido)}</b> conectado ao seu parque!</span>`;
+      $("#esperando").innerHTML = `<span style="color:var(--ok);font-size:16px">✔ <b>${esc(m.apelido)}</b> ${tl("conectado ao seu parque!", "connected to your fleet!", "¡conectada a tu parque!")}</span>`;
       setTimeout(() => { fechar(); irPara(estado.aba); }, 1800);
-    } else if (m) $("#esperando").innerHTML = "<i></i>Conectado! Recebendo as informações do computador…";
+    } else if (m) $("#esperando").innerHTML = `<i></i>${tl("Conectado! Recebendo as informações do computador…", "Connected! Receiving computer information…", "¡Conectado! Recibiendo la información de la computadora…")}`;
   }, 3000);
   estado.aoFecharModal = () => { clearInterval(t); clearTimeout(ajudaTimer); };
 }
@@ -975,7 +1237,7 @@ async function modalConectar() {
 /* ---- parque */
 async function telaParque() {
   const c = $("#conteudo");
-  c.innerHTML = barra("Parque", `<button class="btn prim" id="b-con">${ico("mais", 16)} Conectar máquina</button>`) + `
+  c.innerHTML = barra(tl("Parque", "Fleet", "Parque"), `<button class="btn prim" id="b-con">${ico("mais", 16)} ${tl("Conectar máquina", "Connect machine", "Conectar máquina")}</button>`) + `
     <div class="painel" style="margin-bottom:18px"><svg class="mapa" id="mapa" style="aspect-ratio:16/7;min-height:260px"></svg></div>
     <div class="maquinas" id="maqs"></div>`;
   $("#b-con").onclick = modalConectar;
@@ -983,7 +1245,7 @@ async function telaParque() {
     const p = await api("/api/parque"); estado.parque = p;
     desenharMapa($("#mapa"), p.maquinas, { aoClicar: (m) => document.getElementById("maq-" + m.id)?.scrollIntoView({ behavior: "smooth", block: "center" }) });
     $("#maqs").innerHTML = p.maquinas.length ? p.maquinas.map(cartaoMaquina).join("") :
-      `<div class="painel vazio" style="grid-column:1/-1"><h3>Monte seu parque</h3><p>Conecte o primeiro computador e o Jarvis passa a cuidar dele: ver como está, rodar tarefas, avisar de problemas.</p><button class="btn prim" id="b-con2">Conectar meu computador</button></div>`;
+      `<div class="painel vazio" style="grid-column:1/-1"><h3>${tl("Monte seu parque", "Build your fleet", "Arma tu parque")}</h3><p>${tl("Conecte o primeiro computador e o Jarvis passa a cuidar dele: ver como está, rodar tarefas, avisar de problemas.", "Connect your first computer and Jarvis starts taking care of it: checking health, running tasks, and alerting you to problems.", "Conecta tu primera computadora y Jarvis empezará a cuidarla: ver cómo está, ejecutar tareas y avisar de problemas.")}</p><button class="btn prim" id="b-con2">${tl("Conectar meu computador", "Connect my computer", "Conectar mi computadora")}</button></div>`;
     const b2 = $("#b-con2"); if (b2) b2.onclick = modalConectar;
     $$("[data-acao]").forEach((b) => (b.onclick = () => acaoMaquina(b.dataset.acao, p.maquinas.find((m) => m.id === +b.dataset.id))));
   };
@@ -997,45 +1259,45 @@ function cartaoMaquina(m) {
   const disco = (mt.discos || [])[0];
   const discoPct = disco && disco.total_gb ? 100 - (disco.livre_gb / disco.total_gb) * 100 : null;
   const lim = (estado.planos.find((p) => p.id === estado.usuario.plano) || {}).maquinas;
-  const aviso = m.bloqueada ? `<div class="bloq">🔒 <b>Bloqueada.</b> Seu plano conecta ${lim} máquina${lim === 1 ? "" : "s"}. Desconecte outra ou <button class="link-btn" data-assinar-ir2>assine um plano maior</button> para voltar a usá-la.</div>` : "";
+  const aviso = m.bloqueada ? `<div class="bloq">🔒 <b>${tl("Bloqueada.", "Locked.", "Bloqueada.")}</b> ${tl(`Seu plano conecta ${lim} máquina${lim === 1 ? "" : "s"}. Desconecte outra ou <button class="link-btn" data-assinar-ir2>assine um plano maior</button> para voltar a usá-la.`, `Your plan connects ${lim} machine${lim === 1 ? "" : "s"}. Disconnect another one or <button class="link-btn" data-assinar-ir2>upgrade your plan</button> to use it again.`, `Tu plan conecta ${lim} máquina${lim === 1 ? "" : "s"}. Desconecta otra o <button class="link-btn" data-assinar-ir2>suscríbete a un plan mayor</button> para volver a usarla.`)}</div>` : "";
   return `<div class="maq ${m.online && !m.bloqueada ? "on" : ""} ${m.bloqueada ? "bloqueada" : ""}" id="maq-${m.id}">
-    <div class="cab"><div class="ico">${ico("pc", 22)}</div><div style="min-width:0"><div class="nm">${esc(m.apelido)}</div><div class="so">${esc(i.so || m.hostname)}${m.versao && m.versao !== "?" ? " · agente " + esc(m.versao.split("/")[0]) : ""}</div></div>
-      <span class="st ${m.bloqueada ? "offline" : m.online ? (m.job_atual ? "executando" : "online") : "offline"}">${m.bloqueada ? "bloqueada" : m.online ? (m.job_atual ? "trabalhando" : "ligada") : "desligada"}</span></div>${aviso}
+    <div class="cab"><div class="ico">${ico("pc", 22)}</div><div style="min-width:0"><div class="nm">${esc(m.apelido)}</div><div class="so">${esc(i.so || m.hostname)}${m.versao && m.versao !== "?" ? " · " + tl("agente", "agent", "agente") + " " + esc(m.versao.split("/")[0]) : ""}</div></div>
+      <span class="st ${m.bloqueada ? "offline" : m.online ? (m.job_atual ? "executando" : "online") : "offline"}">${m.bloqueada ? tr("maq_bloqueada") : m.online ? (m.job_atual ? tr("maq_trabalhando") : tr("maq_ligada")) : tr("maq_desligada")}</span></div>${aviso}
     <div class="fichas">${i.cpu ? `<span class="ficha">${esc(i.cpu.replace(/\(R\)|\(TM\)|CPU|Processor/g, "").trim())}</span>` : ""}${i.ram_total_mb ? `<span class="ficha">${Math.round(i.ram_total_mb / 1024)} GB RAM</span>` : ""}${i.gpu ? `<span class="ficha">${esc(i.gpu)}</span>` : ""}${ias}</div>
-    ${m.bloqueada ? "" : m.online ? med("CPU", mt.cpu_pct) + med("RAM", mt.ram_pct) + med("Disco", discoPct) : `<div style="color:var(--tenue);font-size:13px">Visto ${quando(m.visto_em)}. Tarefas para ela esperam na fila até ligar.</div>`}
-    <div class="modo ${m.modo}" ${m.bloqueada ? 'hidden' : ""}>${m.modo === "livre" ? "⚠ <b>Modo livre</b>: roda qualquer comando que você aprovar." : "🛡 <b>Modo seguro</b>: só ações prontas e revisadas."} <button class="link-btn" data-acao="modo" data-id="${m.id}">${m.modo === "livre" ? "Voltar ao seguro" : "Liberar comandos"}</button></div>
-    <div class="acoes">${m.bloqueada ? "" : `<button class="btn peq" data-acao="tarefa" data-id="${m.id}">Nova tarefa</button>`}<button class="btn peq fantasma" data-acao="renomear" data-id="${m.id}">Renomear</button><button class="btn peq fantasma perigo" data-acao="remover" data-id="${m.id}">Desconectar</button></div>
+    ${m.bloqueada ? "" : m.online ? med("CPU", mt.cpu_pct) + med("RAM", mt.ram_pct) + med(tl("Disco", "Disk", "Disco"), discoPct) : `<div style="color:var(--tenue);font-size:13px">${tl("Visto", "Seen", "Visto")} ${quando(m.visto_em)}. ${tl("Tarefas para ela esperam na fila até ligar.", "Tasks for it wait in the queue until it comes online.", "Las tareas para ella esperan en la cola hasta que se encienda.")}</div>`}
+    <div class="modo ${m.modo}" ${m.bloqueada ? 'hidden' : ""}>${m.modo === "livre" ? tl("⚠ <b>Modo livre</b>: roda qualquer comando que você aprovar.", "⚠ <b>Free mode</b>: runs any command you approve.", "⚠ <b>Modo libre</b>: ejecuta cualquier comando que apruebes.") : tl("🛡 <b>Modo seguro</b>: só ações prontas e revisadas.", "🛡 <b>Safe mode</b>: only pre-built, reviewed actions.", "🛡 <b>Modo seguro</b>: solo acciones listas y revisadas.")} <button class="link-btn" data-acao="modo" data-id="${m.id}">${m.modo === "livre" ? tl("Voltar ao seguro", "Switch to safe mode", "Volver al modo seguro") : tl("Liberar comandos", "Enable free commands", "Liberar comandos")}</button></div>
+    <div class="acoes">${m.bloqueada ? "" : `<button class="btn peq" data-acao="tarefa" data-id="${m.id}">${tl("Nova tarefa", "New task", "Nueva tarea")}</button>`}<button class="btn peq fantasma" data-acao="renomear" data-id="${m.id}">${tl("Renomear", "Rename", "Renombrar")}</button><button class="btn peq fantasma perigo" data-acao="remover" data-id="${m.id}">${tl("Desconectar", "Disconnect", "Desconectar")}</button></div>
   </div>`;
 }
 
 async function acaoMaquina(acao, m) {
   if (acao === "tarefa") return modalNovaTarefa(m.hostname);
   if (acao === "modo") {
-    if (m.modo === "livre") { await post(`/api/maquinas/${m.id}/modo`, { modo: "seguro" }); toast("Modo seguro ligado."); return irPara("parque"); }
-    const { el, fechar } = abrirModal(`<h2>Liberar comandos em ${esc(m.apelido)}?</h2>
-      <p class="sub">No <b>modo livre</b>, esta máquina passa a rodar <b>qualquer comando</b> que for aprovado na sua conta, inclusive pedidos ao Claude Code com acesso total. É o que pessoas técnicas usam. Se alguém descobrir sua senha, poderá mexer neste computador.</p>
-      <p style="color:var(--suave);font-size:14px">Se você só quer limpar, organizar e acompanhar o computador, o modo seguro já basta.</p>
-      <form id="f"><label class="campo"><span>Confirme com a sua senha</span><input name="senha" type="password" required autocomplete="current-password"></label>
-      <button class="btn perigo" style="width:100%">Entendi, liberar comandos</button><div class="erro-txt" id="erro"></div></form>`);
+    if (m.modo === "livre") { await post(`/api/maquinas/${m.id}/modo`, { modo: "seguro" }); toast(tl("Modo seguro ligado.", "Safe mode enabled.", "Modo seguro activado.")); return irPara("parque"); }
+    const { el, fechar } = abrirModal(`<h2>${tl(`Liberar comandos em ${esc(m.apelido)}?`, `Enable free commands on ${esc(m.apelido)}?`, `¿Liberar comandos en ${esc(m.apelido)}?`)}</h2>
+      <p class="sub">${tl("No <b>modo livre</b>, esta máquina passa a rodar <b>qualquer comando</b> que for aprovado na sua conta, inclusive pedidos ao Claude Code com acesso total. É o que pessoas técnicas usam. Se alguém descobrir sua senha, poderá mexer neste computador.", "In <b>free mode</b>, this machine will run <b>any command</b> approved on your account, including full-access Claude Code requests. This is for technical users. If someone gets your password, they could control this computer.", "En <b>modo libre</b>, esta máquina ejecutará <b>cualquier comando</b> que se apruebe en tu cuenta, incluidos pedidos a Claude Code con acceso total. Es lo que usan personas técnicas. Si alguien descubre tu contraseña, podrá usar esta computadora.")}</p>
+      <p style="color:var(--suave);font-size:14px">${tl("Se você só quer limpar, organizar e acompanhar o computador, o modo seguro já basta.", "If you just want to clean up, organize, and monitor your computer, safe mode is all you need.", "Si solo quieres limpiar, organizar y monitorear la computadora, el modo seguro ya es suficiente.")}</p>
+      <form id="f"><label class="campo"><span>${tl("Confirme com a sua senha", "Confirm with your password", "Confirma con tu contraseña")}</span><input name="senha" type="password" required autocomplete="current-password"></label>
+      <button class="btn perigo" style="width:100%">${tl("Entendi, liberar comandos", "I understand, enable free commands", "Entendido, liberar comandos")}</button><div class="erro-txt" id="erro"></div></form>`);
     $("#f", el).onsubmit = async (e) => {
       e.preventDefault();
-      try { await post(`/api/maquinas/${m.id}/modo`, { modo: "livre", senha: new FormData(e.target).get("senha") }); fechar(); toast("Modo livre ligado."); irPara("parque"); }
+      try { await post(`/api/maquinas/${m.id}/modo`, { modo: "livre", senha: new FormData(e.target).get("senha") }); fechar(); toast(tl("Modo livre ligado.", "Free mode enabled.", "Modo libre activado.")); irPara("parque"); }
       catch (x) { $("#erro", el).textContent = x.message; }
     };
   }
   if (acao === "renomear") {
-    const { el, fechar } = abrirModal(`<h2>Renomear</h2><form id="f"><label class="campo"><span>Nome no painel</span><input name="apelido" value="${esc(m.apelido)}" maxlength="40" required></label><button class="btn prim" style="width:100%">Salvar</button></form>`);
+    const { el, fechar } = abrirModal(`<h2>${tl("Renomear", "Rename", "Renombrar")}</h2><form id="f"><label class="campo"><span>${tl("Nome no painel", "Name on dashboard", "Nombre en el panel")}</span><input name="apelido" value="${esc(m.apelido)}" maxlength="40" required></label><button class="btn prim" style="width:100%">${tl("Salvar", "Save", "Guardar")}</button></form>`);
     $("#f", el).onsubmit = async (e) => { e.preventDefault(); await api(`/api/maquinas/${m.id}`, { method: "PATCH", body: JSON.stringify({ apelido: new FormData(e.target).get("apelido") }) }); fechar(); irPara("parque"); };
   }
   if (acao === "remover") {
-    const { el, fechar } = abrirModal(`<h2>Desconectar ${esc(m.apelido)}?</h2><p class="sub">O agente nesse computador perde o acesso na hora. O histórico de tarefas continua aqui.</p><div style="display:flex;gap:10px"><button class="btn" id="n" style="flex:1">Voltar</button><button class="btn perigo" id="s" style="flex:1">Desconectar</button></div>`);
+    const { el, fechar } = abrirModal(`<h2>${tl(`Desconectar ${esc(m.apelido)}?`, `Disconnect ${esc(m.apelido)}?`, `¿Desconectar ${esc(m.apelido)}?`)}</h2><p class="sub">${tl("O agente nesse computador perde o acesso na hora. O histórico de tarefas continua aqui.", "The agent on that computer loses access immediately. Your task history remains here.", "El agente en esa computadora pierde el acceso al instante. El historial de tareas sigue aquí.")}</p><div style="display:flex;gap:10px"><button class="btn" id="n" style="flex:1">${tl("Voltar", "Back", "Volver")}</button><button class="btn perigo" id="s" style="flex:1">${tl("Desconectar", "Disconnect", "Desconectar")}</button></div>`);
     $("#n", el).onclick = fechar;
     $("#s", el).onclick = async () => { await api(`/api/maquinas/${m.id}`, { method: "DELETE" }); fechar(); irPara("parque"); };
   }
 }
 
 function opcoesMaquinas(sel) {
-  return (estado.parque?.maquinas || []).filter((m) => !m.bloqueada).map((m) => `<option value="${esc(m.hostname)}" ${m.hostname === sel ? "selected" : ""}>${esc(m.apelido)}${m.online ? "" : " (desligada)"}</option>`).join("");
+  return (estado.parque?.maquinas || []).filter((m) => !m.bloqueada).map((m) => `<option value="${esc(m.hostname)}" ${m.hostname === sel ? "selected" : ""}>${esc(m.apelido)}${m.online ? "" : ` (${tr("maq_desligada")})`}</option>`).join("");
 }
 
 async function carregarAcoes() {
@@ -1049,8 +1311,8 @@ async function modalNovaTarefa(maquina) {
   const acoes = await carregarAcoes();
   const maqs = estado.parque.maquinas;
   let alvo = maqs.find((m) => m.hostname === maquina) || maqs[0];
-  const { el, fechar } = abrirModal(`<h2>Nova tarefa</h2>
-    <label class="campo"><span>Em qual máquina</span><select id="maq">${opcoesMaquinas(alvo.hostname)}</select></label>
+  const { el, fechar } = abrirModal(`<h2>${tl("Nova tarefa", "New task", "Nueva tarea")}</h2>
+    <label class="campo"><span>${tl("Em qual máquina", "On which machine", "En qué máquina")}</span><select id="maq">${opcoesMaquinas(alvo.hostname)}</select></label>
     <div class="grade-acoes">${acoes.map((a) => `<button class="acao-pronta" data-a="${a.id}"><span>${a.icone}</span><b>${esc(a.titulo)}</b><small>${esc(a.descricao)}</small></button>`).join("")}</div>
     <div id="livre"></div><div class="erro-txt" id="erro"></div>`, true);
   const enviar = async (corpo) => {
@@ -1058,12 +1320,12 @@ async function modalNovaTarefa(maquina) {
     catch (x) { $("#erro", el).textContent = x.message; }
   };
   const desenharLivre = () => {
-    $("#livre", el).innerHTML = alvo.modo === "livre" ? `<details class="detalhe"><summary>Comando livre (modo livre)</summary><form id="f">
-      <div class="form-linha"><label class="campo"><span>Tipo</span><select name="tipo"><option value="shell">Comando (terminal)</option><option value="claude">Pedido ao Claude Code</option><option value="gemini">Pedido ao Gemini</option></select></label>
-      <label class="campo"><span>Título</span><input name="titulo" maxlength="120"></label></div>
-      <label class="campo"><span>Comando ou pedido</span><textarea name="texto" rows="3" required></textarea></label>
-      <button class="btn" style="width:100%">Enviar para a máquina</button></form></details>`
-      : `<p style="font-size:13px;color:var(--tenue);margin:12px 0 0">🛡 Esta máquina está no modo seguro: só ações prontas. Para comandos livres, use "Liberar comandos" no cartão da máquina.</p>`;
+    $("#livre", el).innerHTML = alvo.modo === "livre" ? `<details class="detalhe"><summary>${tl("Comando livre (modo livre)", "Custom command (free mode)", "Comando libre (modo libre)")}</summary><form id="f">
+      <div class="form-linha"><label class="campo"><span>${tl("Tipo", "Type", "Tipo")}</span><select name="tipo"><option value="shell">${tl("Comando (terminal)", "Command (terminal)", "Comando (terminal)")}</option><option value="claude">${tl("Pedido ao Claude Code", "Request to Claude Code", "Pedido a Claude Code")}</option><option value="gemini">${tl("Pedido ao Gemini", "Request to Gemini", "Pedido a Gemini")}</select></label>
+      <label class="campo"><span>${tl("Título", "Title", "Título")}</span><input name="titulo" maxlength="120"></label></div>
+      <label class="campo"><span>${tl("Comando ou pedido", "Command or request", "Comando o pedido")}</span><textarea name="texto" rows="3" required></textarea></label>
+      <button class="btn" style="width:100%">${tl("Enviar para a máquina", "Send to machine", "Enviar a la máquina")}</button></form></details>`
+      : `<p style="font-size:13px;color:var(--tenue);margin:12px 0 0">${tl('🛡 Esta máquina está no modo seguro: só ações prontas. Para comandos livres, use "Liberar comandos" no cartão da máquina.', '🛡 This machine is in safe mode: pre-built actions only. For custom commands, click "Enable free commands" on the machine card.', '🛡 Esta máquina está en modo seguro: solo acciones listas. Para comandos libres, usa "Liberar comandos" en la tarjeta de la máquina.')}</p>`;
     const f = $("#f", el); if (f) f.onsubmit = (e) => { e.preventDefault(); enviar(Object.fromEntries(new FormData(e.target))); };
   };
   $("#maq", el).onchange = (e) => { alvo = maqs.find((m) => m.hostname === e.target.value); desenharLivre(); };
@@ -1074,14 +1336,22 @@ async function modalNovaTarefa(maquina) {
 /* ---- tarefas */
 async function telaTarefas() {
   const c = $("#conteudo");
-  c.innerHTML = barra("Tarefas", `<button class="btn prim" id="b-nova">${ico("mais", 16)} Nova tarefa</button>`) + `
-    <div class="abas" id="filtros">${[["", "Todas"], ["aguardando", "Aguardando você"], ["executando", "Executando"], ["pendente", "Na fila"], ["concluido", "Concluídas"], ["falhou", "Falharam"]].map(([v, n]) => `<button class="aba ${(estado.filtro || "") === v ? "ativa" : ""}" data-f="${v}">${n}</button>`).join("")}</div>
+  const filtros = [
+    ["", tl("Todas", "All", "Todas")],
+    ["aguardando", tl("Aguardando você", "Awaiting you", "Esperando tu aprobación")],
+    ["executando", tl("Executando", "Running", "Ejecutando")],
+    ["pendente", tl("Na fila", "Queued", "En cola")],
+    ["concluido", tl("Concluídas", "Completed", "Completadas")],
+    ["falhou", tl("Falharam", "Failed", "Fallaron")],
+  ];
+  c.innerHTML = barra(tl("Tarefas", "Tasks", "Tareas"), `<button class="btn prim" id="b-nova">${ico("mais", 16)} ${tl("Nova tarefa", "New task", "Nueva tarea")}</button>`) + `
+    <div class="abas" id="filtros">${filtros.map(([v, n]) => `<button class="aba ${(estado.filtro || "") === v ? "ativa" : ""}" data-f="${v}">${n}</button>`).join("")}</div>
     <div class="lista-jobs" id="jobs"></div>`;
   $("#b-nova").onclick = () => modalNovaTarefa();
   $$("[data-f]").forEach((b) => (b.onclick = () => { estado.filtro = b.dataset.f; telaTarefas(); }));
   const atualizar = async () => {
     const jobs = await api("/api/jobs?limite=100" + (estado.filtro ? "&status=" + estado.filtro : ""));
-    $("#jobs").innerHTML = jobs.length ? jobs.map(linhaJob).join("") : `<div class="painel vazio"><h3>Nada por aqui</h3><p>As tarefas que você ou o Jarvis criarem aparecem nesta lista, com o resultado de cada uma.</p></div>`;
+    $("#jobs").innerHTML = jobs.length ? jobs.map(linhaJob).join("") : `<div class="painel vazio"><h3>${tl("Nada por aqui", "Nothing here yet", "Nada por aquí")}</h3><p>${tl("As tarefas que você ou o Jarvis criarem aparecem nesta lista, com o resultado de cada uma.", "Tasks created by you or Jarvis appear in this list, along with their output.", "Las tareas que tú o Jarvis creen aparecerán en esta lista, con el resultado de cada una.")}</p></div>`;
     ligarJobs($("#jobs"));
   };
   await atualizar(); repetir(atualizar, 5000);
@@ -1099,19 +1369,19 @@ async function abrirJob(id) {
   const render = async () => {
     const j = await api(`/api/jobs/${id}`);
     const acao = j.payload.acao && (await carregarAcoes()).find((x) => x.id === j.payload.acao);
-    const comando = acao ? `🛡 Ação pronta e revisada: ${acao.titulo}\n${acao.descricao}` : (j.payload.comando || j.payload.prompt || "");
+    const comando = acao ? `🛡 ${tl("Ação pronta e revisada", "Pre-built, reviewed action", "Acción lista y revisada")}: ${acao.titulo}\n${acao.descricao}` : (j.payload.comando || j.payload.prompt || "");
     const saida = j.resultado?.stdout || j.resultado?.resposta || "";
-    g.innerHTML = `<button class="btn peq fantasma" id="fx">← Voltar</button>
+    g.innerHTML = `<button class="btn peq fantasma" id="fx">← ${tl("Voltar", "Back", "Volver")}</button>
       <h2>${esc(j.titulo || j.tipo)}</h2>
-      <div class="meta">${st(j.status)}<span>#${j.id}</span><span>${esc(j.agente || j.tags)}</span><span>${j.tipo === "shell" ? "comando" : esc(j.tipo)}</span><span>criada ${quando(j.criado_em)}</span>${j.origem === "jarvis" ? "<span>✦ pelo Jarvis</span>" : ""}</div>
+      <div class="meta">${st(j.status)}<span>#${j.id}</span><span>${esc(j.agente || j.tags)}</span><span>${j.tipo === "shell" ? tl("comando", "command", "comando") : esc(j.tipo)}</span><span>${tl("criada", "created", "creada")} ${quando(j.criado_em)}</span>${j.origem === "jarvis" ? `<span>✦ ${tl("pelo Jarvis", "by Jarvis", "por Jarvis")}</span>` : ""}</div>
       ${j.status === "executando" ? `<div class="barra-prog" style="margin-bottom:12px"><i style="width:${Math.max(8, j.progresso)}%"></i></div>` : ""}
-      <div class="painel" style="margin-bottom:12px"><h2>${j.tipo === "shell" ? "Comando" : "Pedido"}</h2><pre class="log">${esc(comando)}</pre></div>
-      ${j.ajuda ? `<div class="ajuda-falha"><b>O que aconteceu</b><p>${esc(j.ajuda)}</p></div>` : ""}
+      <div class="painel" style="margin-bottom:12px"><h2>${j.tipo === "shell" ? tl("Comando", "Command", "Comando") : tl("Pedido", "Request", "Pedido")}</h2><pre class="log">${esc(comando)}</pre></div>
+      ${j.ajuda ? `<div class="ajuda-falha"><b>${tl("O que aconteceu", "What happened", "Qué pasó")}</b><p>${esc(j.ajuda)}</p></div>` : ""}
       ${j.mensagem ? `<p style="color:var(--suave)">${esc(j.mensagem)}</p>` : ""}
-      <div class="painel"><h2>Saída ${j.status === "executando" ? '<span class="digitando"></span>' : ""}</h2><pre class="log" id="log">${esc(j.log || saida || (j.status === "pendente" ? "Esperando a máquina pegar a tarefa…" : j.status === "aguardando" ? "Esta tarefa espera a sua aprovação." : "Sem saída."))}</pre></div>
+      <div class="painel"><h2>${tl("Saída", "Output", "Salida")} ${j.status === "executando" ? '<span class="digitando"></span>' : ""}</h2><pre class="log" id="log">${esc(j.log || saida || (j.status === "pendente" ? tl("Esperando a máquina pegar a tarefa…", "Waiting for the machine to pick up the task…", "Esperando a que la máquina tome la tarea…") : j.status === "aguardando" ? tl("Esta tarefa espera a sua aprovação.", "This task is waiting for your approval.", "Esta tarea espera tu aprobación.") : tl("Sem saída.", "No output.", "Sin salida.")))}</pre></div>
       <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap">
-        ${j.status === "aguardando" ? '<button class="btn prim" data-j="aprovar">Aprovar e executar</button>' : ""}
-        ${["aguardando", "pendente", "executando"].includes(j.status) ? '<button class="btn perigo" data-j="cancelar">Cancelar</button>' : '<button class="btn" data-j="repetir">Rodar de novo</button>'}
+        ${j.status === "aguardando" ? `<button class="btn prim" data-j="aprovar">${tl("Aprovar e executar", "Approve and run", "Aprobar y ejecutar")}</button>` : ""}
+        ${["aguardando", "pendente", "executando"].includes(j.status) ? `<button class="btn perigo" data-j="cancelar">${tl("Cancelar", "Cancel", "Cancelar")}</button>` : `<button class="btn" data-j="repetir">${tl("Rodar de novo", "Run again", "Ejecutar de nuevo")}</button>`}
       </div>`;
     $("#fx", g).onclick = fechar;
     const lg = $("#log", g); lg.scrollTop = lg.scrollHeight;
@@ -1126,21 +1396,39 @@ async function abrirJob(id) {
 }
 
 /* ---- jarvis (chat) */
-const ATALHOS = [
-  ["Como está meu parque?", "Me diga como estão minhas máquinas agora e se alguma precisa de atenção."],
-  ["Liberar espaço", "Veja qual máquina está com o disco mais cheio e prepare uma limpeza segura dos arquivos temporários."],
-  ["Lembrar algo", "Lembre que "],
-  ["Organizar Downloads", "Organize a pasta Downloads da minha máquina em pastas por tipo de arquivo."],
-  ["Escrever um e-mail", "Escreva um e-mail educado para "],
-  ["Explicar algo", "Explique em palavras simples: "],
-];
+function atalhosChat() {
+  if (estado.idioma === "en") return [
+    ["How is my fleet?", "Tell me how my machines are doing right now and whether any need attention."],
+    ["Free up space", "Check which machine has the fullest disk and prepare a safe cleanup of temporary files."],
+    ["Remember something", "Remember that "],
+    ["Organize Downloads", "Organize the Downloads folder on my machine into subfolders by file type."],
+    ["Write an email", "Write a polite email to "],
+    ["Explain something", "Explain in simple words: "],
+  ];
+  if (estado.idioma === "es") return [
+    ["¿Cómo está mi parque?", "Dime cómo están mis máquinas ahora y si alguna necesita atención."],
+    ["Liberar espacio", "Mira qué máquina tiene el disco más lleno y prepara una limpieza segura de archivos temporales."],
+    ["Recordar algo", "Recuerda que "],
+    ["Organizar Descargas", "Organiza la carpeta Descargas de mi máquina en carpetas por tipo de archivo."],
+    ["Escribir un correo", "Escribe un correo amable para "],
+    ["Explicar algo", "Explica en palabras simples: "],
+  ];
+  return [
+    ["Como está meu parque?", "Me diga como estão minhas máquinas agora e se alguma precisa de atenção."],
+    ["Liberar espaço", "Veja qual máquina está com o disco mais cheio e prepare uma limpeza segura dos arquivos temporários."],
+    ["Lembrar algo", "Lembre que "],
+    ["Organizar Downloads", "Organize a pasta Downloads da minha máquina em pastas por tipo de arquivo."],
+    ["Escrever um e-mail", "Escreva um e-mail educado para "],
+    ["Explicar algo", "Explique em palavras simples: "],
+  ];
+}
 
 async function telaJarvis() {
   const c = $("#conteudo");
-  c.innerHTML = barra("Jarvis", `<button class="btn peq" id="compartilhar" title="Publica esta conversa numa página que qualquer pessoa pode ver">Compartilhar</button><button class="btn peq" id="nova">${ico("mais", 16)} Nova conversa</button>`) + `
+  c.innerHTML = barra("Jarvis", `<button class="btn peq" id="compartilhar" title="${tl("Publica esta conversa numa página que qualquer pessoa pode ver", "Publish this conversation on a public link anyone can view", "Publica esta conversación en una página que cualquiera puede ver")}">${tl("Compartilhar", "Share", "Compartir")}</button><button class="btn peq" id="nova">${ico("mais", 16)} ${tl("Nova conversa", "New chat", "Nueva conversación")}</button>`) + `
     <div class="chat"><div class="convs" id="convs"></div>
       <div class="area"><div class="msgs" id="msgs"></div>
-        <form class="envio" id="envio"><textarea id="texto" rows="1" placeholder="Peça qualquer coisa ao Jarvis…"></textarea><button class="btn prim" id="enviar">Enviar</button></form></div></div>`;
+        <form class="envio" id="envio"><textarea id="texto" rows="1" placeholder="${tl("Peça qualquer coisa ao Jarvis…", "Ask Jarvis anything…", "Pídele cualquier cosa a Jarvis…")}"></textarea><button class="btn prim" id="enviar">${tl("Enviar", "Send", "Enviar")}</button></form></div></div>`;
   $("#nova").onclick = () => { estado.conversaId = null; boasVindas(); carregarConversas(); };
   $("#compartilhar").onclick = compartilharConversa;
   const ta = $("#texto");
@@ -1152,24 +1440,25 @@ async function telaJarvis() {
   if (estado.rascunho) { ta.value = estado.rascunho; estado.rascunho = null; ajustar(); ta.focus(); }
 }
 async function compartilharConversa() {
-  if (!estado.conversaId) return toast("Converse com o Jarvis primeiro; depois compartilhe a conversa.");
+  if (!estado.conversaId) return toast(tl("Converse com o Jarvis primeiro; depois compartilhe a conversa.", "Chat with Jarvis first, then share the conversation.", "Conversa con Jarvis primero; luego comparte la conversación."));
   let r;
   try { r = await post(`/api/conversas/${estado.conversaId}/compartilhar`); } catch (e) { return toast(e.message); }
-  const { el } = abrirModal(`<h2>Conversa publicada</h2>
-    <p class="sub">Quem abrir este link vê a conversa inteira (sem precisar de conta) e um convite para criar o próprio Jarvis. Se alguém criar conta por ele, você ganha créditos.</p>
-    <div class="cmd"><span>${esc(r.url)}</span><button class="btn peq" id="copiar-link">Copiar</button></div>
-    <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap"><a class="btn peq" target="_blank" href="https://wa.me/?text=${encodeURIComponent("Olha o que o Jarvis fez: " + r.url)}">Mandar no WhatsApp</a><button class="btn peq fantasma perigo" id="despublicar">Despublicar</button></div>`);
-  $("#copiar-link", el).onclick = () => { navigator.clipboard.writeText(r.url); toast("Link copiado."); };
-  $("#despublicar", el).onclick = async () => { await api(`/api/conversas/${estado.conversaId}/compartilhar`, { method: "DELETE" }); $("#modais").innerHTML = ""; toast("Conversa despublicada."); };
+  const { el } = abrirModal(`<h2>${tl("Conversa publicada", "Conversation published", "Conversación publicada")}</h2>
+    <p class="sub">${tl("Quem abrir este link vê a conversa inteira (sem precisar de conta) e um convite para criar o próprio Jarvis. Se alguém criar conta por ele, você ganha créditos.", "Anyone opening this link can read the conversation (no account required) and create their own Jarvis. If someone signs up through it, you earn credits.", "Quien abra este enlace verá toda la conversación (sin necesitar cuenta) y una invitación para crear su propio Jarvis. Si alguien crea cuenta por él, ganas créditos.")}</p>
+    <div class="cmd"><span>${esc(r.url)}</span><button class="btn peq" id="copiar-link">${tl("Copiar", "Copy", "Copiar")}</button></div>
+    <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap"><a class="btn peq" target="_blank" href="https://wa.me/?text=${encodeURIComponent(tl("Olha o que o Jarvis fez: ", "Look what Jarvis did: ", "Mira lo que hizo Jarvis: ") + r.url)}">${tl("Mandar no WhatsApp", "Share on WhatsApp", "Enviar por WhatsApp")}</a><button class="btn peq fantasma perigo" id="despublicar">${tl("Despublicar", "Unpublish", "Despublicar")}</button></div>`);
+  $("#copiar-link", el).onclick = () => { navigator.clipboard.writeText(r.url); toast(tl("Link copiado.", "Link copied.", "Enlace copiado.")); };
+  $("#despublicar", el).onclick = async () => { await api(`/api/conversas/${estado.conversaId}/compartilhar`, { method: "DELETE" }); $("#modais").innerHTML = ""; toast(tl("Conversa despublicada.", "Conversation unpublished.", "Conversación despublicada.")); };
 }
 function ajustar() { const ta = $("#texto"); ta.style.height = "auto"; ta.style.height = Math.min(ta.scrollHeight, 200) + "px"; }
 
 function boasVindas() {
   const n = estado.usuario.nome.split(" ")[0];
-  $("#msgs").innerHTML = `<div class="boas"><svg class="orb" viewBox="0 0 40 40">${LOGO}</svg><h2>Olá, ${esc(n)}. Em que posso ajudar?</h2>
-    <p>Eu converso, lembro do que importa e trabalho nos seus computadores.</p>
-    <div class="atalhos">${ATALHOS.map(([t, p], i) => `<button class="atalho" data-at="${i}"><b>${esc(t)}</b><span>${esc(p.slice(0, 60))}${p.length > 60 ? "…" : ""}</span></button>`).join("")}</div></div>`;
-  $$("[data-at]").forEach((b) => (b.onclick = () => { const ta = $("#texto"); ta.value = ATALHOS[+b.dataset.at][1]; ta.focus(); ajustar(); }));
+  const atalhos = atalhosChat();
+  $("#msgs").innerHTML = `<div class="boas"><svg class="orb" viewBox="0 0 40 40">${LOGO}</svg><h2>${tl(`Olá, ${esc(n)}. Em que posso ajudar?`, `Hi, ${esc(n)}. How can I help?`, `Hola, ${esc(n)}. ¿En qué puedo ayudar?`)}</h2>
+    <p>${tl("Eu converso, lembro do que importa e trabalho nos seus computadores.", "I chat, remember what matters, and work on your computers.", "Converso, recuerdo lo que importa y trabajo en tus computadoras.")}</p>
+    <div class="atalhos">${atalhos.map(([t, p], i) => `<button class="atalho" data-at="${i}"><b>${esc(t)}</b><span>${esc(p.slice(0, 60))}${p.length > 60 ? "…" : ""}</span></button>`).join("")}</div></div>`;
+  $$("[data-at]").forEach((b) => (b.onclick = () => { const ta = $("#texto"); ta.value = atalhos[+b.dataset.at][1]; ta.focus(); ajustar(); }));
 }
 
 async function carregarConversas() {
@@ -1191,15 +1480,15 @@ function rolar() { const m = $("#msgs"); if (m) m.scrollTop = m.scrollHeight; }
 
 function cartaoTarefa(t) {
   const d = document.createElement("div"); d.className = "cartao-tarefa";
-  d.innerHTML = `<div class="cab">${st("aguardando")}<b>${esc(t.titulo)}</b><span style="color:var(--suave);font-size:13px">em ${esc(t.maquina)}</span></div>
+  d.innerHTML = `<div class="cab">${st("aguardando")}<b>${esc(t.titulo)}</b><span style="color:var(--suave);font-size:13px">${tl("em", "on", "en")} ${esc(t.maquina)}</span></div>
     ${t.explicacao ? `<div class="explica">${esc(t.explicacao)}</div>` : ""}
-    ${t.pronta ? `<div style="font-size:13px;color:var(--suave)">🛡 Ação pronta e revisada: ${esc(t.comando)}</div>`
-      : `<div style="font-size:13px;color:var(--pend)">⚠ Comando livre${t.tipo === "claude" ? " (pedido ao Claude Code)" : ""}. Só aprove se entender o que ele faz:</div><pre>${esc(t.comando)}</pre>`}
-    <div class="acoes"><button class="btn prim peq" data-a="aprovar">Aprovar e executar</button><button class="btn peq perigo" data-a="cancelar">Não rodar</button></div>`;
+    ${t.pronta ? `<div style="font-size:13px;color:var(--suave)">🛡 ${tl("Ação pronta e revisada", "Pre-built, reviewed action", "Acción lista y revisada")}: ${esc(t.comando)}</div>`
+      : `<div style="font-size:13px;color:var(--pend)">⚠ ${tl("Comando livre", "Custom command", "Comando libre")}${t.tipo === "claude" ? tl(" (pedido ao Claude Code)", " (Claude Code request)", " (pedido a Claude Code)") : ""}. ${tl("Só aprove se entender o que ele faz:", "Only approve if you understand what it does:", "Solo aprueba si entiendes lo que hace:")}</div><pre>${esc(t.comando)}</pre>`}
+    <div class="acoes"><button class="btn prim peq" data-a="aprovar">${tl("Aprovar e executar", "Approve and run", "Aprobar y ejecutar")}</button><button class="btn peq perigo" data-a="cancelar">${tl("Não rodar", "Do not run", "No ejecutar")}</button></div>`;
   $$("[data-a]", d).forEach((b) => (b.onclick = async () => {
     await post(`/api/jobs/${t.id}/${b.dataset.a}`);
     if (b.dataset.a === "cancelar") { $(".acoes", d).innerHTML = st("cancelado"); return; }
-    $(".acoes", d).innerHTML = `${st("pendente")} <button class="btn peq">Acompanhar</button>`;
+    $(".acoes", d).innerHTML = `${st("pendente")} <button class="btn peq">${tl("Acompanhar", "Follow", "Seguir")}</button>`;
     $(".acoes button", d).onclick = () => abrirJob(t.id);
     const acompanhar = setInterval(async () => {
       const j = await api(`/api/jobs/${t.id}`); if (!d.isConnected) return clearInterval(acompanhar);
@@ -1222,9 +1511,9 @@ async function enviar() {
   const corpo = addMsg("assistant", ""); corpo.classList.add("digitando");
   let recebido = "", aposCartao = false, noTexto = document.createTextNode(""); corpo.appendChild(noTexto);
   try {
-    const r = await fetch("/api/mensagens", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ texto, conversa_id: estado.conversaId }) });
+    const r = await fetch("/api/mensagens", { method: "POST", headers: cabecalhosIdioma(), body: JSON.stringify({ texto, conversa_id: estado.conversaId }) });
     if (!r.ok) {
-      let d = "Algo deu errado."; try { d = (await r.json()).detail; } catch {}
+      let d = tr("erro_generico"); try { d = (await r.json()).detail; } catch {}
       if (r.status === 401) return mostrarLanding();
       if (r.status === 402) modalUpgrade(d);
       throw new Error(d);
@@ -1238,12 +1527,11 @@ async function enviar() {
         const ev = /^event: (.*)$/m.exec(bloco)?.[1], dados = JSON.parse(/^data: (.*)$/m.exec(bloco)?.[1] ?? "null");
         if (ev === "conversa") estado.conversaId = dados.id;
         else if (ev === "texto") {
-          // logo depois de um cartão, a quebra de linha entre rodadas sobra: pula
           if (aposCartao && !dados.trim()) continue;
           aposCartao = false; recebido += dados; noTexto.textContent += dados; rolar();
         }
         else if (ev === "tarefa") { corpo.appendChild(cartaoTarefa(dados)); noTexto = document.createTextNode(""); corpo.appendChild(noTexto); aposCartao = true; rolar(); }
-        else if (ev === "nota") { const s = document.createElement("span"); s.className = "chip-nota"; s.textContent = `✦ Anotado no cérebro: ${dados.nota}`; corpo.appendChild(s); noTexto = document.createTextNode(""); corpo.appendChild(noTexto); }
+        else if (ev === "nota") { const s = document.createElement("span"); s.className = "chip-nota"; s.textContent = `✦ ${tl("Anotado no cérebro:", "Saved to brain:", "Anotado en el cerebro:")} ${dados.nota}`; corpo.appendChild(s); noTexto = document.createTextNode(""); corpo.appendChild(noTexto); }
         else if (ev === "fim") { estado.usuario.creditos = dados.creditos; montarNav(); const p = $(".pilula b"); if (p) p.textContent = dados.creditos; }
         else if (ev === "erro") throw new Error(dados);
       }
@@ -1256,8 +1544,8 @@ async function enviar() {
 /* ---- cérebro */
 async function telaCerebro() {
   const c = $("#conteudo");
-  c.innerHTML = barra("Cérebro", `<button class="btn prim" id="b-nota">${ico("mais", 16)} Nova nota</button>`) + `
-    <p style="color:var(--suave);margin:-8px 0 16px">A memória do Jarvis. Cada bolinha é uma nota; as linhas são os [[links]] entre elas. Arraste para explorar.</p>
+  c.innerHTML = barra(tl("Cérebro", "Brain", "Cerebro"), `<button class="btn prim" id="b-nota">${ico("mais", 16)} ${tl("Nova nota", "New note", "Nueva nota")}</button>`) + `
+    <p style="color:var(--suave);margin:-8px 0 16px">${tl("A memória do Jarvis. Cada bolinha é uma nota; as linhas são os [[links]] entre elas. Arraste para explorar.", "Jarvis's memory. Each dot is a note; lines are [[links]] between them. Drag to explore.", "La memoria de Jarvis. Cada punto es una nota; las líneas son los [[enlaces]] entre ellas. Arrastra para explorar.")}</p>
     <div class="cerebro"><div class="painel" style="padding:8px"><svg id="grafo-cerebro"></svg></div><div class="painel editor" id="editor"></div></div>`;
   $("#b-nota").onclick = () => editarNota(null);
   const d = await api("/api/cerebro"); estado.cerebro = d;
@@ -1268,7 +1556,6 @@ async function telaCerebro() {
 function grafoCerebro(d) {
   const svg = $("#grafo-cerebro"), W = svg.clientWidth || 700, H = svg.clientHeight || 560;
   svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
-  const nomes = new Set(d.notas.map((n) => n.nome));
   const nos = [...d.notas.map((n) => ({ id: n.nome, real: true, grau: 0 })),
     ...[...new Set(d.arestas.filter((a) => !a.existe).map((a) => a.para))].map((id) => ({ id, real: false, grau: 0 }))];
   const idx = Object.fromEntries(nos.map((n, i) => [n.id, i]));
@@ -1318,16 +1605,16 @@ function grafoCerebro(d) {
 async function editarNota(nome, novoNome) {
   const ed = $("#editor"); let n = { nome: novoNome || "", conteudo: novoNome ? `# ${novoNome}\n\n` : "" };
   if (nome) n = await api(`/api/cerebro/${encodeURIComponent(nome)}`);
-  ed.innerHTML = `<div class="cab">${nome ? `<b>${esc(n.nome)}</b>` : `<input id="nome-nota" placeholder="Nome da nota" value="${esc(n.nome)}" style="flex:1;padding:9px 11px;border-radius:9px;border:1px solid var(--borda2);background:var(--fundo)">`}
-    ${nome ? '<button class="btn peq perigo" id="apagar">Apagar</button>' : ""}<button class="btn peq prim" id="salvar">Salvar</button></div>
-    ${nome ? `<div style="font-size:12px;color:var(--tenue);margin-bottom:8px">${n.origem === "jarvis" ? "✦ escrita pelo Jarvis" : n.origem === "painel" ? "escrita por você" : "veio de " + esc(n.origem)} · ${quando(n.atualizado_em)}</div>` : ""}
+  ed.innerHTML = `<div class="cab">${nome ? `<b>${esc(n.nome)}</b>` : `<input id="nome-nota" placeholder="${tl("Nome da nota", "Note title", "Nombre de la nota")}" value="${esc(n.nome)}" style="flex:1;padding:9px 11px;border-radius:9px;border:1px solid var(--borda2);background:var(--fundo)">`}
+    ${nome ? `<button class="btn peq perigo" id="apagar">${tl("Apagar", "Delete", "Borrar")}</button>` : ""}<button class="btn peq prim" id="salvar">${tl("Salvar", "Save", "Guardar")}</button></div>
+    ${nome ? `<div style="font-size:12px;color:var(--tenue);margin-bottom:8px">${n.origem === "jarvis" ? tl("✦ escrita pelo Jarvis", "✦ written by Jarvis", "✦ escrita por Jarvis") : n.origem === "painel" ? tl("escrita por você", "written by you", "escrita por ti") : tl("veio de ", "from ", "vino de ") + esc(n.origem)} · ${quando(n.atualizado_em)}</div>` : ""}
     <textarea id="txt-nota" spellcheck="false"></textarea>
-    <div style="font-size:12px;color:var(--tenue);margin-top:8px">Use [[Nome de outra nota]] para ligar ideias.</div>`;
+    <div style="font-size:12px;color:var(--tenue);margin-top:8px">${tl("Use [[Nome de outra nota]] para ligar ideias.", "Use [[Another note name]] to link ideas.", "Usa [[Nombre de otra nota]] para enlazar ideas.")}</div>`;
   $("#txt-nota").value = n.conteudo;
   $("#salvar").onclick = async () => {
-    const alvo = nome || $("#nome-nota").value.trim(); if (!alvo) return toast("Dê um nome para a nota.");
+    const alvo = nome || $("#nome-nota").value.trim(); if (!alvo) return toast(tl("Dê um nome para a nota.", "Give the note a title.", "Dale un nombre a la nota."));
     await api(`/api/cerebro/${encodeURIComponent(alvo)}`, { method: "PUT", body: JSON.stringify({ conteudo: $("#txt-nota").value }) });
-    toast("Nota salva."); const d = await api("/api/cerebro"); grafoCerebro(d); editarNota(alvo);
+    toast(tl("Nota salva.", "Note saved.", "Nota guardada.")); const d = await api("/api/cerebro"); grafoCerebro(d); editarNota(alvo);
   };
   const ap = $("#apagar"); if (ap) ap.onclick = async () => { await api(`/api/cerebro/${encodeURIComponent(nome)}`, { method: "DELETE" }); telaCerebro(); };
 }
@@ -1335,18 +1622,18 @@ async function editarNota(nome, novoNome) {
 /* ---- rotinas */
 async function telaRotinas() {
   const c = $("#conteudo");
-  c.innerHTML = barra("Rotinas", `<button class="btn prim" id="b-rot">${ico("mais", 16)} Nova rotina</button>`) + `
-    <p style="color:var(--suave);margin:-8px 0 16px">Tarefas que se repetem. Rode com um clique, ou deixe o Jarvis rodar sozinho toda manhã.</p>
+  c.innerHTML = barra(tl("Rotinas", "Routines", "Rutinas"), `<button class="btn prim" id="b-rot">${ico("mais", 16)} ${tl("Nova rotina", "New routine", "Nueva rutina")}</button>`) + `
+    <p style="color:var(--suave);margin:-8px 0 16px">${tl("Tarefas que se repetem. Rode com um clique, ou deixe o Jarvis rodar sozinho toda manhã.", "Recurring tasks. Run with one click, or let Jarvis run them automatically every morning.", "Tareas que se repiten. Ejecútalas con un clic o deja que Jarvis las ejecute solo cada mañana.")}</p>
     <div class="maquinas" id="rots"></div>`;
   $("#b-rot").onclick = modalRotina;
   const rots = await api("/api/rotinas");
   $("#rots").innerHTML = rots.length ? rots.map((r) => `<div class="maq">
-      <div class="cab"><div class="ico">${ico("rotinas", 22)}</div><div style="min-width:0"><div class="nm">${esc(r.nome)}</div><div class="so">${esc(r.maquina)} · ${r.frequencia === "diaria" ? "todo dia de manhã" : "quando você mandar"}</div></div></div>
+      <div class="cab"><div class="ico">${ico("rotinas", 22)}</div><div style="min-width:0"><div class="nm">${esc(r.nome)}</div><div class="so">${esc(r.maquina)} · ${r.frequencia === "diaria" ? tl("todo dia de manhã", "every morning", "cada mañana") : tl("quando você mandar", "when you run it", "cuando tú mandes")}</div></div></div>
       ${r.descricao ? `<div style="color:var(--suave);font-size:14px">${esc(r.descricao)}</div>` : ""}
       <pre class="log" style="max-height:90px">${esc(r.texto)}</pre>
-      <div style="font-size:13px;color:var(--tenue)">Última vez: ${r.ultimo ? st(r.ultimo.status) + " " + quando(r.ultimo.criado_em) : "nunca rodou"}</div>
-      <div class="acoes"><button class="btn peq prim" data-rodar="${r.id}">Rodar agora</button>${r.ultimo ? `<button class="btn peq" data-ver="${r.ultimo.id}">Ver resultado</button>` : ""}<button class="btn peq fantasma perigo" data-del="${r.id}">Apagar</button></div></div>`).join("")
-    : `<div class="painel vazio" style="grid-column:1/-1"><h3>Automatize o que se repete</h3><p>Backup das fotos, limpeza da pasta Temp, relatório do dia… crie uma vez e esqueça.</p><button class="btn prim" id="b-rot2">Criar minha primeira rotina</button></div>`;
+      <div style="font-size:13px;color:var(--tenue)">${tl("Última vez:", "Last run:", "Última vez:")} ${r.ultimo ? st(r.ultimo.status) + " " + quando(r.ultimo.criado_em) : tl("nunca rodou", "never ran", "nunca se ejecutó")}</div>
+      <div class="acoes"><button class="btn peq prim" data-rodar="${r.id}">${tl("Rodar agora", "Run now", "Ejecutar ahora")}</button>${r.ultimo ? `<button class="btn peq" data-ver="${r.ultimo.id}">${tl("Ver resultado", "View result", "Ver resultado")}</button>` : ""}<button class="btn peq fantasma perigo" data-del="${r.id}">${tl("Apagar", "Delete", "Borrar")}</button></div></div>`).join("")
+    : `<div class="painel vazio" style="grid-column:1/-1"><h3>${tl("Automatize o que se repete", "Automate what repeats", "Automatiza lo que se repite")}</h3><p>${tl("Backup das fotos, limpeza da pasta Temp, relatório do dia… crie uma vez e esqueça.", "Photo backups, Temp folder cleanup, daily report… create it once and forget about it.", "Respaldo de fotos, limpieza de la carpeta Temp, informe del día… créala una vez y olvídate.")}</p><button class="btn prim" id="b-rot2">${tl("Criar minha primeira rotina", "Create my first routine", "Crear mi primera rutina")}</button></div>`;
   const b2 = $("#b-rot2"); if (b2) b2.onclick = modalRotina;
   $$("[data-rodar]").forEach((b) => (b.onclick = async () => { const r = await post(`/api/rotinas/${b.dataset.rodar}/rodar`); abrirJob(r.id); telaRotinas(); }));
   $$("[data-ver]").forEach((b) => (b.onclick = () => abrirJob(+b.dataset.ver)));
@@ -1357,14 +1644,14 @@ async function modalRotina() {
   estado.parque = await api("/api/parque");
   if (!estado.parque.maquinas.length) return modalConectar();
   const acoes = await carregarAcoes(), temDiaria = !!planoAtual().rotinas_diarias;
-  const { el, fechar } = abrirModal(`<h2>Nova rotina</h2><form id="f">
-    <label class="campo"><span>Nome</span><input name="nome" required maxlength="80" placeholder="Limpeza semanal"></label>
-    <div class="form-linha"><label class="campo"><span>Máquina</span><select name="maquina">${opcoesMaquinas()}</select></label>
-    <label class="campo"><span>Quando</span><select name="frequencia"><option value="manual">Quando eu mandar</option><option value="diaria" ${temDiaria ? "" : "disabled"}>Todo dia de manhã ${temDiaria ? "" : "(planos com rotinas diárias)"}</option></select></label></div>
-    <label class="campo"><span>O que fazer</span><select name="texto" id="sel-acao">${acoes.map((a) => `<option value="${a.id}">${a.icone} ${esc(a.titulo)}</option>`).join("")}<option value="">✎ Comando livre (só máquinas no modo livre)</option></select></label>
-    <label class="campo oculto" id="campo-livre"><span>Comando</span><textarea name="livre" rows="3"></textarea></label>
-    <button class="btn prim" style="width:100%">Criar rotina</button><div class="erro-txt" id="erro"></div></form>
-    ${temDiaria ? "" : '<p style="font-size:13px;color:var(--suave);margin:12px 0 0">✦ Nos planos com rotinas automáticas o Jarvis roda suas rotinas sozinho todo dia. <button class="link-btn" id="ver-pro">Ver planos</button></p>'}`, true);
+  const { el, fechar } = abrirModal(`<h2>${tl("Nova rotina", "New routine", "Nueva rutina")}</h2><form id="f">
+    <label class="campo"><span>${tl("Nome", "Name", "Nombre")}</span><input name="nome" required maxlength="80" placeholder="${tl("Limpeza semanal", "Weekly cleanup", "Limpieza semanal")}"></label>
+    <div class="form-linha"><label class="campo"><span>${tl("Máquina", "Machine", "Máquina")}</span><select name="maquina">${opcoesMaquinas()}</select></label>
+    <label class="campo"><span>${tl("Quando", "When", "Cuándo")}</span><select name="frequencia"><option value="manual">${tl("Quando eu mandar", "When I run it", "Cuando yo mande")}</option><option value="diaria" ${temDiaria ? "" : "disabled"}>${tl("Todo dia de manhã", "Every morning", "Cada mañana")} ${temDiaria ? "" : tl("(planos com rotinas diárias)", "(plans with daily routines)", "(planes con rutinas diarias)")}</option></select></label></div>
+    <label class="campo"><span>${tl("O que fazer", "What to do", "Qué hacer")}</span><select name="texto" id="sel-acao">${acoes.map((a) => `<option value="${a.id}">${a.icone} ${esc(a.titulo)}</option>`).join("")}<option value="">✎ ${tl("Comando livre (só máquinas no modo livre)", "Custom command (free-mode machines only)", "Comando libre (solo máquinas en modo libre)")}</option></select></label>
+    <label class="campo oculto" id="campo-livre"><span>${tl("Comando", "Command", "Comando")}</span><textarea name="livre" rows="3"></textarea></label>
+    <button class="btn prim" style="width:100%">${tl("Criar rotina", "Create routine", "Crear rutina")}</button><div class="erro-txt" id="erro"></div></form>
+    ${temDiaria ? "" : `<p style="font-size:13px;color:var(--suave);margin:12px 0 0">✦ ${tl("Nos planos com rotinas automáticas o Jarvis roda suas rotinas sozinho todo dia.", "On plans with automatic routines, Jarvis runs your routines every day on its own.", "En los planes con rutinas automáticas, Jarvis ejecuta tus rutinas solo todos los días.")} <button class="link-btn" id="ver-pro">${tl("Ver planos", "View plans", "Ver planes")}</button></p>`}`, true);
   const vp = $("#ver-pro", el); if (vp) vp.onclick = () => { fechar(); irPara("planos"); };
   $("#sel-acao", el).onchange = (e) => $("#campo-livre", el).classList.toggle("oculto", !!e.target.value);
   $("#f", el).onsubmit = async (e) => {
@@ -1381,49 +1668,51 @@ async function modalRotina() {
 async function telaPlanos() {
   const c = $("#conteudo"), u = estado.usuario;
   const [planos, extrato, ind] = await Promise.all([carregarPlanos(), api("/api/extrato"), api("/api/indicacao").catch(() => null)]);
-  c.innerHTML = barra("Planos") + `
+  const nota = tr("nota_moeda");
+  c.innerHTML = barra(tl("Planos", "Plans", "Planes")) + `
     <div class="painel" style="margin-bottom:22px;background:linear-gradient(120deg,rgba(63,208,201,.12),rgba(139,123,255,.12));border-color:var(--borda2)">
-      <h2 style="color:var(--texto);font-family:var(--titulo);font-size:24px;letter-spacing:-.02em;text-transform:none">Seu parque inteiro, trabalhando sozinho</h2>
-      <p style="color:var(--suave);margin:0">Conecte mais computadores, use modelos mais inteligentes, rode rotinas toda manhã e receba sugestões diárias do parque.</p></div>
+      <h2 style="color:var(--texto);font-family:var(--titulo);font-size:24px;letter-spacing:-.02em;text-transform:none">${tl("Seu parque inteiro, trabalhando sozinho", "Your entire fleet, working on its own", "Todo tu parque, trabajando solo")}</h2>
+      <p style="color:var(--suave);margin:0">${tl("Conecte mais computadores, use modelos mais inteligentes, rode rotinas toda manhã e receba sugestões diárias do parque.", "Connect more computers, use smarter AI models, run morning routines, and receive daily fleet suggestions.", "Conecta más computadoras, usa modelos más inteligentes, ejecuta rutinas cada mañana y recibe sugerencias diarias del parque.")}</p></div>
+    ${nota ? `<div class="nota-moeda">${esc(nota)}</div>` : ""}
     <div class="precos" style="margin-bottom:26px">${cartoesPreco(planos, u.plano)}</div>
-    <div class="painel" style="margin-bottom:22px"><h2>Sua conta</h2>
-      <p style="margin:0 0 12px;color:var(--suave)">${esc(u.email)} · ${u.email_verificado ? "✔ e-mail confirmado" : "e-mail não confirmado"}</p>
-      ${u.plano !== "gratis" ? `<p style="margin:0 0 12px;color:var(--suave)">Plano <b style="color:var(--texto)">${esc(u.plano)}</b> válido até ${u.plano_ate ? quandoDia(u.plano_ate) : "—"}${u.assinatura ? " · renova sozinho no cartão" : " · sem renovação automática"}</p>` : ""}
-      <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn peq" id="sair-todos">Sair de todos os dispositivos</button><button class="btn peq fantasma perigo" id="apagar-conta">Apagar minha conta</button>${u.assinatura ? '<button class="btn peq fantasma perigo" id="cancelar-ass">Cancelar assinatura</button>' : ""}</div>
-      <p style="font-size:13px;color:var(--tenue);margin:10px 0 0">Use se acha que alguém viu sua senha. Depois, entrar de um navegador novo pede um código enviado ao seu e-mail.</p></div>
-    ${ind ? `<div class="painel" style="margin-bottom:22px"><h2>Indique e ganhe</h2>
-      <p style="margin:0 0 12px;color:var(--suave)">Quem criar conta pelo seu link ganha <b style="color:var(--texto)">${ind.bonus_indicado} créditos</b> a mais, e você ganha <b style="color:var(--texto)">${ind.bonus}</b> por pessoa (até ${ind.teto}). Até agora: ${ind.indicados} ${ind.indicados === 1 ? "pessoa" : "pessoas"}, ${ind.creditos_ganhos} créditos.</p>
-      <div class="cmd"><span>${esc(ind.link)}</span><button class="btn peq" id="copiar-ind">Copiar</button></div>
-      <div style="margin-top:10px"><a class="btn peq" target="_blank" href="https://wa.me/?text=${encodeURIComponent("Estou usando o Jarvis, um assistente de IA que cuida dos meus computadores. Crie o seu grátis por este link e ganhe créditos: " + ind.link)}">Mandar no WhatsApp</a></div></div>` : ""}
-    <div class="painel"><h2>Extrato de créditos</h2><table class="tabela">${extrato.map((e) => `<tr><td>${esc(e.motivo)}</td><td style="color:var(--tenue);font-family:Inter">${quando(e.criado_em)}</td><td style="color:${e.delta > 0 ? "var(--ok)" : "var(--suave)"}">${e.delta > 0 ? "+" : ""}${e.delta}</td></tr>`).join("")}</table></div>`;
+    <div class="painel" style="margin-bottom:22px"><h2>${tl("Sua conta", "Your account", "Tu cuenta")}</h2>
+      <p style="margin:0 0 12px;color:var(--suave)">${esc(u.email)} · ${u.email_verificado ? tl("✔ e-mail confirmado", "✔ email verified", "✔ correo confirmado") : tl("e-mail não confirmado", "email not verified", "correo no confirmado")}</p>
+      ${u.plano !== "gratis" ? `<p style="margin:0 0 12px;color:var(--suave)">${tl("Plano", "Plan", "Plan")} <b style="color:var(--texto)">${esc(u.plano)}</b> ${tl("válido até", "valid until", "válido hasta")} ${u.plano_ate ? quandoDia(u.plano_ate) : "—"}${u.assinatura ? tl(" · renova sozinho no cartão", " · auto-renews on card", " · se renueva solo en la tarjeta") : tl(" · sem renovação automática", " · no auto-renewal", " · sin renovación automática")}</p>` : ""}
+      <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn peq" id="sair-todos">${tl("Sair de todos os dispositivos", "Sign out of all devices", "Salir de todos los dispositivos")}</button><button class="btn peq fantasma perigo" id="apagar-conta">${tl("Apagar minha conta", "Delete my account", "Borrar mi cuenta")}</button>${u.assinatura ? `<button class="btn peq fantasma perigo" id="cancelar-ass">${tl("Cancelar assinatura", "Cancel subscription", "Cancelar suscripción")}</button>` : ""}</div>
+      <p style="font-size:13px;color:var(--tenue);margin:10px 0 0">${tl("Use se acha que alguém viu sua senha. Depois, entrar de um navegador novo pede um código enviado ao seu e-mail.", "Use this if you think someone saw your password. Signing in from a new browser will require a code sent to your email.", "Úsalo si crees que alguien vio tu contraseña. Luego, entrar desde un navegador nuevo pedirá un código enviado a tu correo.")}</p></div>
+    ${ind ? `<div class="painel" style="margin-bottom:22px"><h2>${tl("Indique e ganhe", "Refer & earn", "Invita y gana")}</h2>
+      <p style="margin:0 0 12px;color:var(--suave)">${tl(`Quem criar conta pelo seu link ganha <b style="color:var(--texto)">${ind.bonus_indicado} créditos</b> a mais, e você ganha <b style="color:var(--texto)">${ind.bonus}</b> por pessoa (até ${ind.teto}). Até agora: ${ind.indicados} ${ind.indicados === 1 ? "pessoa" : "pessoas"}, ${ind.creditos_ganhos} créditos.`, `Anyone who signs up with your link gets <b style="color:var(--texto)">${ind.bonus_indicado} extra credits</b>, and you earn <b style="color:var(--texto)">${ind.bonus}</b> per person (up to ${ind.teto}). So far: ${ind.indicados} ${ind.indicados === 1 ? "person" : "people"}, ${ind.creditos_ganhos} credits.`, `Quien cree una cuenta con tu enlace gana <b style="color:var(--texto)">${ind.bonus_indicado} créditos</b> extra, y tú ganas <b style="color:var(--texto)">${ind.bonus}</b> por persona (hasta ${ind.teto}). Hasta ahora: ${ind.indicados} ${ind.indicados === 1 ? "persona" : "personas"}, ${ind.creditos_ganhos} créditos.`)}</p>
+      <div class="cmd"><span>${esc(ind.link)}</span><button class="btn peq" id="copiar-ind">${tl("Copiar", "Copy", "Copiar")}</button></div>
+      <div style="margin-top:10px"><a class="btn peq" target="_blank" href="https://wa.me/?text=${encodeURIComponent(tl("Estou usando o Jarvis, um assistente de IA que cuida dos meus computadores. Crie o seu grátis por este link e ganhe créditos: ", "I'm using Jarvis, an AI assistant that takes care of my computers. Create yours for free with this link and get extra credits: ", "Estoy usando Jarvis, un asistente de IA que cuida mis computadoras. Crea el tuyo gratis con este enlace y gana créditos: ") + ind.link)}">${tl("Mandar no WhatsApp", "Share on WhatsApp", "Enviar por WhatsApp")}</a></div></div>` : ""}
+    <div class="painel"><h2>${tl("Extrato de créditos", "Credit history", "Historial de créditos")}</h2><table class="tabela">${extrato.map((e) => `<tr><td>${esc(e.motivo)}</td><td style="color:var(--tenue);font-family:Inter">${quando(e.criado_em)}</td><td style="color:${e.delta > 0 ? "var(--ok)" : "var(--suave)"}">${e.delta > 0 ? "+" : ""}${e.delta}</td></tr>`).join("")}</table></div>`;
   $("#sair-todos").onclick = async () => { await post("/api/sair-de-todos"); location.reload(); };
   $("#apagar-conta").onclick = () => {
-    const { el } = abrirModal(`<h2>Apagar a conta</h2>
-      <p class="sub">Isso apaga <b>tudo</b>: conversas, cérebro, máquinas, tarefas e créditos${u.assinatura ? ", e cancela a sua assinatura" : ""}. Não dá para desfazer.</p>
-      <form id="f"><label class="campo"><span>Confirme com a sua senha</span><input name="senha" type="password" required autocomplete="current-password"></label>
-      <button class="btn grande perigo" style="width:100%">Apagar tudo para sempre</button><div class="erro-txt" id="erro"></div></form>`);
+    const { el } = abrirModal(`<h2>${tl("Apagar a conta", "Delete account", "Borrar la cuenta")}</h2>
+      <p class="sub">${tl(`Isso apaga <b>tudo</b>: conversas, cérebro, máquinas, tarefas e créditos${u.assinatura ? ", e cancela a sua assinatura" : ""}. Não dá para desfazer.`, `This deletes <b>everything</b>: chats, brain, machines, tasks, and credits${u.assinatura ? ", and cancels your subscription" : ""}. This cannot be undone.`, `Esto borra <b>todo</b>: conversaciones, cerebro, máquinas, tareas y créditos${u.assinatura ? ", y cancela tu suscripción" : ""}. No se puede deshacer.`)}</p>
+      <form id="f"><label class="campo"><span>${tl("Confirme com a sua senha", "Confirm with your password", "Confirma con tu contraseña")}</span><input name="senha" type="password" required autocomplete="current-password"></label>
+      <button class="btn grande perigo" style="width:100%">${tl("Apagar tudo para sempre", "Delete everything forever", "Borrar todo para siempre")}</button><div class="erro-txt" id="erro"></div></form>`);
     $("#f", el).onsubmit = async (e) => {
       e.preventDefault();
       try { await post("/api/eu/apagar", { senha: new FormData(e.target).get("senha") }); location.href = "/"; }
       catch (x) { $("#erro", el).textContent = x.message; }
     };
   };
-  const ci = $("#copiar-ind"); if (ci) ci.onclick = () => { navigator.clipboard.writeText(ind.link); toast("Link copiado."); };
+  const ci = $("#copiar-ind"); if (ci) ci.onclick = () => { navigator.clipboard.writeText(ind.link); toast(tl("Link copiado.", "Link copied.", "Enlace copiado.")); };
   const ca = $("#cancelar-ass");
   if (ca) ca.onclick = async () => {
-    if (!confirm("Cancelar a renovação automática? Seu plano continua até " + quandoDia(u.plano_ate) + ".")) return;
-    try { await post("/api/pagamentos/cancelar"); estado.usuario = await api("/api/eu"); toast("Assinatura cancelada."); telaPlanos(); } catch (e) { toast(e.message); }
+    if (!confirm(tl("Cancelar a renovação automática? Seu plano continua até ", "Cancel auto-renewal? Your plan remains active until ", "¿Cancelar la renovación automática? Tu plan sigue activo hasta ") + quandoDia(u.plano_ate) + ".")) return;
+    try { await post("/api/pagamentos/cancelar"); estado.usuario = await api("/api/eu"); toast(tl("Assinatura cancelada.", "Subscription canceled.", "Suscripción cancelada.")); telaPlanos(); } catch (e) { toast(e.message); }
   };
 }
 
 /* ---- confirmação de e-mail e código de entrada */
 function telaVerificar(u) {
   $("#landing").classList.add("oculto"); $("#app").classList.add("oculto");
-  const { el } = abrirModal(`<h2>Confirme seu e-mail</h2>
-    <p class="sub">Mandamos um código de 6 números para <b>${esc(u.email)}</b>. Digite aqui para ativar sua conta e ganhar seus créditos.</p>
+  const { el } = abrirModal(`<h2>${tl("Confirme seu e-mail", "Verify your email", "Confirma tu correo")}</h2>
+    <p class="sub">${tl(`Mandamos um código de 6 números para <b>${esc(u.email)}</b>. Digite aqui para ativar sua conta e ganhar seus créditos.`, `We sent a 6-digit code to <b>${esc(u.email)}</b>. Enter it here to activate your account and receive your credits.`, `Enviamos un código de 6 dígitos a <b>${esc(u.email)}</b>. Ingrésalo aquí para activar tu cuenta y recibir tus créditos.`)}</p>
     <form id="f"><input class="codigo-input" name="codigo" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required placeholder="000000">
-    <button class="btn prim grande" style="width:100%;margin-top:12px">Confirmar</button><div class="erro-txt" id="erro"></div></form>
-    <p style="text-align:center;font-size:14px;color:var(--suave);margin:6px 0 0">Não chegou? Olhe o spam ou <button class="link-btn" id="reenviar">mande de novo</button> · <button class="link-btn" id="outra">usar outro e-mail</button></p>`);
+    <button class="btn prim grande" style="width:100%;margin-top:12px">${tl("Confirmar", "Confirm", "Confirmar")}</button><div class="erro-txt" id="erro"></div></form>
+    <p style="text-align:center;font-size:14px;color:var(--suave);margin:6px 0 0">${tl("Não chegou? Olhe o spam ou", "Didn't get it? Check spam or", "¿No llegó? Revisa el spam o")} <button class="link-btn" id="reenviar">${tl("mande de novo", "resend code", "enviar de nuevo")}</button> · <button class="link-btn" id="outra">${tl("usar outro e-mail", "use another email", "usar otro correo")}</button></p>`);
   $(".fechar", el).remove();
   $("input", el).focus();
   $("#f", el).onsubmit = async (e) => {
@@ -1431,15 +1720,15 @@ function telaVerificar(u) {
     try { const v = await post("/api/verificar", { codigo: new FormData(e.target).get("codigo") }); $("#modais").innerHTML = ""; iniciarApp(v, true); }
     catch (x) { $("#erro", el).textContent = x.message; }
   };
-  $("#reenviar", el).onclick = async () => { try { await post("/api/verificar/reenviar"); toast("Código reenviado."); } catch (x) { toast(x.message); } };
+  $("#reenviar", el).onclick = async () => { try { await post("/api/verificar/reenviar"); toast(tl("Código reenviado.", "Code resent.", "Código reenviado.")); } catch (x) { toast(x.message); } };
   $("#outra", el).onclick = async () => { await post("/api/sair"); location.reload(); };
 }
 
 function modalCodigoEntrada(r) {
-  const { el } = abrirModal(`<h2>É você mesmo?</h2>
-    <p class="sub">Você está entrando por um navegador novo. Mandamos um código para <b>${esc(r.email)}</b>.</p>
+  const { el } = abrirModal(`<h2>${tl("É você mesmo?", "Is it really you?", "¿Eres tú?")}</h2>
+    <p class="sub">${tl(`Você está entrando por um navegador novo. Mandamos um código para <b>${esc(r.email)}</b>.`, `You are signing in from a new browser. We sent a code to <b>${esc(r.email)}</b>.`, `Estás entrando desde un navegador nuevo. Enviamos un código a <b>${esc(r.email)}</b>.`)}</p>
     <form id="f"><input class="codigo-input" name="codigo" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required placeholder="000000">
-    <button class="btn prim grande" style="width:100%;margin-top:12px">Entrar</button><div class="erro-txt" id="erro"></div></form>`);
+    <button class="btn prim grande" style="width:100%;margin-top:12px">${tr("btn_entrar")}</button><div class="erro-txt" id="erro"></div></form>`);
   $("input", el).focus();
   $("#f", el).onsubmit = async (e) => {
     e.preventDefault();
