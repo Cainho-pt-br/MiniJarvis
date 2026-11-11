@@ -236,3 +236,53 @@ def test_cron_renova_as_sugestoes_do_pro_sem_cobrar(cliente, mp, monkeypatch):
     modulo.db().execute("UPDATE usuarios SET plano='basico' WHERE id=?", (u["id"],))
     modulo.db().execute("DELETE FROM sugestoes")
     assert cliente.get("/api/cron/rotinas", headers=cab).json()["sugestoes"] == 0
+
+
+def test_plano_turbo_ponta_a_ponta(cliente, mp, monkeypatch):
+    from nuvem import operacao
+    from .test_parque import parear
+
+    u = novo(cliente)
+    # 1. Pagamento Pix do Turbo (R$ 119,90 -> +8.000 créditos, 31 dias)
+    r = cliente.post("/api/pagamentos/pix/turbo").json()
+    assert r["valor"] == 119.90
+    mp_id = next(iter(mp.pagamentos))
+    mp.aprovar(mp_id)
+    assert cliente.get(f"/api/pagamentos/{r['id']}").json()["status"] == "aprovado"
+    eu = cliente.get("/api/eu").json()
+    assert eu["plano"] == "turbo" and eu["creditos"] == modulo.CREDITOS_INICIAIS + 8000
+    assert operacao.funil()["pagamento"] == 1
+    rel = operacao.relatorio()
+    assert rel["pagantes"] == 1 and rel["receita_brl"] == 119.90
+
+    # 2. Até 10 máquinas conectadas no Turbo (a 11ª pede upgrade)
+    for i in range(1, 11):
+        parear(cliente, f"maq-{i}", livre=False)
+    assert cliente.post("/api/parque/parear").status_code == 402
+    assert len(cliente.get("/api/parque").json()["maquinas"]) == 10
+    assert not any(m["bloqueada"] for m in cliente.get("/api/parque").json()["maquinas"])
+
+    # 3. Rotina diária e sugestões automáticas sem gastar créditos no Turbo
+    assert cliente.post("/api/rotinas", json={"nome": "Manhã", "maquina": "maq-1", "tipo": "acao",
+                                              "texto": "espaco_disco", "frequencia": "diaria"}).status_code == 200
+    monkeypatch.setenv("CRON_SECRET", "s3")
+    cab = {"Authorization": "Bearer s3"}
+    cron = cliente.get("/api/cron/rotinas", headers=cab).json()
+    assert cron["disparadas"] == 1 and cron["sugestoes"] == 1
+    assert cliente.get("/api/eu").json()["creditos"] == modulo.CREDITOS_INICIAIS + 8000
+
+    # 4. Rebaixamento para Pro bloqueia as 6 máquinas excedentes (mantém as 4 mais antigas)
+    modulo.db().execute("UPDATE usuarios SET plano='pro' WHERE id=?", (u["id"],))
+    ms_pro = cliente.get("/api/parque").json()["maquinas"]
+    assert len([m for m in ms_pro if not m["bloqueada"]]) == 4
+    assert len([m for m in ms_pro if m["bloqueada"]]) == 6
+
+    # 5. Estorno volta para grátis, tira os 8.000 créditos e deixa só 1 máquina liberada
+    modulo.db().execute("UPDATE usuarios SET plano='turbo' WHERE id=?", (u["id"],))
+    mp.pagamentos[mp_id]["status"] = "refunded"
+    cliente.post("/api/pagamentos/webhook", json={"type": "payment", "data": {"id": mp_id}})
+    eu = cliente.get("/api/eu").json()
+    assert eu["plano"] == "gratis" and eu["creditos"] == modulo.CREDITOS_INICIAIS
+    ms_gratis = cliente.get("/api/parque").json()["maquinas"]
+    assert len([m for m in ms_gratis if not m["bloqueada"]]) == 1
+    assert len([m for m in ms_gratis if m["bloqueada"]]) == 9

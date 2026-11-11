@@ -101,7 +101,7 @@ h1, h2, h3 { font-family: var(--titulo); letter-spacing: -.02em; margin: 0; }
 .caso { padding: 10px 16px; border-radius: 999px; border: 1px solid var(--borda); background: var(--cartao); color: var(--suave); font-size: 14px; }
 .caso b { color: var(--texto); font-weight: 600; }
 
-.precos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; align-items: stretch; }
+.precos { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; align-items: stretch; }
 .preco { padding: 28px; border-radius: var(--r); background: var(--cartao); border: 1px solid var(--borda); display: flex; flex-direction: column; gap: 14px; position: relative; }
 .preco.destaque { border-color: transparent; background: linear-gradient(var(--cartao), var(--cartao)) padding-box, linear-gradient(140deg, var(--ciano), var(--violeta)) border-box; border: 1px solid transparent; box-shadow: 0 30px 80px -40px var(--brilho); }
 .preco .rot { position: absolute; top: -12px; left: 24px; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px; background: linear-gradient(135deg, var(--ciano), var(--violeta)); color: #04121a; }
