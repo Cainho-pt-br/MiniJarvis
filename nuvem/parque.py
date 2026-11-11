@@ -163,7 +163,7 @@ def gerar_codigo(request: Request, u: Any = Depends(nucleo.usuario_verificado)) 
         n = nucleo.db().execute("SELECT COUNT(*) AS n FROM agentes WHERE usuario_id = ?", (u["id"],)).fetchone()["n"]
         if n >= limite:
             raise HTTPException(402, f"Seu plano conecta até {limite} máquina{'s' if limite > 1 else ''}. "
-                                     "Assine o Pro para montar seu parque inteiro.")
+                                     "Assine um plano maior para montar seu parque inteiro.")
     codigo = "".join(secrets.choice(_ALFABETO) for _ in range(6))
     expira = (datetime.now(timezone.utc) + timedelta(minutes=15)).isoformat(timespec="seconds")
     with nucleo.transacao() as con:
@@ -681,8 +681,8 @@ def criar_rotina(r: NovaRotina, u: Any = Depends(nucleo.usuario_verificado)) -> 
         raise HTTPException(400, "Rotina inválida.")
     if r.tipo == "acao" and r.texto not in acoes.ACOES:
         raise HTTPException(400, "Ação desconhecida.")
-    if r.frequencia == "diaria" and u["plano"] != "pro":
-        raise HTTPException(402, "Rotinas diárias automáticas são do plano Pro.")
+    if r.frequencia == "diaria" and not nucleo.info_plano(u["plano"]).get("rotinas_diarias"):
+        raise HTTPException(402, "Rotinas diárias automáticas não estão incluídas no seu plano atual.")
     m = nucleo.db().execute("SELECT modo, apelido, hostname FROM agentes WHERE usuario_id=? AND hostname=?",
                             (u["id"], r.maquina)).fetchone()
     if m is None:
@@ -739,17 +739,23 @@ def cron_rotinas(request: Request) -> dict[str, int]:
     hoje = nucleo.agora()[:10]
     disparadas = 0
     operacao.faxina()
-    # Rotina diária é do Pro: quem voltou para o grátis mantém a rotina, mas ela
-    # só volta a disparar sozinha quando o plano for renovado.
-    for r in nucleo.db().execute("SELECT r.* FROM rotinas r JOIN usuarios u ON u.id = r.usuario_id "
-                                 "WHERE r.frequencia='diaria' AND u.plano='pro'").fetchall():
-        if (r["ultima_execucao"] or "")[:10] == hoje:
-            continue
-        try:
-            _rodar_rotina(r)
-            disparadas += 1
-        except HTTPException:
-            continue  # a máquina da rotina foi removida
+    # Rotina diária só dispara nos planos com `rotinas_diarias`: quem voltou para o
+    # grátis mantém a rotina, mas ela só volta a disparar quando o plano for renovado.
+    planos_diarias = [p["id"] for p in nucleo.PLANOS if p.get("rotinas_diarias")]
+    if planos_diarias:
+        marcadores = ",".join("?" * len(planos_diarias))
+        for r in nucleo.db().execute(
+            f"SELECT r.* FROM rotinas r JOIN usuarios u ON u.id = r.usuario_id "
+            f"WHERE r.frequencia='diaria' AND u.plano IN ({marcadores})",
+            planos_diarias,
+        ).fetchall():
+            if (r["ultima_execucao"] or "")[:10] == hoje:
+                continue
+            try:
+                _rodar_rotina(r)
+                disparadas += 1
+            except HTTPException:
+                continue  # a máquina da rotina foi removida
     return {"disparadas": disparadas, "rebaixados": rebaixados, "sugestoes": sugestoes}
 
 

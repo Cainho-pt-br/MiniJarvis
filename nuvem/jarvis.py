@@ -133,15 +133,16 @@ def validar_sugestoes(dados: Any) -> list[dict[str, str]]:
 
 
 def atualizar_sugestoes(u: Any, cobrar: bool) -> tuple[list[dict[str, str]], int]:
-    """Pede as sugestões à IA e guarda. Com `cobrar=False` (plano Pro: faz parte
-    do plano) não mexe nos créditos. Estoura HTTPException se o teto diário de
+    """Pede as sugestões à IA e guarda. Com `cobrar=False` (planos com sugestões
+    automáticas) não mexe nos créditos. Estoura HTTPException se o teto diário de
     gasto foi atingido ou a IA falhou. Devolve (sugestões, saldo)."""
     from . import operacao
-    from .ia import modelo_do_plano
+    from .ia import modelo_sugestoes_do_plano
 
     operacao.conferir_teto()
     try:
-        dados, final = nucleo.ia().gerar_json(prompt_sugestoes(u["id"]), SCHEMA_SUGESTOES, modelo_do_plano(u["plano"]))
+        dados, final = nucleo.ia().gerar_json(prompt_sugestoes(u["id"]), SCHEMA_SUGESTOES,
+                                              modelo_sugestoes_do_plano(u["plano"]))
     except Exception as exc:  # noqa: BLE001
         nucleo.log.exception("Falha ao gerar sugestões: %s", type(exc).__name__)
         operacao.incidente("ia")
@@ -153,17 +154,21 @@ def atualizar_sugestoes(u: Any, cobrar: bool) -> tuple[list[dict[str, str]], int
 
 
 def sugestoes_automaticas(limite: int = 20) -> int:
-    """Chamado pelo cron: renova as sugestões de quem é Pro e tem máquina conectada,
-    sem cobrar créditos. No máximo `limite` pessoas por rodada, para caber no tempo
-    da função; as que sobram entram na rodada seguinte."""
+    """Chamado pelo cron: renova as sugestões dos planos com `sugestoes_auto`
+    que têm máquina conectada, sem cobrar créditos. No máximo `limite` pessoas
+    por rodada, para caber no tempo da função."""
     from datetime import datetime, timedelta, timezone
 
+    planos_auto = [p["id"] for p in nucleo.PLANOS if p.get("sugestoes_auto")]
+    if not planos_auto:
+        return 0
+    marcadores = ",".join("?" * len(planos_auto))
     velha = (datetime.now(timezone.utc) - timedelta(hours=20)).isoformat(timespec="seconds")
     rows = nucleo.db().execute(
-        "SELECT u.* FROM usuarios u LEFT JOIN sugestoes s ON s.usuario_id = u.id "
-        "WHERE u.plano = 'pro' AND u.email_verificado = 1 AND (s.gerado_em IS NULL OR s.gerado_em < ?) "
-        "AND EXISTS (SELECT 1 FROM agentes a WHERE a.usuario_id = u.id) ORDER BY u.id LIMIT ?",
-        (velha, limite)).fetchall()
+        f"SELECT u.* FROM usuarios u LEFT JOIN sugestoes s ON s.usuario_id = u.id "
+        f"WHERE u.plano IN ({marcadores}) AND u.email_verificado = 1 AND (s.gerado_em IS NULL OR s.gerado_em < ?) "
+        f"AND EXISTS (SELECT 1 FROM agentes a WHERE a.usuario_id = u.id) ORDER BY u.id LIMIT ?",
+        (*planos_auto, velha, limite)).fetchall()
     feitas = 0
     for u in rows:
         try:

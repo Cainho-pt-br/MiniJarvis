@@ -106,9 +106,9 @@ O `Dockerfile` continua no repositório, caso um dia queira sair da Vercel
 
 | Plano | Preço | Créditos/mês | Para quem |
 |---|---|---|---|
-| Grátis | R$ 0 | 300 (uma vez) | Experimentar sem cartão |
-| Básico | R$ 29,90 | 2.000 | Uso diário |
-| Pro | R$ 59,90 | 4.500 + computador conectado | Uso intenso |
+| Grátis | R$ 0 | 200 (uma vez) | Experimentar sem cartão |
+| Básico | R$ 29,90 | 800 | Uso diário (~400 mensagens) |
+| Pro | R$ 59,90 | 4.500 + parque automático | Uso intenso (~375 mensagens com Sonnet) |
 
 1 crédito = US$ 0,001 de custo de IA. A conta é feita com os tokens reais de
 cada resposta (`nuvem/ia.py` → `custo_usd`), então o preço nunca fica abaixo
@@ -116,24 +116,25 @@ do custo.
 
 ### Modelos e a conta que precisa fechar
 
-| Plano | Modelo | Custo por mensagem típica* | Mensagens que os créditos pagam |
-|---|---|---|---|
-| Grátis | `claude-haiku-5-5` | ~US$ 0,0006 (cobra o mínimo de 1 crédito) | ~300 |
-| Básico | `claude-sonnet-5-5` | ~US$ 0,012 (12 créditos) | ~165 por mês |
-| Pro | `claude-sonnet-5-5` | ~US$ 0,012 (12 créditos) | ~375 por mês |
+| Plano | Modelo (chat e tarefas) | Modelo (sugestões) | Custo médio por mensagem* | Mensagens estimadas |
+|---|---|---|---|---|
+| Grátis | `claude-haiku-5-5` | `claude-haiku-5-5` | ~2 créditos | ~100 |
+| Básico | `claude-haiku-5-5` | `claude-haiku-5-5` | ~2 créditos | ~400 por mês |
+| Pro | `claude-sonnet-5-5` | `claude-haiku-5-5` | ~12 créditos | ~375 por mês |
 
-\* ≈2 mil tokens de entrada e ≈800 de saída. A cobrança real usa os tokens de
-cada resposta, com o desconto do cache de prompt.
+\* Mistura típica de perguntas curtas e tarefas com ferramentas. A cobrança real
+usa os tokens de cada resposta, com o desconto do cache de prompt.
 
-- O **Haiku 5.5** deixa o plano grátis quase sem custo (300 créditos custam no
-  máximo US$ 0,30 por pessoa), então dá para ser generoso e deixar a pessoa
-  usar bastante antes de pagar.
-- O **Sonnet 5.5** dá respostas melhores nos planos pagos, que é o motivo de
-  assinar.
-- No Básico, o custo de IA fica em ~US$ 2 (≈R$ 11), cerca de 37% do preço; o
-  resto paga taxa de pagamento (~5%), imposto, Vercel e banco.
-- Os modelos são trocáveis por variável de ambiente (`IA_MODELO_GRATIS`,
-  `IA_MODELO_PAGO`), sem mexer no código.
+- O **Haiku 5.5** atende o plano Grátis (200 créditos custam no máximo US$ 0,20
+  por conta nova), o plano Básico (800 créditos rendem ~400 mensagens/mês e
+  custam no máximo US$ 0,80 ≈ R$ 4,41, ou 15% do preço) e as sugestões do parque
+  em todos os planos.
+- O **Sonnet 5.5** equipa o plano Pro no chat e nas tarefas.
+- Se a chamada ao modelo do plano falhar por erro de API ou sobrecarga, o Jarvis
+  tenta uma única vez o modelo imediatamente abaixo (ex.: Sonnet → Haiku),
+  registra `operacao.incidente("ia_fallback")` e cobra pelo modelo que respondeu.
+- Os modelos são trocáveis por variável de ambiente (`IA_MODELO_HAIKU`,
+  `IA_MODELO_SONNET`, `IA_MODELO_OPUS`), sem mexer no código.
 
 ### Pagamento
 
