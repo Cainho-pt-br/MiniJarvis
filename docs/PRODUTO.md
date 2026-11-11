@@ -106,8 +106,8 @@ O `Dockerfile` continua no repositório, caso um dia queira sair da Vercel
 
 | Plano | Preço | Créditos/mês | Para quem |
 |---|---|---|---|
-| Grátis | R$ 0 | 200 (uma vez) | Experimentar sem cartão |
-| Básico | R$ 29,90 | 800 | Uso diário (~400 mensagens) |
+| Grátis | R$ 0 | 120 (uma vez) | Experimentar sem cartão |
+| Básico | R$ 29,90 | 240 | Uso diário (~120 mensagens) |
 | Pro | R$ 59,90 | 4.500 + parque automático | Uso intenso (~375 mensagens com Sonnet) |
 
 1 crédito = US$ 0,001 de custo de IA. A conta é feita com os tokens reais de
@@ -118,16 +118,16 @@ do custo.
 
 | Plano | Modelo (chat e tarefas) | Modelo (sugestões) | Custo médio por mensagem* | Mensagens estimadas |
 |---|---|---|---|---|
-| Grátis | `claude-haiku-5-5` | `claude-haiku-5-5` | ~2 créditos | ~100 |
-| Básico | `claude-haiku-5-5` | `claude-haiku-5-5` | ~2 créditos | ~400 por mês |
+| Grátis | `claude-haiku-5-5` | `claude-haiku-5-5` | ~2 créditos | ~60 |
+| Básico | `claude-haiku-5-5` | `claude-haiku-5-5` | ~2 créditos | ~120 por mês |
 | Pro | `claude-sonnet-5-5` | `claude-haiku-5-5` | ~12 créditos | ~375 por mês |
 
 \* Mistura típica de perguntas curtas e tarefas com ferramentas. A cobrança real
 usa os tokens de cada resposta, com o desconto do cache de prompt.
 
-- O **Haiku 5.5** atende o plano Grátis (200 créditos custam no máximo US$ 0,20
-  por conta nova), o plano Básico (800 créditos rendem ~400 mensagens/mês e
-  custam no máximo US$ 0,80 ≈ R$ 4,41, ou 15% do preço) e as sugestões do parque
+- O **Haiku 5.5** atende o plano Grátis (120 créditos custam no máximo US$ 0,12
+  por conta nova), o plano Básico (240 créditos rendem ~120 mensagens/mês e
+  custam no máximo US$ 0,24 ≈ R$ 1,32, ou 4,4% do preço) e as sugestões do parque
   em todos os planos.
 - O **Sonnet 5.5** equipa o plano Pro no chat e nas tarefas.
 - Se a chamada ao modelo do plano falhar por erro de API ou sobrecarga, o Jarvis
