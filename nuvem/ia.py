@@ -12,9 +12,12 @@ import re
 from dataclasses import dataclass, field
 from typing import Any, Iterator
 
-# Plano grátis usa o modelo mais barato; planos pagos, o mais capaz.
-MODELO_GRATIS = os.environ.get("IA_MODELO_GRATIS", "claude-haiku-5-5")
-MODELO_PAGO = os.environ.get("IA_MODELO_PAGO", "claude-sonnet-5-5")
+# Modelos por faixa: Haiku no Grátis/Básico e nas sugestões; Sonnet no Pro; Opus no Turbo.
+MODELO_HAIKU = os.environ.get("IA_MODELO_HAIKU", os.environ.get("IA_MODELO_GRATIS", "claude-haiku-5-5"))
+MODELO_SONNET = os.environ.get("IA_MODELO_SONNET", os.environ.get("IA_MODELO_PAGO", "claude-sonnet-5-5"))
+MODELO_OPUS = os.environ.get("IA_MODELO_OPUS", "claude-opus-5-5")
+MODELO_GRATIS = MODELO_HAIKU
+MODELO_PAGO = MODELO_SONNET
 ESFORCO = os.environ.get("IA_ESFORCO", "medium")  # low | medium | high
 MAX_TOKENS = int(os.environ.get("IA_MAX_TOKENS", "16000"))
 MAX_TOKENS_GRATIS = int(os.environ.get("IA_MAX_TOKENS_GRATIS", "4000"))  # limita o custo de uma resposta
@@ -26,16 +29,50 @@ PRECOS = {
     "claude-sonnet-5-5": (2.00, 10.00),
     "claude-haiku-5-5": (0.10, 0.50),  # até 100 mil tokens de entrada por pedido
 }
+# Custo médio estimado por mensagem em créditos (1 crédito = US$ 0,001),
+# considerando uma mistura típica de conversa e ferramentas (ver docs/ECONOMIA.md).
+CUSTO_MEDIO_MENSAGEM = {
+    "claude-haiku-5-5": 2,
+    "claude-sonnet-5-5": 12,
+    "claude-opus-5-5": 24,
+}
 # Modelos que aceitam `fallbacks: "default"` (refazer em outro modelo se recusar).
 COM_FALLBACK = {"claude-opus-5-5", "claude-sonnet-5-5"}
 
 
+def mensagens_estimadas(creditos: int, modelo: str) -> int:
+    custo = CUSTO_MEDIO_MENSAGEM.get(modelo, 12)
+    return max(1, round(creditos / custo / 5) * 5)
+
+
+def modelo_abaixo(modelo: str) -> str | None:
+    """Modelo imediatamente abaixo para fallback em erro de API ou sobrecarga."""
+    mapa = {
+        MODELO_OPUS: MODELO_SONNET,
+        MODELO_SONNET: MODELO_HAIKU,
+        "claude-opus-5-5": "claude-sonnet-5-5",
+        "claude-sonnet-5-5": "claude-haiku-5-5",
+    }
+    abaixo = mapa.get(modelo)
+    return abaixo if abaixo and abaixo != modelo else None
+
+
 def modelo_do_plano(plano: str) -> str:
-    return MODELO_GRATIS if plano == "gratis" else MODELO_PAGO
+    from . import app as nucleo
+
+    return str(nucleo.info_plano(plano)["modelo"])
+
+
+def modelo_sugestoes_do_plano(plano: str) -> str:
+    from . import app as nucleo
+
+    return str(nucleo.info_plano(plano)["modelo_sugestoes"])
 
 
 def max_tokens_do_plano(plano: str) -> int:
-    return MAX_TOKENS_GRATIS if plano == "gratis" else MAX_TOKENS
+    from . import app as nucleo
+
+    return int(nucleo.info_plano(plano)["max_tokens"])
 
 
 SISTEMA = """Você é o Jarvis, o assistente pessoal do usuário, simpático e direto.
@@ -146,9 +183,8 @@ class ClaudeIA:
             return {"betas": ["server-side-fallback-2026-07-01"], "fallbacks": "default"}
         return {}
 
-    def responder(self, historico: list[dict[str, Any]], final: Resposta, modelo: str,
-                  ferramentas: list[dict[str, Any]] | None = None, max_tokens: int = MAX_TOKENS) -> Iterator[str]:
-        """Gera pedaços de texto e preenche `final` ao terminar."""
+    def _chamar_stream(self, historico: list[dict[str, Any]], final: Resposta, modelo: str,
+                       ferramentas: list[dict[str, Any]] | None, max_tokens: int) -> Iterator[str]:
         final.modelo = modelo
         extra = self._extra(modelo)
         if ferramentas:
@@ -172,8 +208,23 @@ class ClaudeIA:
         final.chamadas = [{"id": b.id, "name": b.name, "input": b.input}
                           for b in msg.content if b.type == "tool_use"]
 
-    def gerar_json(self, prompt: str, schema: dict[str, Any], modelo: str) -> tuple[Any, Resposta]:
-        """Uma chamada com saída em JSON garantida pelo schema."""
+    def responder(self, historico: list[dict[str, Any]], final: Resposta, modelo: str,
+                  ferramentas: list[dict[str, Any]] | None = None, max_tokens: int = MAX_TOKENS) -> Iterator[str]:
+        """Gera pedaços de texto e preenche `final` ao terminar.
+        Se a chamada ao modelo do plano der erro de API ou sobrecarga antes de escrever,
+        tenta UMA vez o modelo logo abaixo e cobra pelo modelo que realmente respondeu."""
+        try:
+            yield from self._chamar_stream(historico, final, modelo, ferramentas, max_tokens)
+        except Exception:
+            abaixo = modelo_abaixo(modelo)
+            if not abaixo or final.texto:
+                raise
+            from . import operacao
+
+            operacao.incidente("ia_fallback")
+            yield from self._chamar_stream(historico, final, abaixo, ferramentas, max_tokens)
+
+    def _chamar_json(self, prompt: str, schema: dict[str, Any], modelo: str) -> tuple[Any, Resposta]:
         final = Resposta(modelo=modelo)
         msg = self.cliente.beta.messages.create(
             model=modelo, max_tokens=8000,
@@ -186,6 +237,19 @@ class ClaudeIA:
             raise RuntimeError("a IA recusou gerar sugestões")
         texto = next(b.text for b in msg.content if b.type == "text")
         return json.loads(texto), final
+
+    def gerar_json(self, prompt: str, schema: dict[str, Any], modelo: str) -> tuple[Any, Resposta]:
+        """Uma chamada com saída em JSON garantida pelo schema."""
+        try:
+            return self._chamar_json(prompt, schema, modelo)
+        except Exception:
+            abaixo = modelo_abaixo(modelo)
+            if not abaixo:
+                raise
+            from . import operacao
+
+            operacao.incidente("ia_fallback")
+            return self._chamar_json(prompt, schema, abaixo)
 
 
 class FakeIA:

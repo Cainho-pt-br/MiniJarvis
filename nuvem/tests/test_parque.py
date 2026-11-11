@@ -196,13 +196,28 @@ def test_rotinas_e_cron(cliente, monkeypatch):
     assert cliente.get("/api/cron/rotinas", headers=cab).json()["disparadas"] == 1
 
 
-def test_sugestoes(cliente):
-    cadastrar(cliente)
+def test_sugestoes(cliente, monkeypatch):
+    from nuvem.ia import FakeIA
+
+    modelos_usados = []
+
+    class EspiaSugestoes(FakeIA):
+        def gerar_json(self, prompt, schema, modelo):
+            modelos_usados.append(modelo)
+            return super().gerar_json(prompt, schema, modelo)
+
+    monkeypatch.setattr(modulo, "_ia", EspiaSugestoes())
+    u = cadastrar(cliente)
     assert cliente.get("/api/sugestoes").json()["sugestoes"] == []
     r = cliente.post("/api/sugestoes/gerar").json()
     assert r["sugestoes"][0]["pergunta"] and r["creditos"] < modulo.CREDITOS_INICIAIS
     assert cliente.get("/api/sugestoes").json()["sugestoes"] == r["sugestoes"]
     assert cliente.post("/api/sugestoes/gerar").status_code == 429
+    # Mesmo no Pro, sugestões usam Haiku 5.5
+    modulo.db().execute("UPDATE usuarios SET plano='pro' WHERE id=?", (u["id"],))
+    modulo.db().execute("DELETE FROM sugestoes")
+    assert cliente.post("/api/sugestoes/gerar").status_code == 200
+    assert modelos_usados == ["claude-haiku-5-5", "claude-haiku-5-5"]
 
 
 def test_interesse_e_agente_para_baixar(cliente):
@@ -211,7 +226,12 @@ def test_interesse_e_agente_para_baixar(cliente):
     assert cliente.post("/api/planos/gratis/interesse").status_code == 404
     r = cliente.get("/agente.py")
     assert r.status_code == 200 and "def main()" in r.text
-    assert json.loads(json.dumps(cliente.get("/api/planos").json()))[2]["destaque"] is True
+    planos = json.loads(json.dumps(cliente.get("/api/planos").json()))
+    assert planos[2]["destaque"] is True
+    for p in planos:
+        for campo in ("modelo", "modelo_sugestoes", "maquinas", "creditos", "rotinas_diarias",
+                      "sugestoes_auto", "max_tokens", "mensagens_estimadas"):
+            assert campo in p
 
 
 def test_sem_linha_em_branco_quando_a_primeira_rodada_so_usa_ferramenta(cliente, monkeypatch):

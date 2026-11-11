@@ -22,13 +22,28 @@ cliente é no máximo `créditos do plano ÷ 1000` dólares. Detalhes:
 
 ## Consumo por mensagem (estimado)
 
-| Tipo | Haiku (grátis) | Sonnet (pagos) |
+| Tipo | Haiku (Grátis / Básico / sugestões) | Sonnet (Pro) |
 |---|---|---|
 | Pergunta curta | 1 crédito | 5 |
 | Pedido de tarefa (1 ferramenta) | 2 | 12 |
 | Analisar o parque (2 ferramentas) | 3 | 22 |
+| **Custo médio típico** | **2 créditos** | **12 créditos** |
 
-Isso rende cerca de 170 a 400 mensagens por mês no Básico e 375 a 900 no Pro.
+Com 1 crédito = US$ 0,001 para qualquer modelo, 1 crédito no Haiku rende de 10 a
+20 vezes mais tokens do que no Sonnet:
+
+- **Grátis (120 créditos, Haiku 5.5):** rende cerca de **60 mensagens** (entre 40 e 120),
+  custando no máximo US$ 0,12 (R$ 0,66) por conta nova.
+- **Básico (240 créditos/mês, Haiku 5.5):** com média de 2 créditos por mensagem,
+  240 créditos rendem **cerca de 120 mensagens por mês** (entre 80 e 240), mantendo uma
+  escada natural de volume abaixo do Pro (~375 mensagens) e do Turbo (~335 mensagens). No
+  pior caso (100% dos créditos gastos), 240 créditos custam US$ 0,24 = **R$ 1,32** (4,4% do
+  preço de R$ 29,90, bem abaixo do teto de 45%).
+- **Pro (4.500 créditos/mês, Sonnet 5.5):** com média de 12 créditos por mensagem,
+  rende **cerca de 375 mensagens por mês** (entre 200 e 900). As sugestões do parque
+  rodam em Haiku 5.5 em todos os planos e seguem gratuitas no Pro (~US$ 0,01/mês por
+  assinante ativo).
+
 `IA_ESFORCO` (padrão `medium`) controla quanto a IA raciocina: `low` baixa o custo
 por mensagem no chat.
 
@@ -37,30 +52,31 @@ por mensagem no chat.
 Câmbio de referência: US$ 1 = R$ 5,51 (9/11/2026). Taxa do Mercado Pago estimada
 em 4,98% + R$ 0,49 no cartão (**confirmar na conta**).
 
-| | Básico | Pro |
+| | Básico (240 cr · Haiku) | Pro (4.500 cr · Sonnet) |
 |---|---|---|
 | Preço | R$ 29,90 | R$ 59,90 |
-| IA no pior caso | R$ 11,02 (37%) | R$ 24,80 (41%) |
+| Mensagens estimadas | ~120 / mês | ~375 / mês |
+| IA no pior caso (100% dos créditos) | R$ 1,32 (4%) | R$ 24,80 (41%) |
 | Taxa do pagamento | R$ 1,98 | R$ 3,47 |
-| **Sobra** | **R$ 16,90 (57%)** | **R$ 31,63 (53%)** |
-| Sobra com 50% de uso | R$ 22,41 | R$ 44,03 |
+| **Sobra no pior caso** | **R$ 26,60 (89%)** | **R$ 31,63 (53%)** |
+| Sobra com 50% de uso | R$ 27,26 | R$ 44,03 |
 
-Dólar a R$ 6,50: sobra R$ 14,92 (Básico) e R$ 27,18 (Pro).
+Dólar a R$ 6,50: sobra R$ 26,36 (Básico) e R$ 27,18 (Pro).
 
 Custos fixos aproximados: Vercel Pro US$ 20 (cerca de R$ 110), MEI (cerca de
 R$ 80, confirmar com contador), domínio. Total perto de R$ 195 por mês: o ponto
-de equilíbrio é de uns 12 assinantes Básico, 7 Pro ou 9 numa mistura.
+de equilíbrio é de uns 8 assinantes Básico, 7 Pro ou 7 numa mistura.
 
 ## Onde ainda se perde dinheiro
 
-1. **Contas grátis em massa:** até US$ 0,30 por conta. `TETO_DIARIO_USD` limita o
+1. **Contas grátis em massa:** até US$ 0,12 por conta. `TETO_DIARIO_USD` limita o
    gasto de IA do dia inteiro; deixe em 3 até ter receita e ligue o e-mail
    (confirmação de conta) antes de divulgar.
 2. **Chargeback / estorno:** perde-se o valor e a IA já gasta. Há estorno
    automático de plano e créditos (`cobranca.estornar_plano`) e aviso ao dono.
 3. **Câmbio:** o custo é em dólar e a receita em real.
-4. **Sugestões automáticas do Pro:** cerca de US$ 0,15 por mês por Pro, não cobradas
-   (não entram no teto diário).
+4. **Sugestões automáticas do Pro:** usando Haiku 5.5 em todos os planos, custam
+   cerca de US$ 0,01 por mês por assinante Pro (não cobradas dos créditos).
 5. **Plano gratuito sem confirmação de e-mail:** sem SMTP não há barreira além do
    limite por IP.
 

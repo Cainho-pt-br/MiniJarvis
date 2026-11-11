@@ -57,7 +57,8 @@ próprio e use a URL acima.
 
 ## Regras de negócio (não quebre)
 
-- **Planos:** Grátis 1 máquina e 300 créditos (modelo Haiku 5.5); Básico R$ 29,90, 2 máquinas, 2.000 créditos/mês; Pro R$ 59,90, 4 máquinas, 4.500 créditos/mês, rotinas diárias e sugestões automáticas **sem gastar créditos** (modelo Sonnet 5.5 nos pagos). Definidos em `PLANOS` (`app.py`).
+- **Planos:** Grátis 1 máquina e 120 créditos iniciais (modelo Haiku 5.5, ~60 mensagens); Básico R$ 29,90, 2 máquinas, 240 créditos/mês (modelo Haiku 5.5, ~120 mensagens/mês); Pro R$ 59,90, 4 máquinas, 4.500 créditos/mês (modelo Sonnet 5.5 no chat e tarefas, ~375 mensagens/mês), rotinas diárias e sugestões automáticas **sem gastar créditos**. Sugestões do parque usam Haiku 5.5 em todos os planos. Todas as regras por plano (`modelo`, `modelo_sugestoes`, `maquinas`, `creditos`, `rotinas_diarias`, `sugestoes_auto`, `max_tokens`, `mensagens_estimadas`) ficam em `PLANOS` (`app.py`).
+- **Fallback de modelo:** se a chamada ao modelo do plano falhar por erro de API ou sobrecarga antes de escrever, tenta uma única vez o modelo imediatamente abaixo (Opus → Sonnet; Sonnet → Haiku; Haiku não tem fallback), registra `operacao.incidente("ia_fallback")` e cobra pelo modelo que realmente respondeu.
 - **Créditos:** 1 crédito = US$ 0,001, descontado pelos **tokens reais** de cada resposta. O custo de IA nunca pode passar do crédito cobrado. Conta completa em `docs/ECONOMIA.md`.
 - **Quem desce de plano** mantém as máquinas, mas só as mais antigas, até o limite, seguem ativas; as outras ficam **bloqueadas** (sem tarefas) até desconectar uma ou assinar de novo (`parque.liberadas`).
 - **Plano pago** vale 31 dias por pagamento aprovado (`usuarios.plano_ate`); o cron diário rebaixa os vencidos mantendo os créditos que sobraram.

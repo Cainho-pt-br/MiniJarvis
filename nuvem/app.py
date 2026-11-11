@@ -27,12 +27,23 @@ from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from .banco import Banco, ErroDuplicado, url_postgres
-from .ia import Resposta, criar_ia, custo_usd, max_tokens_do_plano, modelo_do_plano
+from .ia import (
+    MAX_TOKENS,
+    MAX_TOKENS_GRATIS,
+    MODELO_HAIKU,
+    MODELO_SONNET,
+    Resposta,
+    criar_ia,
+    custo_usd,
+    max_tokens_do_plano,
+    mensagens_estimadas,
+    modelo_do_plano,
+)
 from .tarefas import TAREFAS
 
 BASE = Path(__file__).resolve().parent
 DB_PATH = Path(os.environ.get("NUVEM_DB", BASE / "nuvem.db"))
-CREDITOS_INICIAIS = int(os.environ.get("CREDITOS_INICIAIS", "300"))
+CREDITOS_INICIAIS = int(os.environ.get("CREDITOS_INICIAIS", "120"))
 CREDITOS_POR_DOLAR = int(os.environ.get("CREDITOS_POR_DOLAR", "1000"))  # 1 crédito = US$ 0,001 de IA
 SESSAO_DIAS = 30
 COOKIE = "mj_sessao"
@@ -665,13 +676,13 @@ def ver_sugestoes(u: Any = Depends(usuario_atual)) -> dict[str, Any]:
 def gerar_sugestoes(u: Any = Depends(usuario_verificado)) -> dict[str, Any]:
     from .jarvis import atualizar_sugestoes
 
-    pro = u["plano"] == "pro"  # no Pro as sugestões fazem parte do plano: não gastam créditos
-    if not pro and u["creditos"] <= 0:
+    incluido = bool(info_plano(u["plano"]).get("sugestoes_auto"))  # nos planos com sugestões automáticas não gasta créditos
+    if not incluido and u["creditos"] <= 0:
         raise HTTPException(402, "Seus créditos acabaram.")
     atual = db().execute("SELECT gerado_em FROM sugestoes WHERE usuario_id = ?", (u["id"],)).fetchone()
     if atual and (datetime.now(timezone.utc) - datetime.fromisoformat(atual["gerado_em"])).total_seconds() < 600:
         raise HTTPException(429, "As sugestões foram atualizadas há pouco. Tente de novo em alguns minutos.")
-    sugestoes, saldo = atualizar_sugestoes(u, cobrar=not pro)
+    sugestoes, saldo = atualizar_sugestoes(u, cobrar=not incluido)
     return {"sugestoes": sugestoes, "gerado_em": agora(), "creditos": saldo}
 
 
@@ -679,22 +690,35 @@ def gerar_sugestoes(u: Any = Depends(usuario_verificado)) -> dict[str, Any]:
 
 PLANOS = [
     {"id": "gratis", "nome": "Grátis", "preco_brl": 0, "creditos": CREDITOS_INICIAIS, "maquinas": 1,
+     "modelo": MODELO_HAIKU, "modelo_sugestoes": MODELO_HAIKU, "max_tokens": MAX_TOKENS_GRATIS,
+     "rotinas_diarias": False, "sugestoes_auto": False,
+     "mensagens_estimadas": mensagens_estimadas(CREDITOS_INICIAIS, MODELO_HAIKU),
      "descricao": "Para conhecer o Jarvis.",
-     "itens": ["Chat com o Jarvis", "1 máquina conectada", "Cérebro com memória", "300 créditos para começar"]},
-    # Créditos calibrados para a IA custar no máximo ~35% do preço (ver docs/PRODUTO.md).
-    {"id": "basico", "nome": "Básico", "preco_brl": 29.90, "creditos": 2000, "maquinas": 2,
+     "itens": ["Chat com o Jarvis", "1 máquina conectada", "Cérebro com memória",
+               f"{CREDITOS_INICIAIS} créditos para começar"]},
+    # Créditos calibrados para ~120 mensagens/mês e IA ≤ 45% do preço (ver docs/ECONOMIA.md).
+    {"id": "basico", "nome": "Básico", "preco_brl": 29.90, "creditos": 240, "maquinas": 2,
+     "modelo": MODELO_HAIKU, "modelo_sugestoes": MODELO_HAIKU, "max_tokens": MAX_TOKENS,
+     "rotinas_diarias": False, "sugestoes_auto": False,
+     "mensagens_estimadas": mensagens_estimadas(240, MODELO_HAIKU),
      "descricao": "Seu assistente no dia a dia.",
-     "itens": ["IA mais inteligente (Sonnet)", "Até 2 máquinas", "2.000 créditos por mês", "Rotinas manuais"]},
+     "itens": ["Chat e tarefas no computador", "Até 2 máquinas", "240 créditos por mês", "Rotinas manuais"]},
     {"id": "pro", "nome": "Pro", "preco_brl": 59.90, "creditos": 4500, "maquinas": 4, "destaque": True,
+     "modelo": MODELO_SONNET, "modelo_sugestoes": MODELO_HAIKU, "max_tokens": MAX_TOKENS,
+     "rotinas_diarias": True, "sugestoes_auto": True,
+     "mensagens_estimadas": mensagens_estimadas(4500, MODELO_SONNET),
      "descricao": "O parque inteiro trabalhando por você.",
      "itens": ["IA mais inteligente (Sonnet)", "Até 4 máquinas", "4.500 créditos por mês",
                "Rotinas diárias automáticas", "Sugestões do parque todo dia"]},
 ]
 
 
+def info_plano(plano: str) -> dict[str, Any]:
+    return next((p for p in PLANOS if p["id"] == plano), PLANOS[0])
+
+
 @app.get("/api/planos")
 def planos() -> list[dict[str, Any]]:
-    # A cobrança (Mercado Pago / Stripe) entra na próxima etapa; ver docs/PRODUTO.md.
     return PLANOS
 
 

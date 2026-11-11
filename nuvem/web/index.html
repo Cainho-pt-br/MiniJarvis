@@ -630,11 +630,15 @@ async function carregarPlanos() {
   if (!estado.planos.length) estado.planos = await api("/api/planos");
   return estado.planos;
 }
+function planoAtual() {
+  return estado.planos.find((p) => p.id === estado.usuario?.plano) || estado.planos[0] || {};
+}
 function cartoesPreco(planos, atual) {
   return planos.map((p) => `<div class="preco ${p.destaque ? "destaque" : ""}">
     ${p.destaque ? '<span class="rot">Mais escolhido</span>' : ""}
     <h3>${esc(p.nome)}</h3><p class="desc">${esc(p.descricao)}</p>
     <div class="valor">${p.preco_brl ? brl(p.preco_brl) : "R$ 0"}<small>${p.preco_brl ? " /mês" : ""}</small></div>
+    ${p.mensagens_estimadas ? `<div class="est-msgs" style="font-size:13px;color:var(--ciano);margin:-6px 0 12px">cerca de ${p.mensagens_estimadas} mensagens${p.preco_brl ? " por mês" : ""}</div>` : ""}
     <ul>${p.itens.map((i) => `<li>${esc(i)}</li>`).join("")}</ul>
     ${atual === undefined ? `<button class="btn ${p.destaque ? "prim" : ""}" data-abrir="cadastro">${p.preco_brl ? "Começar grátis" : "Criar conta grátis"}</button>`
       : atual === p.id ? `<button class="btn" disabled>Seu plano atual${estado.usuario?.plano_ate ? " · até " + quandoDia(estado.usuario.plano_ate) : ""}</button>${p.preco_brl && !estado.usuario?.assinatura ? `<button class="btn fantasma peq" data-pix="${p.id}">Renovar 1 mês com Pix</button>` : ""}`
@@ -748,7 +752,7 @@ function modalEsqueciSenha(email = "") {
 function modalUpgrade(motivo) {
   carregarPlanos().then((planos) => {
     abrirModal(`<h2>Desbloqueie o <span class="grad">parque inteiro</span></h2>
-      <p class="sub">${esc(motivo || "Recurso do plano Pro.")}</p>
+      <p class="sub">${esc(motivo || "Recurso disponível nos planos superiores.")}</p>
       <div class="precos" style="grid-template-columns:1fr;gap:12px">${cartoesPreco(planos.filter((p) => p.id !== "gratis"), estado.usuario?.plano)}</div>`, true);
   });
 }
@@ -802,10 +806,11 @@ function montarNav() {
     `<button class="nav-it ${estado.aba === id ? "ativo" : ""}" data-aba="${id}">${ico(id === "parque" ? "mapa" : id === "admin" ? "escudo" : id)}<span>${nome}</span>${id === "tarefas" && estado.aguardando ? `<span class="cont">${estado.aguardando}</span>` : ""}</button>`).join("");
   $("#nav-lateral").innerHTML = html(false); $("#nav-baixa").innerHTML = html(true);
   $$("[data-aba]").forEach((b) => (b.onclick = () => irPara(b.dataset.aba)));
-  const u = estado.usuario, plano = estado.planos.find((p) => p.id === u.plano);
-  $("#cartao-plano").innerHTML = u.plano === "pro"
-    ? `<b>Plano Pro</b><p>${u.creditos} créditos disponíveis.</p>`
-    : `<b>Plano ${esc(plano?.nome || u.plano)}</b><p>${u.creditos} créditos · conecte o parque inteiro no Pro.</p><button class="btn prim peq" style="width:100%" data-assinar-ir>Conhecer o Pro</button>`;
+  const u = estado.usuario, plano = planoAtual();
+  const temMaior = estado.planos.some((p) => p.preco_brl > (plano.preco_brl || 0));
+  $("#cartao-plano").innerHTML = !temMaior
+    ? `<b>Plano ${esc(plano.nome || u.plano)}</b><p>${u.creditos} créditos disponíveis.</p>`
+    : `<b>Plano ${esc(plano.nome || u.plano)}</b><p>${u.creditos} créditos · conecte mais computadores.</p><button class="btn prim peq" style="width:100%" data-assinar-ir>Ver planos</button>`;
   const bt = $("[data-assinar-ir]"); if (bt) bt.onclick = () => irPara("planos");
   $("#avatar").textContent = (u.nome || "?")[0].toUpperCase(); $("#nome-usuario").textContent = u.nome;
 }
@@ -864,7 +869,7 @@ async function telaInicio() {
       <div class="stat"><div class="rot">Máquinas ligadas</div><div class="num">${r.online}<small> / ${r.maquinas}</small></div><div class="det">${r.maquinas ? "no seu parque" : "conecte a primeira"}</div></div>
       <div class="stat"><div class="rot">Tarefas concluídas</div><div class="num">${r.concluidos_24h}</div><div class="det">nas últimas 24 h</div></div>
       <div class="stat"><div class="rot">Trabalhando agora</div><div class="num">${r.executando}</div><div class="det">${r.na_fila} na fila</div></div>
-      <div class="stat"><div class="rot">Créditos</div><div class="num">${estado.usuario.creditos}</div><div class="det">${estado.usuario.plano === "gratis" ? "plano Grátis" : "plano " + estado.usuario.plano}</div></div>`;
+      <div class="stat"><div class="rot">Créditos</div><div class="num">${estado.usuario.creditos}</div><div class="det">plano ${esc(planoAtual().nome || estado.usuario.plano)}</div></div>`;
     desenharMapa($("#mapa"), p.maquinas, { aoClicar: (m) => irPara("parque") });
     const cta = $("#cta-mapa");
     if (!p.maquinas.length && !cta) {
@@ -901,15 +906,16 @@ function primeirosPassos(p, jobs) {
 
 async function carregarSugestoes() {
   const d = await api("/api/sugestoes"), el = $("#sugs"); if (!el) return;
-  // No Pro as sugestões se renovam sozinhas (e não gastam créditos).
+  // Nos planos com sugestoes_auto as sugestões se renovam sozinhas (e não gastam créditos).
+  const sugAuto = !!planoAtual().sugestoes_auto;
   const velha = !d.gerado_em || Date.now() - new Date(d.gerado_em).getTime() > 20 * 3600e3;
-  if (estado.usuario.plano === "pro" && velha && !estado.sugAuto) { estado.sugAuto = true; return gerarSugestoes(); }
+  if (sugAuto && velha && !estado.sugAuto) { estado.sugAuto = true; return gerarSugestoes(); }
   if (!d.sugestoes.length) {
     el.innerHTML = `<div class="vazio" style="padding:14px"><p>O Jarvis analisa seu parque e sugere o que fazer hoje.</p><button class="btn prim peq" id="b-sug2">Gerar sugestões</button></div>`;
     $("#b-sug2").onclick = gerarSugestoes; return;
   }
   el.innerHTML = d.sugestoes.map((s, i) => `<div class="sug"><span class="tg">${esc(s.tag)}${s.maquina ? " · " + esc(s.maquina) : ""}</span><b>${esc(s.titulo)}</b><p>${esc(s.descricao)}</p><span class="mot">Por quê: ${esc(s.motivo)}</span><button class="btn peq" data-sug="${i}">Pedir ao Jarvis →</button></div>`).join("")
-    + `<div style="font-size:12px;color:var(--tenue)">Atualizadas ${quando(d.gerado_em)}${estado.usuario.plano === "pro" ? " · incluídas no seu plano, sem gastar créditos" : ""}</div>`;
+    + `<div style="font-size:12px;color:var(--tenue)">Atualizadas ${quando(d.gerado_em)}${sugAuto ? " · incluídas no seu plano, sem gastar créditos" : ""}</div>`;
   $$("[data-sug]", el).forEach((b) => (b.onclick = () => { estado.rascunho = d.sugestoes[+b.dataset.sug].pergunta; irPara("jarvis"); }));
 }
 async function gerarSugestoes() {
@@ -1330,7 +1336,7 @@ async function editarNota(nome, novoNome) {
 async function telaRotinas() {
   const c = $("#conteudo");
   c.innerHTML = barra("Rotinas", `<button class="btn prim" id="b-rot">${ico("mais", 16)} Nova rotina</button>`) + `
-    <p style="color:var(--suave);margin:-8px 0 16px">Tarefas que se repetem. Rode com um clique, ou deixe o Jarvis rodar sozinho toda manhã (plano Pro).</p>
+    <p style="color:var(--suave);margin:-8px 0 16px">Tarefas que se repetem. Rode com um clique, ou deixe o Jarvis rodar sozinho toda manhã.</p>
     <div class="maquinas" id="rots"></div>`;
   $("#b-rot").onclick = modalRotina;
   const rots = await api("/api/rotinas");
@@ -1350,15 +1356,15 @@ async function telaRotinas() {
 async function modalRotina() {
   estado.parque = await api("/api/parque");
   if (!estado.parque.maquinas.length) return modalConectar();
-  const acoes = await carregarAcoes(), pro = estado.usuario.plano === "pro";
+  const acoes = await carregarAcoes(), temDiaria = !!planoAtual().rotinas_diarias;
   const { el, fechar } = abrirModal(`<h2>Nova rotina</h2><form id="f">
     <label class="campo"><span>Nome</span><input name="nome" required maxlength="80" placeholder="Limpeza semanal"></label>
     <div class="form-linha"><label class="campo"><span>Máquina</span><select name="maquina">${opcoesMaquinas()}</select></label>
-    <label class="campo"><span>Quando</span><select name="frequencia"><option value="manual">Quando eu mandar</option><option value="diaria" ${pro ? "" : "disabled"}>Todo dia de manhã ${pro ? "" : "(Pro)"}</option></select></label></div>
+    <label class="campo"><span>Quando</span><select name="frequencia"><option value="manual">Quando eu mandar</option><option value="diaria" ${temDiaria ? "" : "disabled"}>Todo dia de manhã ${temDiaria ? "" : "(planos com rotinas diárias)"}</option></select></label></div>
     <label class="campo"><span>O que fazer</span><select name="texto" id="sel-acao">${acoes.map((a) => `<option value="${a.id}">${a.icone} ${esc(a.titulo)}</option>`).join("")}<option value="">✎ Comando livre (só máquinas no modo livre)</option></select></label>
     <label class="campo oculto" id="campo-livre"><span>Comando</span><textarea name="livre" rows="3"></textarea></label>
     <button class="btn prim" style="width:100%">Criar rotina</button><div class="erro-txt" id="erro"></div></form>
-    ${pro ? "" : '<p style="font-size:13px;color:var(--suave);margin:12px 0 0">✦ No <b>Pro</b> o Jarvis roda suas rotinas sozinho todo dia. <button class="link-btn" id="ver-pro">Conhecer</button></p>'}`, true);
+    ${temDiaria ? "" : '<p style="font-size:13px;color:var(--suave);margin:12px 0 0">✦ Nos planos com rotinas automáticas o Jarvis roda suas rotinas sozinho todo dia. <button class="link-btn" id="ver-pro">Ver planos</button></p>'}`, true);
   const vp = $("#ver-pro", el); if (vp) vp.onclick = () => { fechar(); irPara("planos"); };
   $("#sel-acao", el).onchange = (e) => $("#campo-livre", el).classList.toggle("oculto", !!e.target.value);
   $("#f", el).onsubmit = async (e) => {
@@ -1378,7 +1384,7 @@ async function telaPlanos() {
   c.innerHTML = barra("Planos") + `
     <div class="painel" style="margin-bottom:22px;background:linear-gradient(120deg,rgba(63,208,201,.12),rgba(139,123,255,.12));border-color:var(--borda2)">
       <h2 style="color:var(--texto);font-family:var(--titulo);font-size:24px;letter-spacing:-.02em;text-transform:none">Seu parque inteiro, trabalhando sozinho</h2>
-      <p style="color:var(--suave);margin:0">No <b style="color:var(--texto)">Pro</b> você conecta todos os computadores, o Jarvis usa a IA mais inteligente, roda suas rotinas toda manhã e sugere o que fazer a cada dia.</p></div>
+      <p style="color:var(--suave);margin:0">Conecte mais computadores, use modelos mais inteligentes, rode rotinas toda manhã e receba sugestões diárias do parque.</p></div>
     <div class="precos" style="margin-bottom:26px">${cartoesPreco(planos, u.plano)}</div>
     <div class="painel" style="margin-bottom:22px"><h2>Sua conta</h2>
       <p style="margin:0 0 12px;color:var(--suave)">${esc(u.email)} · ${u.email_verificado ? "✔ e-mail confirmado" : "e-mail não confirmado"}</p>
