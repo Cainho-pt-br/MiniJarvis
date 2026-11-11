@@ -597,7 +597,7 @@ PLANOS_TEXTOS: dict[str, dict[str, dict[str, Any]]] = {
             "itens": [
                 "Chat e tarefas no computador",
                 "Conecte até 2 computadores",
-                "800 créditos por mês",
+                "{creditos} créditos por mês",
                 "Rotinas manuais",
             ],
         },
@@ -607,7 +607,7 @@ PLANOS_TEXTOS: dict[str, dict[str, dict[str, Any]]] = {
             "itens": [
                 "Chat and tasks on your computer",
                 "Connect up to 2 computers",
-                "800 credits per month",
+                "{creditos} credits per month",
                 "Manual routines",
             ],
         },
@@ -617,7 +617,7 @@ PLANOS_TEXTOS: dict[str, dict[str, dict[str, Any]]] = {
             "itens": [
                 "Chat y tareas en tu computadora",
                 "Conecta hasta 2 computadoras",
-                "800 créditos por mes",
+                "{creditos} créditos por mes",
                 "Rutinas manuales",
             ],
         },
