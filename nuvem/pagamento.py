@@ -116,6 +116,8 @@ _mp: Any = None
 
 
 def mp() -> Any:
+    from .i18n import t
+
     global _mp
     if _mp is None:
         if os.environ.get("MP_FAKE") == "1":
@@ -123,7 +125,7 @@ def mp() -> Any:
         elif os.environ.get("MP_ACCESS_TOKEN"):
             _mp = ClienteMP(os.environ["MP_ACCESS_TOKEN"])
     if _mp is None:
-        raise HTTPException(503, "O pagamento ainda não está disponível. Deixe seu interesse que avisamos.")
+        raise HTTPException(503, t("pagamento_indisponivel"))
     return _mp
 
 
@@ -163,39 +165,57 @@ def _registrar(uid: int, referencia: str, tipo: str, plano: str, valor: float, s
 @router.post("/api/pagamentos/assinatura/{plano}")
 def assinar(plano: str, request: Request, u: Any = Depends(nucleo.usuario_verificado)) -> dict[str, str]:
     """Assinatura mensal no cartão: devolve a URL do checkout do Mercado Pago."""
+    from .i18n import t
+
     try:
         p = cobranca.plano_info(plano)
     except ValueError:
-        raise HTTPException(404, "Plano não encontrado.")
+        raise HTTPException(404, t("plano_nao_encontrado"))
     nucleo.limitar(f"pag:{u['id']}", 10, 3600)
-    r = mp().post("/preapproval", {
-        "reason": f"Jarvis {p['nome']}",
-        "external_reference": _ref(u["id"], plano),
-        "payer_email": u["email"],
-        "back_url": f"{site_url(request)}/#planos",
-        "auto_recurring": {"frequency": 1, "frequency_type": "months",
-                           "transaction_amount": float(p["preco_brl"]), "currency_id": "BRL"},
-        "status": "pending",
-    })
+    cliente_mp = mp()
+    try:
+        r = cliente_mp.post("/preapproval", {
+            "reason": f"Jarvis {p['nome']}",
+            "external_reference": _ref(u["id"], plano),
+            "payer_email": u["email"],
+            "back_url": f"{site_url(request)}/#planos",
+            "auto_recurring": {"frequency": 1, "frequency_type": "months",
+                               "transaction_amount": float(p["preco_brl"]), "currency_id": "BRL"},
+            "status": "pending",
+        })
+    except HTTPException:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        log.exception("não consegui criar assinatura (%s): %s", plano, type(exc).__name__)
+        raise HTTPException(502, t("erro_criar_pagamento"))
     return {"url": r["init_point"]}
 
 
 @router.post("/api/pagamentos/pix/{plano}")
 def pagar_pix(plano: str, request: Request, u: Any = Depends(nucleo.usuario_verificado)) -> dict[str, Any]:
     """Um mês do plano pago com Pix: devolve o QR code e o copia-e-cola."""
+    from .i18n import t
+
     try:
         p = cobranca.plano_info(plano)
     except ValueError:
-        raise HTTPException(404, "Plano não encontrado.")
+        raise HTTPException(404, t("plano_nao_encontrado"))
     nucleo.limitar(f"pag:{u['id']}", 10, 3600)
-    r = mp().post("/v1/payments", {
-        "transaction_amount": float(p["preco_brl"]),
-        "description": f"Jarvis {p['nome']} · 1 mês",
-        "payment_method_id": "pix",
-        "external_reference": _ref(u["id"], plano),
-        "payer": {"email": u["email"], "first_name": u["nome"][:60]},
-        "notification_url": f"{site_url(request)}/api/pagamentos/webhook",
-    })
+    cliente_mp = mp()
+    try:
+        r = cliente_mp.post("/v1/payments", {
+            "transaction_amount": float(p["preco_brl"]),
+            "description": f"Jarvis {p['nome']} · 1 mês",
+            "payment_method_id": "pix",
+            "external_reference": _ref(u["id"], plano),
+            "payer": {"email": u["email"], "first_name": u["nome"][:60]},
+            "notification_url": f"{site_url(request)}/api/pagamentos/webhook",
+        })
+    except HTTPException:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        log.exception("não consegui criar pix (%s): %s", plano, type(exc).__name__)
+        raise HTTPException(502, t("erro_criar_pagamento"))
     pid = _registrar(u["id"], f"mp:{r['id']}", "pix", plano, float(p["preco_brl"]), "pendente")
     dados = (r.get("point_of_interaction") or {}).get("transaction_data") or {}
     return {"id": pid, "valor": p["preco_brl"], "copia_cola": dados.get("qr_code", ""),
@@ -204,9 +224,11 @@ def pagar_pix(plano: str, request: Request, u: Any = Depends(nucleo.usuario_veri
 
 @router.get("/api/pagamentos/{pid}")
 def ver_pagamento(pid: int, u: Any = Depends(nucleo.usuario_atual)) -> dict[str, Any]:
+    from .i18n import t
+
     r = nucleo.db().execute("SELECT * FROM pagamentos WHERE id=? AND usuario_id=?", (pid, u["id"])).fetchone()
     if r is None:
-        raise HTTPException(404, "Pagamento não encontrado.")
+        raise HTTPException(404, t("pagamento_nao_encontrado"))
     if r["status"] == "pendente" and r["referencia"].startswith("mp:"):
         try:  # o painel está esperando: confere direto no MP, sem depender do webhook
             processar_pagamento(r["referencia"][3:])
@@ -219,6 +241,8 @@ def ver_pagamento(pid: int, u: Any = Depends(nucleo.usuario_atual)) -> dict[str,
 def parar_cobranca(u: Any) -> None:
     """Cancela a assinatura no Mercado Pago. Estoura se o MP não confirmar, para
     ninguém achar que cancelou e continuar sendo cobrado."""
+    from .i18n import t
+
     if not u["assinatura_id"]:
         return
     try:
@@ -227,7 +251,7 @@ def parar_cobranca(u: Any) -> None:
         raise
     except Exception as exc:  # noqa: BLE001
         log.exception("não consegui cancelar a assinatura %s: %s", u["assinatura_id"], type(exc).__name__)
-        raise HTTPException(502, "Não consegui cancelar a assinatura no Mercado Pago agora. Tente de novo em instantes.")
+        raise HTTPException(502, t("erro_cancelar_assinatura"))
     with nucleo.transacao() as con:
         con.execute("UPDATE usuarios SET assinatura_id=NULL WHERE id=?", (u["id"],))
 
@@ -235,8 +259,10 @@ def parar_cobranca(u: Any) -> None:
 @router.post("/api/pagamentos/cancelar")
 def cancelar_assinatura(u: Any = Depends(nucleo.usuario_verificado)) -> dict[str, bool]:
     """Para de cobrar; o plano vale até a data já paga."""
+    from .i18n import t
+
     if not u["assinatura_id"]:
-        raise HTTPException(400, "Você não tem assinatura ativa.")
+        raise HTTPException(400, t("sem_assinatura_ativa"))
     parar_cobranca(u)
     return {"ok": True}
 
@@ -324,6 +350,8 @@ def _assinatura_valida(request: Request, data_id: str) -> bool:
 
 @router.post("/api/pagamentos/webhook")
 async def webhook(request: Request) -> JSONResponse:
+    from .i18n import t
+
     try:
         corpo = await request.json()
     except ValueError:
@@ -334,7 +362,7 @@ async def webhook(request: Request) -> JSONResponse:
     if not data_id:
         return JSONResponse({"ok": True})
     if not _assinatura_valida(request, data_id):
-        raise HTTPException(401, "assinatura inválida")
+        raise HTTPException(401, t("assinatura_invalida"))
     # Cada notificação vira uma consulta à API do MP: limita rajadas por origem.
     nucleo.limitar(f"webhook:{nucleo.ip_cliente(request)}", 120, 60)
     try:
@@ -349,5 +377,6 @@ async def webhook(request: Request) -> JSONResponse:
             processar_assinatura(data_id)
     except Exception as exc:  # noqa: BLE001  (o MP reenvia se não for 200)
         log.exception("webhook do MP falhou (%s %s): %s", tipo, data_id, type(exc).__name__)
-        raise HTTPException(500, "erro ao processar")
+        raise HTTPException(500, t("erro_processar"))
     return JSONResponse({"ok": True})
+

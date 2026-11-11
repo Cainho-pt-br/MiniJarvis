@@ -288,34 +288,152 @@ Remover-Jarvis
 '''
 
 
+_TRADUCOES_INSTALADOR: dict[str, list[tuple[str, str]]] = {
+    "en": [
+        ("Jarvis · conectando este computador", "Jarvis · connecting this computer"),
+        ("Este comando está sem o código. Gere outro no painel, em 'Conectar máquina'.",
+         "This command is missing the pairing code. Generate a new one in the dashboard under 'Connect machine'."),
+        ("• Este Mac precisa das Ferramentas de Linha de Comando da Apple (elas trazem o Python).",
+         "• This Mac needs the Apple Command Line Tools (they include Python)."),
+        ("  Vai abrir uma janela: clique em 'Instalar', espere terminar e cole este comando de novo.",
+         "  A window will open: click 'Install', wait for it to finish, and paste this command again."),
+        ("• Falta o Python 3 neste computador. Instale e cole este comando de novo:",
+         "• Python 3 is missing on this computer. Install it and paste this command again:"),
+        ("✓ Python encontrado", "✓ Python found"),
+        ("✓ Agente baixado em", "✓ Agent downloaded to"),
+        ("✓ Computador conectado à sua conta", "✓ Computer connected to your account"),
+        ("✓ Pronto! O agente já está rodando e liga sozinho com o computador",
+         "✓ Done! The agent is running and starts automatically with the computer"),
+        ("✓ Pronto! O agente está rodando.", "✓ Done! The agent is running."),
+        ("  Atenção: não achei como ligá-lo sozinho depois de reiniciar; rode este comando de novo se precisar.",
+         "  Note: could not configure auto-start on reboot; run this command again if needed."),
+        ("  Volte ao navegador: este computador já aparece no seu parque.",
+         "  Return to your browser: this computer now appears in your park."),
+        ("  Para desconectar e remover:", "  To disconnect and remove:"),
+        ("Jarvis - conectando este computador", "Jarvis - connecting this computer"),
+        ('Este comando esta sem o codigo. Gere outro no painel, em "Conectar maquina".',
+         'This command is missing the code. Generate a new one in the dashboard under "Connect machine".'),
+        ("- Instalando o Python (leva 1 ou 2 minutos)...", "- Installing Python (takes 1 or 2 minutes)..."),
+        ("Nao consegui instalar o Python sozinho.", "Could not install Python automatically."),
+        ('Baixe em https://www.python.org/downloads/ , marque "Add python.exe to PATH" ao instalar e cole este comando de novo.',
+         'Download from https://www.python.org/downloads/ , check "Add python.exe to PATH" during setup, and paste this command again.'),
+        ("OK Python encontrado", "OK Python found"),
+        ("OK Agente baixado em", "OK Agent downloaded to"),
+        ("Nao deu para conectar. Gere um codigo novo no painel e tente de novo.",
+         "Could not connect. Generate a new code in the dashboard and try again."),
+        ("OK Computador conectado a sua conta", "OK Computer connected to your account"),
+        ("Pronto! O agente ja esta rodando e liga sozinho com o computador.",
+         "Done! The agent is running and starts automatically with the computer."),
+        ("Volte ao navegador: este computador ja aparece no seu parque.",
+         "Return to your browser: this computer now appears in your park."),
+        ("Para desconectar e remover:", "To disconnect and remove:"),
+        ("Agente do Jarvis removido. Remova também a máquina no painel (Parque > Desconectar).",
+         "Jarvis agent removed. Also remove the machine in the dashboard (Park > Disconnect)."),
+        ("Agente do Jarvis removido. Remova tambem a maquina no painel (Parque > Desconectar).",
+         "Jarvis agent removed. Also remove the machine in the dashboard (Park > Disconnect)."),
+    ],
+    "es": [
+        ("Jarvis · conectando este computador", "Jarvis · conectando esta computadora"),
+        ("Este comando está sem o código. Gere outro no painel, em 'Conectar máquina'.",
+         "A este comando le falta el código. Genera otro en el panel, en 'Conectar equipo'."),
+        ("• Este Mac precisa das Ferramentas de Linha de Comando da Apple (elas trazem o Python).",
+         "• Esta Mac necesita las Herramientas de Línea de Comandos de Apple (incluyen Python)."),
+        ("  Vai abrir uma janela: clique em 'Instalar', espere terminar e cole este comando de novo.",
+         "  Se abrirá una ventana: haz clic en 'Instalar', espera a que termine y pega este comando de nuevo."),
+        ("• Falta o Python 3 neste computador. Instale e cole este comando de novo:",
+         "• Falta Python 3 en esta computadora. Instálalo y pega este comando de nuevo:"),
+        ("✓ Python encontrado", "✓ Python encontrado"),
+        ("✓ Agente baixado em", "✓ Agente descargado en"),
+        ("✓ Computador conectado à sua conta", "✓ Computadora conectada a tu cuenta"),
+        ("✓ Pronto! O agente já está rodando e liga sozinho com o computador",
+         "✓ ¡Listo! El agente ya está funcionando y se inicia solo con la computadora"),
+        ("✓ Pronto! O agente está rodando.", "✓ ¡Listo! El agente está funcionando."),
+        ("  Atenção: não achei como ligá-lo sozinho depois de reiniciar; rode este comando de novo se precisar.",
+         "  Atención: no pude configurar el inicio automático al reiniciar; ejecuta este comando de nuevo si lo necesitas."),
+        ("  Volte ao navegador: este computador já aparece no seu parque.",
+         "  Vuelve al navegador: esta computadora ya aparece en tu parque."),
+        ("  Para desconectar e remover:", "  Para desconectar y eliminar:"),
+        ("Jarvis - conectando este computador", "Jarvis - conectando esta computadora"),
+        ('Este comando esta sem o codigo. Gere outro no painel, em "Conectar maquina".',
+         'A este comando le falta el codigo. Genera otro en el panel, en "Conectar equipo".'),
+        ("- Instalando o Python (leva 1 ou 2 minutos)...", "- Instalando Python (tarda 1 o 2 minutos)..."),
+        ("Nao consegui instalar o Python sozinho.", "No pude instalar Python automáticamente."),
+        ('Baixe em https://www.python.org/downloads/ , marque "Add python.exe to PATH" ao instalar e cole este comando de novo.',
+         'Descárgalo en https://www.python.org/downloads/ , marca "Add python.exe to PATH" al instalar y pega este comando de nuevo.'),
+        ("OK Python encontrado", "OK Python encontrado"),
+        ("OK Agente baixado em", "OK Agente descargado en"),
+        ("Nao deu para conectar. Gere um codigo novo no painel e tente de novo.",
+         "No se pudo conectar. Genera un código nuevo en el panel e inténtalo de nuevo."),
+        ("OK Computador conectado a sua conta", "OK Computadora conectada a tu cuenta"),
+        ("Pronto! O agente ja esta rodando e liga sozinho com o computador.",
+         "¡Listo! El agente ya está funcionando y se inicia solo con la computadora."),
+        ("Volte ao navegador: este computador ja aparece no seu parque.",
+         "Vuelve al navegador: esta computadora ya aparece en tu parque."),
+        ("Para desconectar e remover:", "Para desconectar y eliminar:"),
+        ("Agente do Jarvis removido. Remova também a máquina no painel (Parque > Desconectar).",
+         "Agente de Jarvis eliminado. Elimina también el equipo en el panel (Parque > Desconectar)."),
+        ("Agente do Jarvis removido. Remova tambem a maquina no painel (Parque > Desconectar).",
+         "Agente de Jarvis eliminado. Elimina también el equipo en el panel (Parque > Desconectar)."),
+    ],
+}
+
+
+def _traduzir_script(script: str, idioma: str | None) -> str:
+    from .i18n import idioma_atual, normalizar_idioma
+
+    lang = normalizar_idioma(idioma) or idioma_atual()
+    for orig, trad in _TRADUCOES_INSTALADOR.get(lang, []):
+        script = script.replace(orig, trad)
+    return script
+
+
 def _codigo(c: str) -> str:
     c = (c or "").strip().upper()
     return c if _RE_CODIGO.match(c) else ""
 
 
 @router.get("/instalar.sh")
-def instalar_sh(request: Request, c: str = "") -> PlainTextResponse:
-    return _texto(SH.replace("__BASE__", _base(request)).replace("__CODIGO__", _codigo(c)))
+def instalar_sh(request: Request, c: str = "", lang: str = "") -> PlainTextResponse:
+    from .i18n import resolver_idioma
+
+    idioma = resolver_idioma(request, explicito=lang)
+    s = SH.replace("__BASE__", _base(request)).replace("__CODIGO__", _codigo(c))
+    return _texto(_traduzir_script(s, idioma))
 
 
 @router.get("/instalar.ps1")
-def instalar_ps1(request: Request, c: str = "") -> PlainTextResponse:
-    return _texto(PS1.replace("__BASE__", _base(request)).replace("__CODIGO__", _codigo(c)))
+def instalar_ps1(request: Request, c: str = "", lang: str = "") -> PlainTextResponse:
+    from .i18n import resolver_idioma
+
+    idioma = resolver_idioma(request, explicito=lang)
+    s = PS1.replace("__BASE__", _base(request)).replace("__CODIGO__", _codigo(c))
+    return _texto(_traduzir_script(s, idioma))
 
 
 @router.get("/desinstalar.sh")
-def desinstalar_sh() -> PlainTextResponse:
-    return _texto(DESINSTALAR_SH)
+def desinstalar_sh(request: Request, lang: str = "") -> PlainTextResponse:
+    from .i18n import resolver_idioma
+
+    idioma = resolver_idioma(request, explicito=lang)
+    return _texto(_traduzir_script(DESINSTALAR_SH, idioma))
 
 
 @router.get("/desinstalar.ps1")
-def desinstalar_ps1() -> PlainTextResponse:
-    return _texto(DESINSTALAR_PS1)
+def desinstalar_ps1(request: Request, lang: str = "") -> PlainTextResponse:
+    from .i18n import resolver_idioma
+
+    idioma = resolver_idioma(request, explicito=lang)
+    return _texto(_traduzir_script(DESINSTALAR_PS1, idioma))
 
 
-def comandos(base: str, codigo: str) -> dict[str, str]:
+def comandos(base: str, codigo: str, idioma: str | None = None) -> dict[str, str]:
+    from .i18n import PADRAO, idioma_atual, normalizar_idioma
+
+    lang = normalizar_idioma(idioma) or idioma_atual()
+    sufixo = f"&lang={lang}" if lang != PADRAO else ""
     return {
-        "windows": f'irm "{base}/instalar.ps1?c={codigo}" | iex',
-        "mac": f'curl -fsSL "{base}/instalar.sh?c={codigo}" | sh',
-        "linux": f'curl -fsSL "{base}/instalar.sh?c={codigo}" | sh',
+        "windows": f'irm "{base}/instalar.ps1?c={codigo}{sufixo}" | iex',
+        "mac": f'curl -fsSL "{base}/instalar.sh?c={codigo}{sufixo}" | sh',
+        "linux": f'curl -fsSL "{base}/instalar.sh?c={codigo}{sufixo}" | sh',
     }
+

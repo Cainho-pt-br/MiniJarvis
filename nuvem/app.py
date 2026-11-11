@@ -27,6 +27,15 @@ from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from .banco import Banco, ErroDuplicado, url_postgres
+from .i18n import (
+    aceitar_idioma,
+    definir_idioma,
+    idioma_atual,
+    normalizar_idioma,
+    planos_localizados,
+    resolver_idioma,
+    t,
+)
 from .ia import (
     MAX_TOKENS,
     MAX_TOKENS_GRATIS,
@@ -40,7 +49,7 @@ from .ia import (
     mensagens_estimadas,
     modelo_do_plano,
 )
-from .tarefas import TAREFAS
+from .tarefas import catalogo_tarefas
 
 BASE = Path(__file__).resolve().parent
 DB_PATH = Path(os.environ.get("NUVEM_DB", BASE / "nuvem.db"))
@@ -58,6 +67,16 @@ app = FastAPI(title="MiniJarvis Nuvem", docs_url=None, redoc_url=None, openapi_u
 
 @app.middleware("http")
 async def cabecalhos_de_seguranca(request: Request, call_next: Any) -> Any:
+    u_sessao = None
+    tok = request.cookies.get(COOKIE)
+    if tok:
+        try:
+            u_sessao = db().execute(
+                "SELECT idioma FROM sessoes s JOIN usuarios u ON u.id = s.usuario_id "
+                "WHERE s.token_hash = ? AND s.expira_em > ?", (_hash_token(tok), agora())).fetchone()
+        except Exception:
+            u_sessao = None
+    definir_idioma(resolver_idioma(request, usuario=u_sessao))
     resp = await call_next(request)
     # Ninguém pode embutir o painel noutro site (evita enganar o clique em "Aprovar").
     resp.headers.setdefault("X-Frame-Options", "DENY")
@@ -134,12 +153,13 @@ def abrir_sessao(resp: Response, usuario_id: int) -> None:
 def usuario_atual(request: Request) -> Any:
     token = request.cookies.get(COOKIE)
     if not token:
-        raise HTTPException(401, "Faça login para continuar.")
+        raise HTTPException(401, t("login_necessario"))
     row = db().execute(
         "SELECT u.* FROM sessoes s JOIN usuarios u ON u.id = s.usuario_id "
         "WHERE s.token_hash = ? AND s.expira_em > ?", (_hash_token(token), agora())).fetchone()
     if row is None:
-        raise HTTPException(401, "Sua sessão expirou. Entre de novo.")
+        raise HTTPException(401, t("sessao_expirada"))
+    definir_idioma(resolver_idioma(request, usuario=row))
     return row
 
 
@@ -155,13 +175,13 @@ def ip_cliente(request: Request) -> str:
     return request.client.host if request.client else "?"
 
 
-def limitar(chave: str, maximo: int, janela_s: int, msg: str = "Muitas tentativas. Espere alguns minutos.") -> None:
+def limitar(chave: str, maximo: int, janela_s: int, msg: str | None = None) -> None:
     """Conta tentativas no banco (vale entre instâncias). Estoura com 429."""
     desde = (datetime.now(timezone.utc) - timedelta(seconds=janela_s)).isoformat(timespec="seconds")
     n = db().execute("SELECT COUNT(*) AS n FROM limites WHERE chave = ? AND criado_em > ?",
                      (chave, desde)).fetchone()["n"]
     if n >= maximo:
-        raise HTTPException(429, msg)
+        raise HTTPException(429, msg or t("muitas_tentativas"))
     with transacao() as con:
         con.execute("INSERT INTO limites (chave, criado_em) VALUES (?, ?)", (chave, agora()))
         if secrets.randbelow(50) == 0:  # faxina de vez em quando
@@ -181,6 +201,7 @@ class Cadastro(BaseModel):
     senha: str = Field(min_length=8, max_length=200)
     aceito: bool = False  # termos de uso e política de privacidade
     indicacao: str = Field(default="", max_length=20)  # código de quem indicou (?ref=)
+    idioma: str = Field(default="", max_length=16)
 
 
 class Entrada(BaseModel):
@@ -215,7 +236,7 @@ def _publico(u: Any) -> dict[str, Any]:
     return {"id": u["id"], "nome": u["nome"], "email": u["email"], "creditos": u["creditos"],
             "plano": u["plano"], "plano_ate": u["plano_ate"], "assinatura": bool(u["assinatura_id"]),
             "email_verificado": bool(u["email_verificado"]), "admin": eh_admin(u),
-            "codigo_indicacao": u["codigo_indicacao"]}
+            "codigo_indicacao": u["codigo_indicacao"], "idioma": u["idioma"]}
 
 
 def eh_admin(u: Any) -> bool:
@@ -248,13 +269,13 @@ def _conferir_codigo(uid: int, finalidade: str, codigo: str, cid: int | None = N
         args.append(cid)
     c = db().execute(sql, args).fetchone()
     if c is None or c["expira_em"] < agora():
-        raise HTTPException(400, "Código expirado. Peça um novo.")
+        raise HTTPException(400, t("codigo_expirado"))
     if c["tentativas"] >= 5:
-        raise HTTPException(429, "Tentativas demais com este código. Peça um novo.")
+        raise HTTPException(429, t("tentativas_codigo"))
     if not hmac.compare_digest(c["codigo_hash"], _hash_token(codigo.strip())):
         with transacao() as con:
             con.execute("UPDATE codigos SET tentativas = tentativas + 1 WHERE id = ?", (c["id"],))
-        raise HTTPException(400, "Código incorreto.")
+        raise HTTPException(400, t("codigo_incorreto"))
     with transacao() as con:
         con.execute("DELETE FROM codigos WHERE id = ?", (c["id"],))
 
@@ -264,12 +285,13 @@ def _mandar_codigo(u: Any, finalidade: str) -> int:
 
     cid, codigo = _criar_codigo(u["id"], finalidade)
     motivo = {"verificar": "confirmar", "entrar": "entrar", "senha": "senha"}[finalidade]
+    idioma = normalizar_idioma(u["idioma"]) or idioma_atual()
     try:
-        correio.enviar_codigo(u["email"], u["nome"], codigo, motivo)
+        correio.enviar_codigo(u["email"], u["nome"], codigo, motivo, idioma=idioma)
     except Exception as exc:  # noqa: BLE001
         log.exception("Falha ao enviar e-mail: %s", type(exc).__name__)
         operacao.incidente("email")
-        raise HTTPException(503, "Não consegui enviar o e-mail agora. Tente de novo em instantes.")
+        raise HTTPException(503, t("erro_envio_email"))
     return cid
 
 
@@ -288,7 +310,7 @@ def dispositivo_confiavel(request: Request, uid: int) -> bool:
 
 def usuario_verificado(u: Any = Depends(usuario_atual)) -> Any:
     if not u["email_verificado"]:
-        raise HTTPException(403, "Confirme seu e-mail para continuar.")
+        raise HTTPException(403, t("confirme_email"))
     return u
 
 
@@ -306,35 +328,44 @@ def _dar_boas_vindas(uid: int) -> None:
 def cadastrar(c: Cadastro, request: Request, resp: Response) -> dict[str, Any]:
     from . import correio
 
+    idioma_pref = (
+        normalizar_idioma(c.idioma)
+        or normalizar_idioma(request.headers.get("x-idioma"))
+        or aceitar_idioma(request.headers.get("x-nav-idiomas"))
+        or aceitar_idioma(request.headers.get("accept-language"))
+    )
+    if idioma_pref:
+        definir_idioma(idioma_pref)
     ip = ip_cliente(request)
-    limitar(f"cad-h:{ip}", 3, 3600, "Muitas contas criadas desta rede. Tente de novo mais tarde.")
-    limitar(f"cad-d:{ip}", 8, 86400, "Muitas contas criadas desta rede hoje. Tente amanhã.")
+    limitar(f"cad-h:{ip}", 3, 3600, t("muitas_contas_hora"))
+    limitar(f"cad-d:{ip}", 8, 86400, t("muitas_contas_dia"))
     email = c.email.strip().lower()
     if not _RE_EMAIL.match(email):
-        raise HTTPException(400, "E-mail inválido.")
+        raise HTTPException(400, t("email_invalido"))
     if not c.aceito:
-        raise HTTPException(400, "Para criar a conta, aceite os termos de uso e a política de privacidade.")
+        raise HTTPException(400, t("aceite_termos"))
     canon = email_canonico(email)
     if canon.split("@")[1] in DESCARTAVEIS:
-        raise HTTPException(400, "Use um e-mail de verdade (endereços temporários não são aceitos).")
+        raise HTTPException(400, t("email_descartavel"))
     if db().execute("SELECT 1 FROM usuarios WHERE email_canonico = ? OR email = ?", (canon, email)).fetchone():
-        raise HTTPException(409, "Já existe uma conta com este e-mail.")
+        raise HTTPException(409, t("email_ja_cadastrado"))
     precisa_confirmar = correio.configurado()
     if not precisa_confirmar and email in _admins():
         # Sem confirmação por e-mail, qualquer um poderia se cadastrar com o
         # e-mail do dono e virar administrador.
-        raise HTTPException(403, "Este e-mail só pode ser cadastrado com a confirmação por e-mail ligada.")
+        raise HTTPException(403, t("email_admin_exige_confirmacao"))
     indicador = crescimento.quem_indicou(c.indicacao)
     try:
         with transacao() as con:
             uid = con.inserir(
                 "INSERT INTO usuarios (email, email_canonico, nome, senha_hash, creditos, email_verificado, "
-                "aceitou_termos_em, codigo_indicacao, indicado_por, criado_em) VALUES (?, ?, ?, ?, 0, 0, ?, ?, ?, ?)",
+                "aceitou_termos_em, codigo_indicacao, indicado_por, idioma, criado_em) "
+                "VALUES (?, ?, ?, ?, 0, 0, ?, ?, ?, ?, ?)",
                 (email, canon, c.nome.strip(), gerar_hash(c.senha), agora(), crescimento.gerar_codigo_indicacao(),
-                 indicador, agora()))
+                 indicador, idioma_pref, agora()))
     except ErroDuplicado:
-        raise HTTPException(409, "Já existe uma conta com este e-mail.")
-    parque._semear_cerebro(uid)  # o cérebro já nasce com as notas de boas-vindas
+        raise HTTPException(409, t("email_ja_cadastrado"))
+    parque._semear_cerebro(uid, idioma_atual())  # o cérebro já nasce com as notas de boas-vindas
     operacao.registrar("cadastro", uid)
     u = db().execute("SELECT * FROM usuarios WHERE id = ?", (uid,)).fetchone()
     if precisa_confirmar:
@@ -364,7 +395,7 @@ def verificar_email(c: Codigo, resp: Response, u: Any = Depends(usuario_atual)) 
 def reenviar_codigo(u: Any = Depends(usuario_atual)) -> dict[str, bool]:
     if u["email_verificado"]:
         return {"ok": True}
-    limitar(f"reenv-m:{u['id']}", 1, 60, "Espere um minuto para pedir outro código.")
+    limitar(f"reenv-m:{u['id']}", 1, 60, t("espere_reenviar_codigo"))
     limitar(f"reenv-h:{u['id']}", 6, 3600)
     _mandar_codigo(u, "verificar")
     return {"ok": True}
@@ -381,11 +412,11 @@ def entrar(e: Entrada, request: Request, resp: Response) -> dict[str, Any]:
 
     email = e.email.strip().lower()
     limitar(f"login-ip:{ip_cliente(request)}", 15, 900)
-    limitar(f"login-conta:{email_canonico(email)}", 8, 900,
-            "Muitas tentativas nesta conta. Espere 15 minutos.")
+    limitar(f"login-conta:{email_canonico(email)}", 8, 900, t("muitas_tentativas_conta"))
     u = db().execute("SELECT * FROM usuarios WHERE email = ?", (email,)).fetchone()
     if u is None or not conferir_senha(e.senha, u["senha_hash"]):
-        raise HTTPException(401, "E-mail ou senha incorretos.")
+        raise HTTPException(401, t("credenciais_incorretas"))
+    definir_idioma(resolver_idioma(request, usuario=u))
     # Navegador novo numa conta confirmada: pede o código mandado por e-mail
     # (verificação em duas etapas sem precisar de aplicativo).
     if u["email_verificado"] and correio.configurado() and not dispositivo_confiavel(request, u["id"]):
@@ -405,7 +436,7 @@ def entrar_com_codigo(c: CodigoEntrada, request: Request, resp: Response) -> dic
     limitar(f"login-cod:{ip_cliente(request)}", 20, 900)
     r = db().execute("SELECT usuario_id FROM codigos WHERE id = ? AND finalidade = 'entrar'", (c.desafio,)).fetchone()
     if r is None:
-        raise HTTPException(400, "Código expirado. Entre de novo.")
+        raise HTTPException(400, t("codigo_expirado_entrar"))
     _conferir_codigo(r["usuario_id"], "entrar", c.codigo, c.desafio)
     confiar_dispositivo(resp, r["usuario_id"])
     abrir_sessao(resp, r["usuario_id"])
@@ -423,12 +454,12 @@ def esquecer_senha(e: EsqueciSenha, request: Request) -> dict[str, bool]:
     from . import correio
 
     if not correio.configurado():
-        raise HTTPException(503, "A recuperação de senha ainda não está disponível. Fale com o suporte.")
+        raise HTTPException(503, t("recuperacao_indisponivel"))
     limitar(f"esq-ip:{ip_cliente(request)}", 10, 3600)
     email = e.email.strip().lower()
     u = db().execute("SELECT * FROM usuarios WHERE email = ?", (email,)).fetchone()
     if u is not None:
-        limitar(f"esq-conta:{u['id']}", 3, 3600, "Já mandamos códigos demais para este e-mail. Espere uma hora.")
+        limitar(f"esq-conta:{u['id']}", 3, 3600, t("muitos_codigos_email"))
         _mandar_codigo(u, "senha")
     return {"ok": True}
 
@@ -444,7 +475,7 @@ def redefinir_senha(n: NovaSenha, request: Request, resp: Response) -> dict[str,
     limitar(f"redef-ip:{ip_cliente(request)}", 20, 900)
     u = db().execute("SELECT * FROM usuarios WHERE email = ?", (n.email.strip().lower(),)).fetchone()
     if u is None:
-        raise HTTPException(400, "Código incorreto.")
+        raise HTTPException(400, t("codigo_incorreto"))
     _conferir_codigo(u["id"], "senha", n.codigo)
     with transacao() as con:
         # Quem provou que tem o e-mail também confirmou a conta.
@@ -484,6 +515,22 @@ def eu(u: Any = Depends(usuario_atual)) -> dict[str, Any]:
     return _publico(u)
 
 
+class TrocaIdioma(BaseModel):
+    idioma: str = Field(min_length=2, max_length=16)
+
+
+@app.post("/api/eu/idioma")
+@app.patch("/api/eu/idioma")
+def mudar_idioma(dados: TrocaIdioma, u: Any = Depends(usuario_atual)) -> dict[str, Any]:
+    norm = normalizar_idioma(dados.idioma)
+    if not norm:
+        raise HTTPException(400, t("idioma_invalido"))
+    with transacao() as con:
+        con.execute("UPDATE usuarios SET idioma = ? WHERE id = ?", (norm, u["id"]))
+    definir_idioma(norm)
+    return _publico(db().execute("SELECT * FROM usuarios WHERE id = ?", (u["id"],)).fetchone())
+
+
 class ApagarConta(BaseModel):
     senha: str = Field(max_length=200)
 
@@ -495,7 +542,7 @@ def apagar_conta(a: ApagarConta, resp: Response, u: Any = Depends(usuario_atual)
     não continuar sendo cobrada por uma conta que não existe mais."""
     limitar(f"apagar:{u['id']}", 5, 900)
     if not conferir_senha(a.senha, u["senha_hash"]):
-        raise HTTPException(403, "Senha incorreta.")
+        raise HTTPException(403, t("senha_incorreta"))
     pagamento.parar_cobranca(u)
     with transacao() as con:
         con.execute("DELETE FROM usuarios WHERE id = ?", (u["id"],))
@@ -508,7 +555,7 @@ def apagar_conta(a: ApagarConta, resp: Response, u: Any = Depends(usuario_atual)
 
 @app.get("/api/tarefas")
 def tarefas() -> list[dict[str, str]]:
-    return TAREFAS
+    return catalogo_tarefas(idioma_atual())
 
 
 @app.get("/api/conversas")
@@ -521,7 +568,7 @@ def listar_conversas(u: Any = Depends(usuario_atual)) -> list[dict[str, Any]]:
 def _conversa_do_usuario(cid: int, uid: int) -> Any:
     c = db().execute("SELECT * FROM conversas WHERE id = ? AND usuario_id = ?", (cid, uid)).fetchone()
     if c is None:
-        raise HTTPException(404, "Conversa não encontrada.")
+        raise HTTPException(404, t("conversa_nao_encontrada"))
     return c
 
 
@@ -584,13 +631,14 @@ def enviar_mensagem(m: NovaMensagem, u: Any = Depends(usuario_verificado)) -> St
     from .jarvis import EntradaInvalida, executar_ferramenta
 
     if u["creditos"] <= 0:
-        raise HTTPException(402, "Seus créditos acabaram. Recarregue para continuar conversando.")
+        raise HTTPException(402, t("creditos_acabaram_chat"))
     operacao.conferir_teto()
     operacao.primeira_vez("primeira_mensagem", u["id"])
+    idioma = idioma_atual()
     texto = m.texto.strip()
     with transacao() as con:
         if m.conversa_id is None:
-            titulo = texto.splitlines()[0][:60] or "Nova conversa"
+            titulo = texto.splitlines()[0][:60] or t("nova_conversa", idioma)
             cid = con.inserir("INSERT INTO conversas (usuario_id, titulo, criado_em, atualizado_em) "
                               "VALUES (?, ?, ?, ?)", (u["id"], titulo, agora(), agora()))
         else:
@@ -609,6 +657,7 @@ def enviar_mensagem(m: NovaMensagem, u: Any = Depends(usuario_verificado)) -> St
                         (cid, papel, visivel, json.dumps(conteudo, ensure_ascii=False), oculta, agora()))
 
     def gerar() -> Iterator[str]:
+        definir_idioma(idioma)
         yield _sse("conversa", {"id": cid})
         custo_total = 0
         ja_escreveu = False
@@ -627,11 +676,11 @@ def enviar_mensagem(m: NovaMensagem, u: Any = Depends(usuario_verificado)) -> St
                 log.exception("Falha ao chamar a IA (conversa %s, modelo %s): %s",
                               cid, final.modelo, type(exc).__name__)
                 operacao.incidente("ia")
-                yield _sse("erro", "A IA não respondeu agora. Tente de novo em instantes.")
+                yield _sse("erro", t("ia_nao_respondeu", idioma))
                 break
             custo_total += _custo(final)
             if final.recusada and not final.texto:
-                final.texto = "Não posso ajudar com esse pedido. Que tal tentar de outro jeito?"
+                final.texto = t("ia_recusou", idioma)
                 yield _sse("texto", final.texto)
             guardar("assistant", final.texto, final.conteudo, 0 if final.texto else 1)
             historico.append({"role": "assistant", "content": final.conteudo})
@@ -640,7 +689,7 @@ def enviar_mensagem(m: NovaMensagem, u: Any = Depends(usuario_verificado)) -> St
             if final.stop_reason != "tool_use" or not final.chamadas:
                 break
             if custo_total >= u["creditos"]:  # o saldo acabou no meio: não começa outra rodada
-                yield _sse("texto", "\n\n(Seus créditos acabaram; recarregue para eu continuar.)")
+                yield _sse("texto", t("creditos_acabaram_meio", idioma))
                 break
             resultados = []
             for ch in final.chamadas:
@@ -679,10 +728,10 @@ def gerar_sugestoes(u: Any = Depends(usuario_verificado)) -> dict[str, Any]:
 
     incluido = bool(info_plano(u["plano"]).get("sugestoes_auto"))  # nos planos com sugestões automáticas não gasta créditos
     if not incluido and u["creditos"] <= 0:
-        raise HTTPException(402, "Seus créditos acabaram.")
+        raise HTTPException(402, t("creditos_acabaram"))
     atual = db().execute("SELECT gerado_em FROM sugestoes WHERE usuario_id = ?", (u["id"],)).fetchone()
     if atual and (datetime.now(timezone.utc) - datetime.fromisoformat(atual["gerado_em"])).total_seconds() < 600:
-        raise HTTPException(429, "As sugestões foram atualizadas há pouco. Tente de novo em alguns minutos.")
+        raise HTTPException(429, t("sugestoes_recentes"))
     sugestoes, saldo = atualizar_sugestoes(u, cobrar=not incluido)
     return {"sugestoes": sugestoes, "gerado_em": agora(), "creditos": saldo}
 
@@ -728,14 +777,14 @@ def info_plano(plano: str) -> dict[str, Any]:
 
 @app.get("/api/planos")
 def planos() -> list[dict[str, Any]]:
-    return PLANOS
+    return planos_localizados(PLANOS, idioma_atual())
 
 
 @app.post("/api/planos/{plano}/interesse")
 def registrar_interesse(plano: str, u: Any = Depends(usuario_verificado)) -> dict[str, bool]:
     """Enquanto o pagamento não está ligado, guarda quem quis assinar (lista de espera)."""
     if plano not in {p["id"] for p in PLANOS} - {"gratis"}:
-        raise HTTPException(404, "Plano não encontrado.")
+        raise HTTPException(404, t("plano_nao_encontrado"))
     with transacao() as con:
         con.execute("INSERT INTO interesses (usuario_id, plano, criado_em) VALUES (?, ?, ?)", (u["id"], plano, agora()))
     return {"ok": True}
@@ -752,7 +801,7 @@ def extrato(u: Any = Depends(usuario_atual)) -> list[dict[str, Any]]:
 
 def usuario_admin(u: Any = Depends(usuario_atual)) -> Any:
     if not eh_admin(u):
-        raise HTTPException(404, "não encontrado")
+        raise HTTPException(404, t("nao_encontrado"))
     return u
 
 
@@ -782,21 +831,21 @@ class TrocaPlano(BaseModel):
 
 
 @app.post("/api/admin/usuarios/{uid}/plano")
-def admin_trocar_plano(uid: int, t: TrocaPlano, _: Any = Depends(usuario_admin)) -> dict[str, bool]:
+def admin_trocar_plano(uid: int, t_plano: TrocaPlano, _: Any = Depends(usuario_admin)) -> dict[str, bool]:
     from . import cobranca
 
-    if t.plano not in {p["id"] for p in PLANOS}:
-        raise HTTPException(400, "Plano inválido.")
-    if t.plano == "gratis":
+    if t_plano.plano not in {p["id"] for p in PLANOS}:
+        raise HTTPException(400, t("plano_invalido"))
+    if t_plano.plano == "gratis":
         with transacao() as con:
             con.execute("UPDATE usuarios SET plano = 'gratis', plano_ate = NULL WHERE id = ?", (uid,))
-    elif t.meses:
-        cobranca.ativar_plano(uid, t.plano, f"plano {t.plano} (cortesia)", t.meses)
-    if t.creditos:
+    elif t_plano.meses:
+        cobranca.ativar_plano(uid, t_plano.plano, f"plano {t_plano.plano} (cortesia)", t_plano.meses)
+    if t_plano.creditos:
         with transacao() as con:
-            con.execute("UPDATE usuarios SET creditos = creditos + ? WHERE id = ?", (t.creditos, uid))
+            con.execute("UPDATE usuarios SET creditos = creditos + ? WHERE id = ?", (t_plano.creditos, uid))
             con.execute("INSERT INTO extrato (usuario_id, delta, motivo, criado_em) VALUES (?, ?, ?, ?)",
-                        (uid, t.creditos, "créditos de cortesia", agora()))
+                        (uid, t_plano.creditos, "créditos de cortesia", agora()))
     return {"ok": True}
 
 
@@ -856,8 +905,9 @@ def favicon() -> FileResponse:
 def icone(nome: str) -> FileResponse:
     caminho = (BASE / "web" / "icones" / nome).resolve()
     if caminho.parent != (BASE / "web" / "icones").resolve() or not caminho.is_file():
-        raise HTTPException(404, "não encontrado")
+        raise HTTPException(404, t("nao_encontrado"))
     return FileResponse(caminho, headers={"Cache-Control": "public, max-age=86400"})
+
 
 
 @app.get("/agente.py")

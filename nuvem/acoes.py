@@ -95,6 +95,75 @@ ACOES: dict[str, dict[str, Any]] = {
 }
 
 
+_TRADUCOES_ACOES: dict[str, dict[str, tuple[str, str]]] = {
+    "espaco_disco": {
+        "pt-BR": ("Ver espaço em disco", "Mostra quanto espaço livre cada disco tem."),
+        "en": ("Check disk space", "Shows how much free space each drive has."),
+        "es": ("Ver espacio en disco", "Muestra cuánto espacio libre tiene cada disco."),
+    },
+    "info_sistema": {
+        "pt-BR": ("Informações do computador", "Mostra o sistema, o processador, a memória e há quanto tempo está ligado."),
+        "en": ("Computer information", "Shows the system, processor, memory, and how long it has been running."),
+        "es": ("Información de la computadora", "Muestra el sistema, el procesador, la memoria y cuánto tiempo lleva encendida."),
+    },
+    "processos_pesados": {
+        "pt-BR": ("O que está pesando", "Lista os 10 programas que mais usam memória agora. Não fecha nada."),
+        "en": ("What is slowing it down", "Lists the top 10 programs using memory right now. Does not close anything."),
+        "es": ("Qué está consumiendo recursos", "Lista los 10 programas que más memoria usan ahora. No cierra nada."),
+    },
+    "maiores_downloads": {
+        "pt-BR": ("Maiores arquivos em Downloads",
+                  "Mostra os 15 maiores arquivos da pasta Downloads, para você decidir o que apagar. Não apaga nada."),
+        "en": ("Largest files in Downloads",
+               "Shows the 15 largest files in your Downloads folder so you can decide what to delete. Deletes nothing."),
+        "es": ("Archivos más grandes en Descargas",
+               "Muestra los 15 archivos más grandes de la carpeta Descargas para que decidas qué borrar. No borra nada."),
+    },
+    "limpar_temporarios": {
+        "pt-BR": ("Limpar arquivos temporários",
+                  "Apaga arquivos temporários com mais de 7 dias. Seus documentos, fotos e downloads não são tocados."),
+        "en": ("Clean temporary files",
+               "Deletes temporary files older than 7 days. Your documents, photos, and downloads are untouched."),
+        "es": ("Limpiar archivos temporales",
+               "Borra archivos temporales con más de 7 días. Tus documentos, fotos y descargas no se tocan."),
+    },
+    "organizar_downloads": {
+        "pt-BR": ("Organizar Downloads",
+                  "Separa os arquivos soltos da pasta Downloads em pastas (Imagens, Documentos, Vídeos…). "
+                  "Nada é apagado: só muda de pasta."),
+        "en": ("Organize Downloads",
+               "Sorts loose files in your Downloads folder into subfolders (Images, Documents, Videos…). "
+               "Nothing is deleted: files only move into folders."),
+        "es": ("Organizar Descargas",
+               "Separa los archivos sueltos de la carpeta Descargas en carpetas (Imágenes, Documentos, Videos…). "
+               "No se borra nada: solo cambia de carpeta."),
+    },
+    "testar_internet": {
+        "pt-BR": ("Testar a internet", "Mede se a internet está respondendo e com que rapidez."),
+        "en": ("Test internet", "Measures whether the internet is responding and how fast."),
+        "es": ("Probar internet", "Mide si internet responde y con qué rapidez."),
+    },
+}
+
+
+def titulo_acao(acao: str, idioma: str | None = None) -> str:
+    from .i18n import PADRAO, idioma_atual, normalizar_idioma
+
+    lang = normalizar_idioma(idioma) or idioma_atual()
+    tr = _TRADUCOES_ACOES.get(acao, {})
+    par = tr.get(lang) or tr.get(PADRAO)
+    return par[0] if par else ACOES[acao]["titulo"]
+
+
+def descricao_acao(acao: str, idioma: str | None = None) -> str:
+    from .i18n import PADRAO, idioma_atual, normalizar_idioma
+
+    lang = normalizar_idioma(idioma) or idioma_atual()
+    tr = _TRADUCOES_ACOES.get(acao, {})
+    par = tr.get(lang) or tr.get(PADRAO)
+    return par[1] if par else ACOES[acao]["descricao"]
+
+
 def eh_windows(info: dict[str, Any] | None) -> bool | None:
     so = str((info or {}).get("so") or "").lower()
     if not so:
@@ -104,10 +173,12 @@ def eh_windows(info: dict[str, Any] | None) -> bool | None:
 
 def comando(acao: str, info: dict[str, Any] | None) -> str:
     """O comando da ação para o sistema da máquina (KeyError se a ação não existe)."""
+    from .i18n import t
+
     a = ACOES[acao]
     win = eh_windows(info)
     if win is None:
-        raise ValueError("a máquina ainda não informou o sistema operacional; espere ela conectar")
+        raise ValueError(t("maquina_sem_so"))
     if win:
         # -EncodedCommand evita qualquer problema de aspas no cmd.exe, que é
         # quem o agente usa para jobs shell no Windows.
@@ -116,6 +187,7 @@ def comando(acao: str, info: dict[str, Any] | None) -> str:
     return a["unix"]
 
 
-def catalogo() -> list[dict[str, str]]:
-    return [{"id": k, "titulo": v["titulo"], "descricao": v["descricao"], "icone": v["icone"]}
+def catalogo(idioma: str | None = None) -> list[dict[str, str]]:
+    return [{"id": k, "titulo": titulo_acao(k, idioma), "descricao": descricao_acao(k, idioma), "icone": v["icone"]}
             for k, v in ACOES.items()]
+

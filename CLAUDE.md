@@ -42,9 +42,10 @@ próprio e use a URL acima.
 | `app.py` | Contas (cadastro, e-mail confirmado, login, "esqueci a senha", apagar conta), chat com streaming e ferramentas, planos, admin, páginas legais e página inicial |
 | `parque.py` | Máquinas, pareamento por código, protocolo do agente, tarefas (jobs), cérebro (notas), rotinas, cron diário, limite de máquinas por plano |
 | `jarvis.py` | Ferramentas que a IA usa no chat; sugestões do parque (`atualizar_sugestoes`, `sugestoes_automaticas`) |
+| `i18n.py` | Internacionalização (`pt-BR`, `en`, `es`), resolução de idioma por requisição e textos da API/planos |
 | `ia.py` | Cliente da Anthropic, modelos por plano, **tabela de preços** (`PRECOS`), `FakeIA` para testes |
 | `acoes.py` | As 7 ações prontas do modo seguro (comando Windows em PowerShell codificado e unix) |
-| `falhas.py` | Explica em português por que uma tarefa falhou |
+| `falhas.py` | Explica em linguagem simples (`pt-BR`, `en`, `es`) por que uma tarefa falhou |
 | `instaladores.py` | Scripts `/instalar.ps1`, `/instalar.sh`, `/desinstalar.*` servidos pelo site |
 | `pagamento.py` | Mercado Pago: assinatura no cartão, Pix, webhook (`FakeMP` nos testes) |
 | `cobranca.py` | Ativar plano (31 dias + créditos), rebaixar vencidos, estorno |
@@ -65,7 +66,7 @@ próprio e use a URL acima.
 - **Segurança:** toda máquina nasce no **modo seguro** (só ações prontas); modo livre exige a senha da conta. Tarefas criadas pelo Jarvis nascem "aguardando" e só rodam depois do "Aprovar". Admin exige e-mail confirmado (`ADMIN_EMAILS`). O token do agente é guardado só como hash.
 - **Pagamento:** o webhook nunca confia no aviso: busca o pagamento na API do Mercado Pago. `pagamentos.referencia` é UNIQUE e a troca para "aprovado" é atômica (não credite fora desse caminho).
 - **Teto de gasto:** `TETO_DIARIO_USD` para a IA do dia inteiro e avisa o dono por e-mail.
-- **Idioma:** tudo que o usuário vê é em português do Brasil, linguagem simples, sem jargão.
+- **Idioma:** suporta `pt-BR` (padrão e fallback), `en` e `es`, sempre em linguagem simples e sem jargão. Ordem de escolha: preferência salva (`usuarios.idioma` + `localStorage`) > `navigator.languages` > cabeçalho `Accept-Language` > `pt-BR`. Preços continuam em reais (BRL), com aviso claro para quem usa em `en` ou `es`.
 
 ## Armadilhas já pisadas
 

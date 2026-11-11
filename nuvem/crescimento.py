@@ -120,8 +120,8 @@ def despublicar(cid: int, u: Any = Depends(nucleo.usuario_atual)) -> dict[str, b
     return {"ok": True}
 
 
-_PAGINA = """<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{titulo} · conversa com o Jarvis</title><meta name="description" content="{descricao}">
+_PAGINA = """<!doctype html><html lang="{lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{titulo} · {sufixo_titulo}</title><meta name="description" content="{descricao}">
 <meta property="og:title" content="{titulo} · Jarvis"><meta property="og:description" content="{descricao}">
 <meta name="robots" content="noindex"><link rel="icon" href="/favicon.ico">
 <style>body{{margin:0;background:#05080f;color:#e8eef8;font:15px/1.6 Inter,system-ui,sans-serif}}main{{max-width:720px;margin:0 auto;padding:32px 16px 80px}}
@@ -130,24 +130,37 @@ h1{{font-size:22px;margin:0 0 20px}}.m{{display:flex;gap:12px;margin:0 0 16px}}.
 .m.assistant .q{{background:linear-gradient(135deg,#3fd0c9,#8b7bff);color:#04121a;border:0}}.c{{white-space:pre-wrap;word-break:break-word;padding:12px 14px;border-radius:14px;background:#0e1522;border:1px solid #1d2940;flex:1}}
 .m.user .c{{background:#131c2c}}.cta{{margin-top:36px;padding:24px;border-radius:16px;text-align:center;background:linear-gradient(120deg,rgba(63,208,201,.12),rgba(139,123,255,.12));border:1px solid #2a3a57}}
 .cta a{{display:inline-block;margin-top:12px;padding:12px 22px;border-radius:12px;background:linear-gradient(135deg,#3fd0c9,#8b7bff);color:#04121a;font-weight:700;text-decoration:none}}.cta p{{margin:0;color:#9aa8bf}}</style></head>
-<body><main><div class="topo"><a href="/">Jarvis</a><span>conversa compartilhada</span></div><h1>{titulo}</h1>{mensagens}
-<div class="cta"><b>Quer um Jarvis assim para você?</b><p>Ele conversa em português, lembra de tudo e cuida dos seus computadores. Grátis, sem cartão.</p><a href="/?ref={ref}">Criar meu Jarvis grátis →</a></div></main></body></html>"""
+<body><main><div class="topo"><a href="/">Jarvis</a><span>{topo_texto}</span></div><h1>{titulo}</h1>{mensagens}
+<div class="cta"><b>{cta_titulo}</b><p>{cta_texto}</p><a href="/?ref={ref}">{cta_botao}</a></div></main></body></html>"""
 
 
 @router.get("/c/{token}")
-def ver_compartilhada(token: str) -> Response:
+def ver_compartilhada(token: str, request: Request) -> Response:
+    from .i18n import resolver_idioma, t
+
+    idioma = resolver_idioma(request)
     r = nucleo.db().execute(
         "SELECT c.id, c.titulo, s.usuario_id FROM compartilhamentos s JOIN conversas c ON c.id=s.conversa_id "
         "WHERE s.token=?", (token,)).fetchone()
     if r is None:
-        return HTMLResponse("<h1 style='font-family:sans-serif'>Esta conversa não está mais publicada.</h1>", 404)
+        return HTMLResponse(f"<h1 style='font-family:sans-serif'>{t('compartilhada_nao_publicada', idioma)}</h1>", 404)
     msgs = nucleo.db().execute("SELECT papel, texto FROM mensagens WHERE conversa_id=? AND oculta=0 AND texto<>'' "
                                "ORDER BY id LIMIT 200", (r["id"],)).fetchall()
     corpo = "".join(f'<div class="m {m["papel"]}"><div class="q">{"J" if m["papel"] == "assistant" else "•"}</div>'
                     f'<div class="c">{html.escape(m["texto"])}</div></div>' for m in msgs)
     primeira = next((m["texto"] for m in msgs if m["papel"] == "assistant"), "")
-    return HTMLResponse(_PAGINA.format(titulo=html.escape(r["titulo"]), descricao=html.escape(primeira[:150]),
-                                       mensagens=corpo, ref=codigo_de(r["usuario_id"])))
+    return HTMLResponse(_PAGINA.format(
+        lang=idioma,
+        titulo=html.escape(r["titulo"]),
+        sufixo_titulo=html.escape(t("compartilhada_sufixo_titulo", idioma)),
+        descricao=html.escape(primeira[:150]),
+        topo_texto=html.escape(t("compartilhada_topo", idioma)),
+        mensagens=corpo,
+        cta_titulo=html.escape(t("compartilhada_cta_titulo", idioma)),
+        cta_texto=html.escape(t("compartilhada_cta_texto", idioma)),
+        cta_botao=html.escape(t("compartilhada_cta_botao", idioma)),
+        ref=codigo_de(r["usuario_id"]),
+    ))
 
 
 # ---------------------------------------------------------------------- guias ---
@@ -173,10 +186,13 @@ def listar_guias() -> list[dict[str, str]]:
 
 @router.get("/guia/{slug}")
 def ver_guia(slug: str) -> Response:
+    from .i18n import t
+
     if not re.fullmatch(r"[a-z0-9-]{1,80}", slug) or not (GUIAS_DIR / f"{slug}.html").is_file():
-        raise HTTPException(404, "não encontrado")
+        raise HTTPException(404, t("nao_encontrado"))
     return HTMLResponse((GUIAS_DIR / f"{slug}.html").read_text(encoding="utf-8"),
                         headers={"Cache-Control": "public, max-age=3600"})
+
 
 
 @router.get("/robots.txt")
