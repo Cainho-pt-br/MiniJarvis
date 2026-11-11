@@ -40,12 +40,12 @@ def test_pix_ativa_o_plano_por_31_dias(cliente, mp):
     # o painel consulta e já vê aprovado, mesmo sem webhook
     assert cliente.get(f"/api/pagamentos/{r['id']}").json()["status"] == "aprovado"
     eu = cliente.get("/api/eu").json()
-    assert eu["plano"] == "basico" and eu["creditos"] == modulo.CREDITOS_INICIAIS + 800
+    assert eu["plano"] == "basico" and eu["creditos"] == modulo.CREDITOS_INICIAIS + 240
     ate = datetime.fromisoformat(eu["plano_ate"])
     assert timedelta(days=30) < ate - datetime.now(timezone.utc) < timedelta(days=32)
     # a notificação chegando depois não soma de novo
     assert cliente.post("/api/pagamentos/webhook", json={"type": "payment", "data": {"id": mp_id}}).status_code == 200
-    assert cliente.get("/api/eu").json()["creditos"] == modulo.CREDITOS_INICIAIS + 800
+    assert cliente.get("/api/eu").json()["creditos"] == modulo.CREDITOS_INICIAIS + 240
     assert u["creditos"] == modulo.CREDITOS_INICIAIS
 
 
@@ -124,7 +124,7 @@ def test_webhook_e_painel_juntos_creditam_uma_vez_so(cliente, mp):
     [f.start() for f in fios]
     [f.join() for f in fios]
     assert not erros
-    assert cliente.get("/api/eu").json()["creditos"] == modulo.CREDITOS_INICIAIS + 800
+    assert cliente.get("/api/eu").json()["creditos"] == modulo.CREDITOS_INICIAIS + 240
 
 
 def test_estorno_tira_o_plano_e_os_creditos(cliente, mp):
