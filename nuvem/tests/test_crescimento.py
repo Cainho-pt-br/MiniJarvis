@@ -85,20 +85,65 @@ def test_link_compartilhavel(cliente):
 
 def test_guias_robots_e_sitemap(cliente):
     guias = cliente.get("/api/guias").json()
-    assert len(guias) >= 3 and all(g["titulo"] and g["descricao"] for g in guias)
+    assert len(guias) == 4 and all(g["titulo"] and g["descricao"] for g in guias)
     r = cliente.get(f"/guia/{guias[0]['slug']}")
     assert r.status_code == 200 and "Jarvis" in r.text
+    assert 'hreflang="pt-BR"' in r.text and 'hreflang="en"' in r.text and 'hreflang="es"' in r.text
+    assert "<!--HREFLANG-->" not in r.text
     assert cliente.get("/guia/../app").status_code in (404, 422)
     assert cliente.get("/guia/nao-existe").status_code == 404
     assert "Disallow: /api/" in cliente.get("/robots.txt").text
     sm = cliente.get("/sitemap.xml").text
-    assert "/guia/" + guias[0]["slug"] in sm and "/termos" in sm
+    assert "/guia/" + guias[0]["slug"] in sm and "/termos" in sm and "/privacidade" in sm
+    for lang in ("pt-BR", "en", "es"):
+        assert f"?lang={lang}" in sm
+        assert f'hreflang="{lang}"' in sm
+
+
+def test_paginas_legais_e_guias_em_tres_idiomas(cliente):
+    # /termos e /privacidade em pt-BR, en e es (com aviso no topo de que o português prevalece)
+    for rota in ("/termos", "/privacidade"):
+        r_pt = cliente.get(f"{rota}?lang=pt-BR")
+        assert r_pt.status_code == 200
+        assert '<html lang="pt-BR">' in r_pt.text
+        assert 'hreflang="en"' in r_pt.text and 'hreflang="es"' in r_pt.text and "<!--HREFLANG-->" not in r_pt.text
+
+        r_en = cliente.get(rota, headers={"Accept-Language": "en-US,en;q=0.9"})
+        assert r_en.status_code == 200
+        assert '<html lang="en">' in r_en.text
+        assert "Portuguese version" in r_en.text and "prevails" in r_en.text
+        assert 'hreflang="pt-BR"' in r_en.text and 'hreflang="es"' in r_en.text
+
+        r_es = cliente.get(f"/es{rota}")
+        assert r_es.status_code == 200
+        assert '<html lang="es">' in r_es.text
+        assert "versión en portugués" in r_es.text and "prevalece" in r_es.text
+        assert 'hreflang="pt-BR"' in r_es.text and 'hreflang="en"' in r_es.text
+
+    # Os 4 guias em pt-BR, en e es com hreflang e listagem localizada em /api/guias
+    guias_pt = {g["slug"]: g for g in cliente.get("/api/guias?lang=pt-BR").json()}
+    guias_en = {g["slug"]: g for g in cliente.get("/api/guias?lang=en").json()}
+    guias_es = {g["slug"]: g for g in cliente.get("/api/guias?lang=es").json()}
+    assert len(guias_pt) == 4 and set(guias_pt) == set(guias_en) == set(guias_es)
+    for slug in guias_pt:
+        assert guias_pt[slug]["titulo"] != guias_en[slug]["titulo"]
+        assert guias_pt[slug]["titulo"] != guias_es[slug]["titulo"]
+        for lang in ("pt-BR", "en", "es"):
+            rg = cliente.get(f"/guia/{slug}?lang={lang}")
+            assert rg.status_code == 200
+            assert f'<html lang="{lang}">' in rg.text
+            assert 'rel="alternate" hreflang="pt-BR"' in rg.text
+            assert 'rel="alternate" hreflang="en"' in rg.text
+            assert 'rel="alternate" hreflang="es"' in rg.text
+            assert 'rel="alternate" hreflang="x-default"' in rg.text
+            assert "<!--HREFLANG-->" not in rg.text
 
 
 def test_pagina_inicial_tem_tags_de_compartilhamento(cliente):
     r = cliente.get("/")
     assert r.status_code == 200
     assert '<link rel="canonical" href="http://testserver/">' in r.text
+    assert 'hreflang="en"' in r.text and 'hreflang="es"' in r.text
     assert 'property="og:image" content="http://testserver/icones/icone-512.png"' in r.text
     assert "<!--SEO-->" not in r.text
     assert cliente.get("/icones/icone-512.png").status_code == 200  # a imagem existe

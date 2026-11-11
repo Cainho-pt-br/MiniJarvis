@@ -168,14 +168,27 @@ def ver_compartilhada(token: str, request: Request) -> Response:
 GUIAS_DIR = nucleo.BASE / "web" / "guias"
 
 
-def guias() -> list[dict[str, str]]:
+def _arquivo_guia(slug: str, idioma: str) -> Any:
+    if idioma in ("en", "es"):
+        arq_id = GUIAS_DIR / idioma / f"{slug}.html"
+        if arq_id.is_file():
+            return arq_id
+    return GUIAS_DIR / f"{slug}.html"
+
+
+def guias(idioma: str | None = None) -> list[dict[str, str]]:
+    from .i18n import idioma_atual
+
+    id_ef = idioma or idioma_atual()
     saida = []
-    for arq in sorted(GUIAS_DIR.glob("*.html")):
+    for arq_base in sorted(GUIAS_DIR.glob("*.html")):
+        slug = arq_base.stem
+        arq = _arquivo_guia(slug, id_ef)
         texto = arq.read_text(encoding="utf-8")
-        t = re.search(r"<title>(.*?)</title>", texto)
-        d = re.search(r'name="description" content="(.*?)"', texto)
-        saida.append({"slug": arq.stem, "titulo": html.unescape(t.group(1).split(" · ")[0]) if t else arq.stem,
-                      "descricao": html.unescape(d.group(1)) if d else ""})
+        t_m = re.search(r"<title>(.*?)</title>", texto)
+        d_m = re.search(r'name="description" content="(.*?)"', texto)
+        saida.append({"slug": slug, "titulo": html.unescape(t_m.group(1).split(" · ")[0]) if t_m else slug,
+                      "descricao": html.unescape(d_m.group(1)) if d_m else ""})
     return saida
 
 
@@ -184,15 +197,38 @@ def listar_guias() -> list[dict[str, str]]:
     return guias()
 
 
-@router.get("/guia/{slug}")
-def ver_guia(slug: str) -> Response:
-    from .i18n import t
+def _renderizar_guia(slug: str, request: Request, idioma_forcado: str | None = None) -> Response:
+    from .i18n import idioma_atual, t
+    from .pagamento import site_url
 
     if not re.fullmatch(r"[a-z0-9-]{1,80}", slug) or not (GUIAS_DIR / f"{slug}.html").is_file():
         raise HTTPException(404, t("nao_encontrado"))
-    return HTMLResponse((GUIAS_DIR / f"{slug}.html").read_text(encoding="utf-8"),
-                        headers={"Cache-Control": "public, max-age=3600"})
+    idioma = idioma_forcado or idioma_atual()
+    arq = _arquivo_guia(slug, idioma)
+    texto = arq.read_text(encoding="utf-8")
+    base = site_url(request)
+    url_can = f"{base}/guia/{slug}{('?lang=' + idioma) if idioma in ('en', 'es') else ''}"
+    hreflang = (f'<link rel="canonical" href="{url_can}">'
+                f'<link rel="alternate" hreflang="pt-BR" href="{base}/guia/{slug}?lang=pt-BR">'
+                f'<link rel="alternate" hreflang="en" href="{base}/guia/{slug}?lang=en">'
+                f'<link rel="alternate" hreflang="es" href="{base}/guia/{slug}?lang=es">'
+                f'<link rel="alternate" hreflang="x-default" href="{base}/guia/{slug}">')
+    texto = texto.replace("<!--HREFLANG-->", hreflang)
+    return HTMLResponse(texto, headers={"Cache-Control": "public, max-age=3600"})
 
+
+@router.get("/guia/{slug}")
+def ver_guia(slug: str, request: Request) -> Response:
+    return _renderizar_guia(slug, request)
+
+
+@router.get("/{idioma_rota}/guia/{slug}")
+def ver_guia_idioma(idioma_rota: str, slug: str, request: Request) -> Response:
+    from .i18n import t
+
+    if idioma_rota not in ("en", "es", "pt-BR", "pt"):
+        raise HTTPException(404, t("nao_encontrado"))
+    return _renderizar_guia(slug, request, idioma_forcado="pt-BR" if idioma_rota == "pt" else idioma_rota)
 
 
 @router.get("/robots.txt")
@@ -207,7 +243,22 @@ def sitemap(request: Request) -> Response:
     from .pagamento import site_url
 
     base = site_url(request)
-    urls = [f"{base}/", f"{base}/termos", f"{base}/privacidade"] + [f"{base}/guia/{g['slug']}" for g in guias()]
-    corpo = "".join(f"<url><loc>{html.escape(u)}</loc></url>" for u in urls)
-    return Response(f'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
-                    f"{corpo}</urlset>", media_type="application/xml")
+    rotas = [f"{base}/", f"{base}/termos", f"{base}/privacidade"] + [f"{base}/guia/{g['slug']}" for g in guias("pt-BR")]
+    idiomas = ("pt-BR", "en", "es")
+    blocos = []
+    for u in rotas:
+        alternates = "".join(
+            f'<xhtml:link rel="alternate" hreflang="{lang}" href="{html.escape(f"{u}?lang={lang}")}"/>'
+            for lang in idiomas
+        ) + f'<xhtml:link rel="alternate" hreflang="x-default" href="{html.escape(u)}"/>'
+        blocos.append(f"<url><loc>{html.escape(u)}</loc>{alternates}</url>")
+        for lang in idiomas:
+            blocos.append(f"<url><loc>{html.escape(f'{u}?lang={lang}')}</loc>{alternates}</url>")
+    corpo = "".join(blocos)
+    return Response(
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" '
+        'xmlns:xhtml="http://www.w3.org/1999/xhtml">'
+        f"{corpo}</urlset>",
+        media_type="application/xml",
+    )
