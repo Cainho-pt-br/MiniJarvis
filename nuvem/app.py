@@ -774,9 +774,25 @@ def saude() -> dict[str, str]:
     return {"status": "ok"}
 
 
+_INDEX: list[str] = []
+
+
 @app.get("/")
-def pagina() -> FileResponse:
-    return FileResponse(BASE / "web" / "index.html")
+def pagina(request: Request) -> Any:
+    """A página inicial, com o endereço do site e a imagem de compartilhamento
+    (o WhatsApp e as redes só aceitam endereços completos nessas tags)."""
+    from fastapi.responses import HTMLResponse
+
+    from .pagamento import site_url
+
+    if not _INDEX:
+        _INDEX.append((BASE / "web" / "index.html").read_text(encoding="utf-8"))
+    base = site_url(request)
+    seo = (f'<link rel="canonical" href="{base}/">'
+           f'<meta property="og:type" content="website"><meta property="og:url" content="{base}/">'
+           f'<meta property="og:image" content="{base}/icones/icone-512.png">'
+           f'<meta property="og:locale" content="pt_BR"><meta name="twitter:card" content="summary">')
+    return HTMLResponse(_INDEX[0].replace("<!--SEO-->", seo), headers={"Cache-Control": "public, max-age=300"})
 
 
 @app.get("/termos")

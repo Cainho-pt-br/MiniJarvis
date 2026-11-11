@@ -93,3 +93,12 @@ def test_guias_robots_e_sitemap(cliente):
     assert "Disallow: /api/" in cliente.get("/robots.txt").text
     sm = cliente.get("/sitemap.xml").text
     assert "/guia/" + guias[0]["slug"] in sm and "/termos" in sm
+
+
+def test_pagina_inicial_tem_tags_de_compartilhamento(cliente):
+    r = cliente.get("/")
+    assert r.status_code == 200
+    assert '<link rel="canonical" href="http://testserver/">' in r.text
+    assert 'property="og:image" content="http://testserver/icones/icone-512.png"' in r.text
+    assert "<!--SEO-->" not in r.text
+    assert cliente.get("/icones/icone-512.png").status_code == 200  # a imagem existe
