@@ -6,6 +6,7 @@
 <title>Jarvis · seu parque de computadores com IA</title>
 <meta name="description" content="Converse com o Jarvis em português. Ele lembra de tudo, cuida dos seus computadores e trabalha por você, até enquanto você dorme.">
 <meta name="theme-color" content="#05080f">
+<!--SEO-->
 <meta property="og:title" content="Jarvis · seus computadores trabalhando por você">
 <meta property="og:description" content="Um assistente de IA que conversa, lembra e executa tarefas nos seus computadores.">
 <link rel="icon" href="/favicon.ico">
@@ -133,6 +134,15 @@ footer { position: relative; z-index: 1; text-align: center; color: var(--tenue)
 .aceite { display: block; font-size: 13px; line-height: 1.5; color: var(--suave); margin: 4px 0; }
 .aceite input { margin: 0 6px 0 0; vertical-align: middle; }
 .preco .btn + .btn { margin-top: -6px; }
+.pp { margin-bottom: 18px; border-color: rgba(63, 208, 201, .35); background: linear-gradient(120deg, rgba(63, 208, 201, .08), rgba(139, 123, 255, .08)); }
+.pp-lista { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.pp-it { padding: 14px; border-radius: 12px; border: 1px solid var(--borda); background: var(--cartao); display: grid; gap: 8px; align-content: start; }
+.pp-it b::before { content: "○ "; color: var(--tenue); }
+.pp-it.ok { opacity: .6; }
+.pp-it.ok b::before { content: "✓ "; color: var(--ok); }
+.pp-it p { margin: 0; color: var(--suave); font-size: 13px; }
+.pp-cont { font-size: 12px; color: var(--suave); margin-right: 8px; }
+@media (max-width: 760px) { .pp-lista { grid-template-columns: 1fr; } }
 .guias { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
 .guia { display: block; padding: 20px 22px; border-radius: var(--r); background: var(--cartao); border: 1px solid var(--borda); color: inherit; transition: border-color .2s; }
 .guia:hover { border-color: var(--ciano); }
@@ -162,7 +172,8 @@ footer { position: relative; z-index: 1; text-align: center; color: var(--tenue)
 main.conteudo { min-width: 0; padding: 22px clamp(16px, 3vw, 36px) 100px; }
 .barra { display: flex; align-items: center; gap: 12px; margin-bottom: 22px; flex-wrap: wrap; }
 .barra h1 { font-size: 26px; }
-.barra .dir { margin-left: auto; display: flex; gap: 10px; align-items: center; }
+.barra .dir { margin-left: auto; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: flex-end; max-width: 100%; }
+.pilula { white-space: nowrap; }
 .pilula { display: inline-flex; align-items: center; gap: 7px; padding: 7px 12px; border-radius: 999px; border: 1px solid var(--borda2); background: var(--cartao); font-size: 13px; color: var(--suave); }
 .pilula b { color: var(--texto); font-family: var(--mono); font-weight: 500; }
 .pilula.alerta { border-color: rgba(227, 179, 65, .5); color: var(--pend); }
@@ -831,6 +842,7 @@ async function telaInicio() {
   const hora = new Date().getHours(), saud = hora < 12 ? "Bom dia" : hora < 18 ? "Boa tarde" : "Boa noite";
   c.innerHTML = barra(`${saud}, ${esc(u.nome.split(" ")[0])}`) + `
     <div class="stats" id="stats"></div>
+    <div id="primeiros"></div>
     <div class="grade-inicio">
       <div class="painel"><h2>Mapa do parque <span class="acao-dir"><button class="btn peq" id="b-conectar">${ico("mais", 16)} Conectar máquina</button></span></h2>
         <svg class="mapa" id="mapa"></svg>
@@ -862,9 +874,29 @@ async function telaInicio() {
     $("#recentes").innerHTML = jobs.length ? jobs.map(linhaJob).join("") :
       `<div class="vazio" style="padding:16px"><p>Nenhuma tarefa ainda. Peça algo ao Jarvis!</p><button class="btn prim peq" data-ir2>Falar com o Jarvis</button></div>`;
     ligarJobs($("#recentes")); const b2 = $("[data-ir2]"); if (b2) b2.onclick = () => irPara("jarvis");
+    if (!estado.jaConversou) { try { estado.jaConversou = (await api("/api/conversas")).length > 0; } catch {} }
+    primeirosPassos(p, jobs);
   };
   await atualizar(); repetir(atualizar, 6000);
   carregarSugestoes();
+}
+
+function primeirosPassos(p, jobs) {
+  const el = $("#primeiros"); if (!el) return;
+  let fechado = false; try { fechado = localStorage.getItem("mj_pp") === "1"; } catch {}
+  const passos = [
+    { ok: estado.jaConversou, t: "Converse com o Jarvis", d: "Peça um e-mail, um resumo, uma ideia. Leva 10 segundos.", b: "Abrir o chat", f: () => irPara("jarvis") },
+    { ok: p.maquinas.length > 0, t: "Conecte seu primeiro computador", d: "Um comando colado no terminal. Leva 2 minutos.", b: "Conectar", f: modalConectar },
+    { ok: jobs.length > 0, t: "Peça uma tarefa a ele", d: "Por exemplo: ver quanto espaço livre tem o disco. Você aprova antes de rodar.", b: "Pedir ao Jarvis", f: () => { estado.rascunho = "Veja quanto espaço livre tem meu disco"; irPara("jarvis"); } },
+  ];
+  const feitos = passos.filter((x) => x.ok).length;
+  if (fechado || feitos === passos.length) { if (el.innerHTML) el.innerHTML = ""; return; }
+  const html = `<div class="painel pp"><h2>Primeiros passos <span class="acao-dir"><span class="pp-cont">${feitos} de ${passos.length}</span><button class="btn peq fantasma" id="pp-fechar">Agora não</button></span></h2>
+    <div class="pp-lista">${passos.map((x, i) => `<div class="pp-it ${x.ok ? "ok" : ""}"><b>${esc(x.t)}</b><p>${esc(x.d)}</p>${x.ok ? "" : `<button class="btn peq prim" data-pp="${i}">${esc(x.b)}</button>`}</div>`).join("")}</div></div>`;
+  if (el.dataset.h === html) return;  // nada mudou: não refaz a tela a cada atualização
+  el.dataset.h = html; el.innerHTML = html;
+  $$("[data-pp]", el).forEach((b) => (b.onclick = () => passos[+b.dataset.pp].f()));
+  $("#pp-fechar", el).onclick = () => { try { localStorage.setItem("mj_pp", "1"); } catch {} el.innerHTML = ""; el.dataset.h = ""; };
 }
 
 async function carregarSugestoes() {
