@@ -1,5 +1,9 @@
 # Revisão do projeto: o que falta para virar renda recorrente
 
+> **Retrato histórico (10/11/2026).** A situação descrita abaixo era a de antes das
+> Fases A, B e C, que já foram implementadas e estão em produção. Para o estado
+> atual, veja `CLAUDE.md`, `docs/PRODUTO.md` e `docs/OPERACAO.md`.
+
 Revisão feita em 10/11/2026 sobre o código do PR #4 (branch
 `claude/modest-brahmagupta-po9asl`), o banco de produção (Neon) e o deploy na
 Vercel.

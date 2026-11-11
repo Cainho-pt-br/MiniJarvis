@@ -84,9 +84,8 @@ vercel --prod
 - **Streaming:** o app envia a resposta aos pedaços (SSE). Confira no
   primeiro deploy se o texto aparece aos poucos; se vier tudo de uma vez,
   funciona do mesmo jeito, só sem o efeito de digitação.
-- **Limite de tentativas de login** fica na memória de cada instância. Em
-  serverless isso é só uma proteção básica; o próximo passo é guardar no banco
-  ou usar o Firewall da Vercel.
+- **Limites de tentativas** (cadastro, login, códigos, pagamentos) ficam no
+  banco (`limites`), então valem entre todas as instâncias da Vercel.
 - **Plano Hobby (grátis) da Vercel é só para uso não comercial.** Quando
   começar a cobrar dos usuários, o projeto precisa estar no plano Pro.
 
