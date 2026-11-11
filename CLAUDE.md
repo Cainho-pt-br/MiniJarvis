@@ -50,10 +50,10 @@ próprio e use a URL acima.
 | `pagamento.py` | Mercado Pago: assinatura no cartão, Pix, webhook (`FakeMP` nos testes) |
 | `cobranca.py` | Ativar plano (31 dias + créditos), rebaixar vencidos, estorno |
 | `operacao.py` | Teto diário de gasto de IA, funil, relatório diário, alertas |
-| `crescimento.py` | Indicação, conversa compartilhada (`/c/token`), guias de SEO, `robots.txt`, `sitemap.xml` |
+| `crescimento.py` | Indicação, conversa compartilhada (`/c/token`), guias de SEO (`pt-BR`, `en`, `es` com `hreflang`), `robots.txt`, `sitemap.xml` nos 3 idiomas |
 | `correio.py` | E-mail por SMTP (biblioteca padrão) |
 | `banco.py` | Camada de banco única para Postgres e SQLite, schema e migrações |
-| `web/index.html` | **Todo o front-end** (arquivo único, JavaScript puro). `web/guias/*.html`, `termos.html`, `privacidade.html` |
+| `web/index.html` | **Todo o front-end** (arquivo único, JavaScript puro). `web/guias/*.html` (+ `en/` e `es/`), `termos*.html`, `privacidade*.html` |
 | `tests/` | Testes (SQLite e Postgres). Fixture `cliente` em `conftest.py` |
 
 ## Regras de negócio (não quebre)
@@ -66,7 +66,7 @@ próprio e use a URL acima.
 - **Segurança:** toda máquina nasce no **modo seguro** (só ações prontas); modo livre exige a senha da conta. Tarefas criadas pelo Jarvis nascem "aguardando" e só rodam depois do "Aprovar". Admin exige e-mail confirmado (`ADMIN_EMAILS`). O token do agente é guardado só como hash.
 - **Pagamento:** o webhook nunca confia no aviso: busca o pagamento na API do Mercado Pago. `pagamentos.referencia` é UNIQUE e a troca para "aprovado" é atômica (não credite fora desse caminho).
 - **Teto de gasto:** `TETO_DIARIO_USD` para a IA do dia inteiro e avisa o dono por e-mail.
-- **Idioma:** suporta `pt-BR` (padrão e fallback), `en` e `es`, sempre em linguagem simples e sem jargão. Ordem de escolha: preferência salva (`usuarios.idioma` + `localStorage`) > `navigator.languages` > cabeçalho `Accept-Language` > `pt-BR`. Preços continuam em reais (BRL), com aviso claro para quem usa em `en` ou `es`.
+- **Idioma:** suporta `pt-BR` (padrão e fallback), `en` e `es`, sempre em linguagem simples e sem jargão. Ordem de escolha: preferência salva (`usuarios.idioma` + `localStorage`) > `navigator.languages` > cabeçalho `Accept-Language` > `pt-BR`. Preços continuam em reais (BRL), com aviso claro para quem usa em `en` ou `es`. `/termos` e `/privacidade` em `en` e `es` trazem aviso no topo de que a versão em português prevalece.
 
 ## Armadilhas já pisadas
 

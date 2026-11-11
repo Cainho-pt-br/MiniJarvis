@@ -871,6 +871,10 @@ def pagina(request: Request) -> Any:
         _INDEX.append((BASE / "web" / "index.html").read_text(encoding="utf-8"))
     base = site_url(request)
     seo = (f'<link rel="canonical" href="{base}/">'
+           f'<link rel="alternate" hreflang="pt-BR" href="{base}/?lang=pt-BR">'
+           f'<link rel="alternate" hreflang="en" href="{base}/?lang=en">'
+           f'<link rel="alternate" hreflang="es" href="{base}/?lang=es">'
+           f'<link rel="alternate" hreflang="x-default" href="{base}/">'
            f'<meta property="og:type" content="website"><meta property="og:url" content="{base}/">'
            f'<meta property="og:image" content="{base}/icones/icone-512.png">'
            f'<meta property="og:locale" content="pt_BR"><meta name="twitter:card" content="summary">')
@@ -878,22 +882,64 @@ def pagina(request: Request) -> Any:
 
 
 @app.get("/termos")
-def termos() -> Any:
-    return _pagina_legal("termos.html")
+def termos(request: Request) -> Any:
+    return _pagina_legal("termos", request)
+
+
+@app.get("/{idioma_rota:path}/termos")
+def termos_idioma(idioma_rota: str, request: Request) -> Any:
+    if idioma_rota not in ("en", "es", "pt-BR", "pt"):
+        raise HTTPException(404, t("nao_encontrado"))
+    return _pagina_legal("termos", request, idioma_forcado="pt-BR" if idioma_rota == "pt" else idioma_rota)
 
 
 @app.get("/privacidade")
-def privacidade() -> Any:
-    return _pagina_legal("privacidade.html")
+def privacidade(request: Request) -> Any:
+    return _pagina_legal("privacidade", request)
 
 
-def _pagina_legal(nome: str) -> Any:
+@app.get("/{idioma_rota:path}/privacidade")
+def privacidade_idioma(idioma_rota: str, request: Request) -> Any:
+    if idioma_rota not in ("en", "es", "pt-BR", "pt"):
+        raise HTTPException(404, t("nao_encontrado"))
+    return _pagina_legal("privacidade", request, idioma_forcado="pt-BR" if idioma_rota == "pt" else idioma_rota)
+
+
+_FALLBACK_CONTATO = {
+    "pt-BR": "o e-mail de contato informado no site",
+    "en": "the contact email listed on the website",
+    "es": "el correo de contacto indicado en el sitio",
+}
+_FALLBACK_RESPONSAVEL = {
+    "pt-BR": "o responsável pelo Jarvis",
+    "en": "the party responsible for Jarvis",
+    "es": "el responsable de Jarvis",
+}
+
+
+def _pagina_legal(base_nome: str, request: Request | None = None, idioma_forcado: str | None = None) -> Any:
     from fastapi.responses import HTMLResponse
 
-    texto = (BASE / "web" / nome).read_text(encoding="utf-8")
-    texto = texto.replace("{{CONTATO}}", os.environ.get("EMAIL_CONTATO") or os.environ.get("EMAIL_REMETENTE", "")
-                          .split("<")[-1].rstrip(">") or "o e-mail de contato informado no site")
-    return HTMLResponse(texto.replace("{{RESPONSAVEL}}", os.environ.get("RESPONSAVEL_LEGAL", "o responsável pelo Jarvis")))
+    from .pagamento import site_url
+
+    idioma = idioma_forcado or idioma_atual()
+    sufixo = f".{idioma}" if idioma in ("en", "es") else ""
+    arq = BASE / "web" / f"{base_nome}{sufixo}.html"
+    if not arq.is_file():
+        arq = BASE / "web" / f"{base_nome}.html"
+    texto = arq.read_text(encoding="utf-8")
+    base = site_url(request) if request is not None else "https://jarvis.run"
+    hreflang = (f'<link rel="canonical" href="{base}/{base_nome}'
+                f'{("?lang=" + idioma) if idioma in ("en", "es") else ""}">'
+                f'<link rel="alternate" hreflang="pt-BR" href="{base}/{base_nome}?lang=pt-BR">'
+                f'<link rel="alternate" hreflang="en" href="{base}/{base_nome}?lang=en">'
+                f'<link rel="alternate" hreflang="es" href="{base}/{base_nome}?lang=es">'
+                f'<link rel="alternate" hreflang="x-default" href="{base}/{base_nome}">')
+    texto = texto.replace("<!--HREFLANG-->", hreflang)
+    contato = (os.environ.get("EMAIL_CONTATO") or os.environ.get("EMAIL_REMETENTE", "")
+               .split("<")[-1].rstrip(">") or _FALLBACK_CONTATO.get(idioma, _FALLBACK_CONTATO["pt-BR"]))
+    responsavel = os.environ.get("RESPONSAVEL_LEGAL", _FALLBACK_RESPONSAVEL.get(idioma, _FALLBACK_RESPONSAVEL["pt-BR"]))
+    return HTMLResponse(texto.replace("{{CONTATO}}", contato).replace("{{RESPONSAVEL}}", responsavel))
 
 
 @app.get("/favicon.ico")
