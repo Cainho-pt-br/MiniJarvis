@@ -22,12 +22,12 @@ cliente é no máximo `créditos do plano ÷ 1000` dólares. Detalhes:
 
 ## Consumo por mensagem (estimado)
 
-| Tipo | Haiku (Grátis / Básico / sugestões) | Sonnet (Pro) |
-|---|---|---|
-| Pergunta curta | 1 crédito | 5 |
-| Pedido de tarefa (1 ferramenta) | 2 | 12 |
-| Analisar o parque (2 ferramentas) | 3 | 22 |
-| **Custo médio típico** | **2 créditos** | **12 créditos** |
+| Tipo | Haiku (Grátis / Básico / sugestões) | Sonnet (Pro) | Opus (Turbo) |
+|---|---|---|---|
+| Pergunta curta | 1 crédito | 5 | 10 |
+| Pedido de tarefa (1 ferramenta) | 2 | 12 | 24 |
+| Analisar o parque (2 ferramentas) | 3 | 22 | 44 |
+| **Custo médio típico** | **2 créditos** | **12 créditos** | **24 créditos** |
 
 Com 1 crédito = US$ 0,001 para qualquer modelo, 1 crédito no Haiku rende de 10 a
 20 vezes mais tokens do que no Sonnet:
@@ -45,6 +45,12 @@ Com 1 crédito = US$ 0,001 para qualquer modelo, 1 crédito no Haiku rende de 10
   rende **cerca de 375 mensagens por mês** (entre 200 e 900). As sugestões do parque
   rodam em Haiku 5.5 em todos os planos e seguem gratuitas no Pro (~US$ 0,01/mês por
   assinante ativo).
+- **Turbo (8.000 créditos/mês, Opus 5.5):** o Opus 5.5 custa US$ 4 / US$ 20 por milhão de
+  tokens (entrada / saída), exatamente o dobro do Sonnet 5.5. Com média de 24 créditos
+  por mensagem, 8.000 créditos rendem **cerca de 335 mensagens por mês** (entre 180 e 800).
+  No pior caso (cliente gasta 100% dos 8.000 créditos = US$ 8,00), a IA custa **R$ 44,08**
+  (36,8% do preço de R$ 119,90) e a taxa do pagamento custa **R$ 6,46** (5,4%), deixando
+  **R$ 69,36 de sobra líquida (57,8% de margem)** — acima da meta mínima de 50% de margem.
 
 `IA_ESFORCO` (padrão `medium`) controla quanto a IA raciocina: `low` baixa o custo
 por mensagem no chat.
@@ -54,20 +60,20 @@ por mensagem no chat.
 Câmbio de referência: US$ 1 = R$ 5,51 (9/11/2026). Taxa do Mercado Pago estimada
 em 4,98% + R$ 0,49 no cartão (**confirmar na conta**).
 
-| | Básico (800 cr · Haiku) | Pro (4.500 cr · Sonnet) |
-|---|---|---|
-| Preço | R$ 29,90 | R$ 59,90 |
-| Mensagens estimadas | ~400 / mês | ~375 / mês |
-| IA no pior caso (100% dos créditos) | R$ 4,41 (15%) | R$ 24,80 (41%) |
-| Taxa do pagamento | R$ 1,98 | R$ 3,47 |
-| **Sobra no pior caso** | **R$ 23,51 (79%)** | **R$ 31,63 (53%)** |
-| Sobra com 50% de uso | R$ 25,71 | R$ 44,03 |
+| | Básico (800 cr · Haiku) | Pro (4.500 cr · Sonnet) | Turbo (8.000 cr · Opus) |
+|---|---|---|---|
+| Preço | R$ 29,90 | R$ 59,90 | R$ 119,90 |
+| Mensagens estimadas | ~400 / mês | ~375 / mês | ~335 / mês |
+| IA no pior caso (100% dos créditos) | R$ 4,41 (15%) | R$ 24,80 (41%) | R$ 44,08 (37%) |
+| Taxa do pagamento | R$ 1,98 | R$ 3,47 | R$ 6,46 |
+| **Sobra no pior caso** | **R$ 23,51 (79%)** | **R$ 31,63 (53%)** | **R$ 69,36 (58%)** |
+| Sobra com 50% de uso | R$ 25,71 | R$ 44,03 | R$ 91,40 |
 
-Dólar a R$ 6,50: sobra R$ 22,72 (Básico) e R$ 27,18 (Pro).
+Dólar a R$ 6,50: sobra R$ 22,72 (Básico), R$ 27,18 (Pro) e R$ 61,44 (Turbo, 51%).
 
 Custos fixos aproximados: Vercel Pro US$ 20 (cerca de R$ 110), MEI (cerca de
 R$ 80, confirmar com contador), domínio. Total perto de R$ 195 por mês: o ponto
-de equilíbrio é de uns 9 assinantes Básico, 7 Pro ou 8 numa mistura.
+de equilíbrio é de uns 9 assinantes Básico, 7 Pro, 3 Turbo ou 6 numa mistura.
 
 ## Onde ainda se perde dinheiro
 

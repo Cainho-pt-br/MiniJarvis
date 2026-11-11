@@ -28,7 +28,8 @@ def test_modelo_por_plano():
     assert ia.modelo_do_plano("gratis") == "claude-haiku-5-5"
     assert ia.modelo_do_plano("basico") == "claude-haiku-5-5"
     assert ia.modelo_do_plano("pro") == "claude-sonnet-5-5"
-    for p in ("gratis", "basico", "pro"):
+    assert ia.modelo_do_plano("turbo") == "claude-opus-5-5"
+    for p in ("gratis", "basico", "pro", "turbo"):
         assert ia.modelo_sugestoes_do_plano(p) == "claude-haiku-5-5"
 
 

@@ -106,9 +106,10 @@ O `Dockerfile` continua no repositório, caso um dia queira sair da Vercel
 
 | Plano | Preço | Créditos/mês | Para quem |
 |---|---|---|---|
-| Grátis | R$ 0 | 200 (uma vez) | Experimentar sem cartão |
-| Básico | R$ 29,90 | 800 | Uso diário (~400 mensagens) |
-| Pro | R$ 59,90 | 4.500 + parque automático | Uso intenso (~375 mensagens com Sonnet) |
+| Grátis | R$ 0 | 200 (uma vez) | Experimentar sem cartão (1 computador) |
+| Básico | R$ 29,90 | 800 | Uso diário (~400 mensagens, até 2 computadores) |
+| Pro | R$ 59,90 | 4.500 + parque automático | Uso intenso (~375 mensagens com Sonnet, até 4 computadores) |
+| Turbo | R$ 119,90 | 8.000 + parque automático | Quem tem muitos computadores ou quer o máximo (~335 mensagens com Opus, até 10 computadores) |
 
 1 crédito = US$ 0,001 de custo de IA. A conta é feita com os tokens reais de
 cada resposta (`nuvem/ia.py` → `custo_usd`), então o preço nunca fica abaixo
@@ -121,6 +122,7 @@ do custo.
 | Grátis | `claude-haiku-5-5` | `claude-haiku-5-5` | ~2 créditos | ~100 |
 | Básico | `claude-haiku-5-5` | `claude-haiku-5-5` | ~2 créditos | ~400 por mês |
 | Pro | `claude-sonnet-5-5` | `claude-haiku-5-5` | ~12 créditos | ~375 por mês |
+| Turbo | `claude-opus-5-5` | `claude-haiku-5-5` | ~24 créditos | ~335 por mês |
 
 \* Mistura típica de perguntas curtas e tarefas com ferramentas. A cobrança real
 usa os tokens de cada resposta, com o desconto do cache de prompt.
@@ -130,11 +132,54 @@ usa os tokens de cada resposta, com o desconto do cache de prompt.
   custam no máximo US$ 0,80 ≈ R$ 4,41, ou 15% do preço) e as sugestões do parque
   em todos os planos.
 - O **Sonnet 5.5** equipa o plano Pro no chat e nas tarefas.
+- O **Opus 5.5** equipa o plano Turbo no chat e nas tarefas, mantendo 58% de
+  margem líquida mesmo no pior caso (ver `docs/ECONOMIA.md`).
 - Se a chamada ao modelo do plano falhar por erro de API ou sobrecarga, o Jarvis
-  tenta uma única vez o modelo imediatamente abaixo (ex.: Sonnet → Haiku),
+  tenta uma única vez o modelo imediatamente abaixo (Opus → Sonnet; Sonnet → Haiku),
   registra `operacao.incidente("ia_fallback")` e cobra pelo modelo que respondeu.
 - Os modelos são trocáveis por variável de ambiente (`IA_MODELO_HAIKU`,
   `IA_MODELO_SONNET`, `IA_MODELO_OPUS`), sem mexer no código.
+
+### "Usar minhas IAs" (não implementado — depende de revisão de termos)
+
+Muitos usuários avançados já pagam assinaturas pessoais (Claude Pro/Max com
+Claude Code, ChatGPT Plus/Pro com Codex CLI, ou Google One AI Premium com
+Gemini CLI) nas próprias máquinas. O agente do Jarvis já detecta se a máquina
+tem `claude`, `codex` ou `gemini` instalados (`tem_claude`, `tem_codex`,
+`tem_gemini` no heartbeat) e, no modo livre, já sabe rodar um job do tipo
+`claude` localmente.
+
+- **Desenho pensado (quando e se for liberado):**
+  1. Na tela da máquina (ou no perfil), o usuário marca quais IAs instaladas no
+     próprio computador deseja autorizar o Jarvis a acionar.
+  2. Quando o usuário pede uma tarefa complexa no painel, o Jarvis no servidor
+     (usando Haiku apenas para orquestrar, ~1–2 créditos) cria uma tarefa
+     aguardando aprovação do usuário para delegar a execução ao CLI local
+     (`claude`, `codex` ou `gemini`) na máquina do próprio usuário.
+  3. O agente executa o CLI local com as credenciais que nunca saem da máquina
+     do cliente e devolve apenas o texto do resultado ao painel.
+- **Riscos:**
+  1. **Restrição contratual dos fornecedores:** a Anthropic e outros provedores
+     restringem o uso de assinaturas pessoais (OAuth / sessão do CLI) por
+     produtos ou serviços de terceiros. Se o provedor interpretar que um painel
+     web externo despachando comandos ao CLI local viola os Termos de Uso
+     pessoais, a conta do usuário naquele fornecedor pode ser suspensa.
+  2. **Experiência frágil para leigos:** o CLI local pode pedir login de novo,
+     bater no limite de mensagens da assinatura pessoal do cliente ou mudar o
+     formato de saída sem aviso, gerando falhas difíceis de explicar.
+  3. **Segurança:** o CLI local roda com as permissões do usuário na máquina;
+     por isso só poderia existir em máquinas no modo livre e sempre com aprovação
+     explícita por tarefa.
+- **Pergunta de termos que falta responder (para Anthropic, OpenAI e Google):**
+  > *Os Termos de Uso da assinatura pessoal (Consumer / Pro / Max / Plus) permitem
+  > que o próprio titular da conta autorize um agente instalado no computador dele
+  > a invocar a ferramenta oficial de linha de comando (`claude` / `codex` / `gemini`)
+  > em nome dele, a partir de um comando aprovado por ele num painel web de
+  > terceiro, desde que as credenciais nunca saiam da máquina do usuário nem sejam
+  > compartilhadas com terceiros?*
+
+Enquanto essa resposta não estiver confirmada para cada fornecedor, o recurso
+**não deve ser exposto** como benefício de plano nem automatizado no chat.
 
 ### Pagamento
 
@@ -204,8 +249,9 @@ Sem token, os botões de assinar voltam a ser lista de espera.
   por minuto por máquina ligada.
 - **Rotinas diárias:** a Vercel chama `/api/cron/rotinas` às 9h UTC (6h em
   Brasília), autenticada por `CRON_SECRET`.
-- **Planos:** Grátis conecta 1 máquina, Básico 2, Pro 4. Rotinas diárias
-  e sugestões automáticas (sem gastar créditos) são do Pro.
+- **Planos:** Grátis conecta 1 máquina, Básico 2, Pro 4, Turbo 10. Rotinas
+  diárias e sugestões automáticas (sem gastar créditos) estão incluídas no Pro e
+  no Turbo.
 - **Quem desce de plano** mantém as máquinas conectadas, mas só as mais
   antigas, até o limite do novo plano, continuam ativas; as outras ficam
   **bloqueadas** (seguem ligadas, não recebem tarefas, o painel avisa e
