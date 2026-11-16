@@ -147,3 +147,9 @@ def test_pagina_inicial_tem_tags_de_compartilhamento(cliente):
     assert 'property="og:image" content="http://testserver/icones/icone-512.png"' in r.text
     assert "<!--SEO-->" not in r.text
     assert cliente.get("/icones/icone-512.png").status_code == 200  # a imagem existe
+
+
+def test_arquivo_de_verificacao_do_google(cliente):
+    r = cliente.get("/google1712b60dc42fba21.html")
+    assert r.status_code == 200
+    assert r.text == "google-site-verification: google1712b60dc42fba21.html"

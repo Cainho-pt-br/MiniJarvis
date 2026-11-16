@@ -238,6 +238,12 @@ def robots(request: Request) -> PlainTextResponse:
     return PlainTextResponse(f"User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /c/\nSitemap: {site_url(request)}/sitemap.xml\n")
 
 
+@router.get("/google1712b60dc42fba21.html")
+def verificacao_google() -> PlainTextResponse:
+    """Arquivo de verificação do Google Search Console (conteúdo público e fixo)."""
+    return PlainTextResponse("google-site-verification: google1712b60dc42fba21.html", media_type="text/html")
+
+
 @router.get("/sitemap.xml")
 def sitemap(request: Request) -> Response:
     from .pagamento import site_url
