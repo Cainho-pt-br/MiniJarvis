@@ -95,7 +95,9 @@ próprio e use a URL acima.
 
 ## Estado e próximos passos
 
-Código completo até o PR #6. **Falta só configuração do dono** (não é código): credenciais do Mercado Pago, e-mail de envio (SMTP), Vercel Pro e domínio, MEI, limite de gasto na Anthropic. Sem credenciais do Mercado Pago os botões de assinar viram lista de espera; sem SMTP a confirmação de e-mail, o "esqueci a senha" e o relatório ficam desligados.
+Código completo até o PR #11 (PRs A a D: modelos por plano, plano Turbo, idioma pt-BR/en/es, termos e guias em três idiomas), tudo na `main` e em produção. Os créditos (Grátis 120, Básico 240) foram definidos pelo dono e são intencionais. A comparação real Haiku × Sonnet foi dispensada pelo dono.
+
+**Falta só configuração do dono** (não é código): credenciais do Mercado Pago, e-mail de envio (SMTP), Vercel Pro e domínio, MEI, limite de gasto na Anthropic. Sem credenciais do Mercado Pago os botões de assinar viram lista de espera; sem SMTP a confirmação de e-mail, o "esqueci a senha" e o relatório ficam desligados.
 
 Ideias já discutidas, ainda não feitas: login com Google (precisa de credencial do dono), pacote avulso de créditos, programa de afiliados, preços em dólar e Stripe para estrangeiros, e "usar minhas IAs" (delegar tarefas ao Claude Code, Codex ou Gemini que o cliente já assina; depende de revisar os termos de uso de cada fornecedor antes).
 
